@@ -17,13 +17,13 @@ from ttg_intro_builder import IntroBuilder
 from ttg_pack_status import PackStatusReader
 from ttg_project_schema import TTGProject, make_ttg_intro_project
 from ttg_render_plan import RenderPlanner
+from ttg_timeline_actions import TimelineActions
 from ttg_validation import ProjectValidator
 
 
 class CreativeCanvasPreview(QFrame):
     def __init__(self) -> None:
         super().__init__()
-        self.setObjectName("creativeCanvasPreview")
         self.setMinimumSize(640, 420)
         layout = QVBoxLayout(self)
         self.preview = QLabel("Create or open a .ttgstudio project")
@@ -46,6 +46,7 @@ class CreativeStudioWidget(QWidget):
         super().__init__()
         self.project_root = Path(project_root or Path.cwd())
         self.action = ActionEngine()
+        self.timeline_actions = TimelineActions()
         self.validator = ProjectValidator()
         self.planner = RenderPlanner()
         self.pack_reader = PackStatusReader(self.project_root)
@@ -59,39 +60,19 @@ class CreativeStudioWidget(QWidget):
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
         toolbar = QHBoxLayout()
-        self.new_button = QPushButton("New")
-        self.intro_button = QPushButton("Intro Template")
-        self.cinematic_intro_button = QPushButton("Cinematic TTG")
-        self.isp_button = QPushButton("ISP Diagram")
-        self.board_button = QPushButton("Board Callout")
-        self.open_button = QPushButton("Open")
-        self.save_button = QPushButton("Save")
-        self.add_text_button = QPushButton("Add Text")
-        self.add_shape_button = QPushButton("Add Shape")
-        self.duplicate_button = QPushButton("Duplicate")
-        self.delete_button = QPushButton("Delete")
-        self.up_button = QPushButton("Layer Up")
-        self.down_button = QPushButton("Layer Down")
-        self.nudge_left_button = QPushButton("←")
-        self.nudge_right_button = QPushButton("→")
-        self.nudge_up_button = QPushButton("↑")
-        self.nudge_down_button = QPushButton("↓")
-        self.validate_button = QPushButton("Validate")
-        self.plan_button = QPushButton("Render Plan")
-        self.pack_button = QPushButton("Packs")
-        self.render_button = QPushButton("Render Preview")
-        self.export_png_button = QPushButton("Export PNG")
-        self.export_frames_button = QPushButton("Export Frames")
-        self.export_mp4_button = QPushButton("Export MP4")
-        for button in [
-            self.new_button, self.intro_button, self.cinematic_intro_button,
-            self.isp_button, self.board_button, self.open_button, self.save_button,
-            self.add_text_button, self.add_shape_button, self.duplicate_button,
-            self.delete_button, self.up_button, self.down_button,
-            self.nudge_left_button, self.nudge_right_button, self.nudge_up_button, self.nudge_down_button,
-            self.validate_button, self.plan_button, self.pack_button, self.render_button,
-            self.export_png_button, self.export_frames_button, self.export_mp4_button,
-        ]:
+        button_names = [
+            ("new_button", "New"), ("intro_button", "Intro Template"), ("cinematic_intro_button", "Cinematic TTG"),
+            ("isp_button", "ISP Diagram"), ("board_button", "Board Callout"), ("open_button", "Open"), ("save_button", "Save"),
+            ("add_text_button", "Add Text"), ("add_shape_button", "Add Shape"), ("duplicate_button", "Duplicate"),
+            ("delete_button", "Delete"), ("up_button", "Layer Up"), ("down_button", "Layer Down"),
+            ("nudge_left_button", "←"), ("nudge_right_button", "→"), ("nudge_up_button", "↑"), ("nudge_down_button", "↓"),
+            ("fly_button", "Fly In"), ("fade_button", "Fade In"), ("pulse_button", "Pulse"), ("clear_anim_button", "Clear Anim"),
+            ("validate_button", "Validate"), ("plan_button", "Render Plan"), ("pack_button", "Packs"),
+            ("render_button", "Render Preview"), ("export_png_button", "Export PNG"), ("export_frames_button", "Export Frames"), ("export_mp4_button", "Export MP4"),
+        ]
+        for attr, label in button_names:
+            button = QPushButton(label)
+            setattr(self, attr, button)
             toolbar.addWidget(button)
         toolbar.addStretch()
         root.addLayout(toolbar)
@@ -125,6 +106,10 @@ class CreativeStudioWidget(QWidget):
         self.nudge_right_button.clicked.connect(lambda: self.nudge_selected_layer(10, 0))
         self.nudge_up_button.clicked.connect(lambda: self.nudge_selected_layer(0, -10))
         self.nudge_down_button.clicked.connect(lambda: self.nudge_selected_layer(0, 10))
+        self.fly_button.clicked.connect(lambda: self.apply_timeline_preset("fly"))
+        self.fade_button.clicked.connect(lambda: self.apply_timeline_preset("fade"))
+        self.pulse_button.clicked.connect(lambda: self.apply_timeline_preset("pulse"))
+        self.clear_anim_button.clicked.connect(lambda: self.apply_timeline_preset("clear"))
         self.validate_button.clicked.connect(self.validate_project)
         self.plan_button.clicked.connect(self.show_render_plan)
         self.pack_button.clicked.connect(self.show_pack_status)
@@ -144,6 +129,14 @@ class CreativeStudioWidget(QWidget):
         if row < 0 or row >= len(self.project.layers):
             return None
         return self.project.layers[row].id
+
+    def select_layer_by_id(self, layer_id: str) -> None:
+        if self.project is None:
+            return
+        for index, layer in enumerate(self.project.layers):
+            if layer.id == layer_id:
+                self.layer_list.setCurrentRow(index)
+                return
 
     def new_project(self) -> None:
         self.project = self.action.new_project("Untitled TTG Project", "image")
@@ -166,63 +159,64 @@ class CreativeStudioWidget(QWidget):
     def add_isp_diagram(self) -> None:
         if self.project is None:
             self.new_project()
-        if self.project is None:
-            return
-        add_basic_isp_diagram(self.project)
-        self.refresh_panels()
-        self.render_preview()
+        if self.project is not None:
+            add_basic_isp_diagram(self.project)
+            self.refresh_panels(); self.render_preview()
 
     def add_board_callout(self) -> None:
         if self.project is None:
             self.new_project()
-        if self.project is None:
-            return
-        add_basic_board_callout(self.project)
-        self.refresh_panels()
-        self.render_preview()
+        if self.project is not None:
+            add_basic_board_callout(self.project)
+            self.refresh_panels(); self.render_preview()
 
     def duplicate_selected_layer(self) -> None:
         if self.project is None:
             return
         layer_id = self.selected_layer_id()
-        if not layer_id:
-            return
-        duplicate = self.action.duplicate_layer(self.project, layer_id)
-        self.refresh_panels()
-        self.select_layer_by_id(duplicate.id)
-        self.render_preview()
+        if layer_id:
+            duplicate = self.action.duplicate_layer(self.project, layer_id)
+            self.refresh_panels(); self.select_layer_by_id(duplicate.id); self.render_preview()
 
     def delete_selected_layer(self) -> None:
         if self.project is None:
             return
         layer_id = self.selected_layer_id()
-        if not layer_id:
-            return
-        self.action.remove_layer(self.project, layer_id)
-        self.refresh_panels()
-        self.render_preview()
+        if layer_id:
+            self.action.remove_layer(self.project, layer_id)
+            self.refresh_panels(); self.render_preview()
 
     def reorder_selected_layer(self, direction: int) -> None:
         if self.project is None:
             return
         layer_id = self.selected_layer_id()
-        if not layer_id:
-            return
-        self.action.move_layer_order(self.project, layer_id, direction)
-        self.refresh_panels()
-        self.select_layer_by_id(layer_id)
-        self.render_preview()
+        if layer_id:
+            self.action.move_layer_order(self.project, layer_id, direction)
+            self.refresh_panels(); self.select_layer_by_id(layer_id); self.render_preview()
 
     def nudge_selected_layer(self, dx: float, dy: float) -> None:
         if self.project is None:
             return
         layer_id = self.selected_layer_id()
+        if layer_id:
+            self.action.offset_layer(self.project, layer_id, dx, dy)
+            self.refresh_panels(); self.select_layer_by_id(layer_id); self.render_preview()
+
+    def apply_timeline_preset(self, preset: str) -> None:
+        if self.project is None:
+            return
+        layer_id = self.selected_layer_id()
         if not layer_id:
             return
-        self.action.offset_layer(self.project, layer_id, dx, dy)
-        self.refresh_panels()
-        self.select_layer_by_id(layer_id)
-        self.render_preview()
+        if preset == "fly":
+            self.timeline_actions.add_fly_in_left(self.project, layer_id, 0.0, min(1.2, self.project.canvas.duration))
+        elif preset == "fade":
+            self.timeline_actions.add_fade_in(self.project, layer_id, 0.0, min(1.0, self.project.canvas.duration))
+        elif preset == "pulse":
+            self.timeline_actions.add_pulse(self.project, layer_id, 0.0, self.project.canvas.duration)
+        elif preset == "clear":
+            self.timeline_actions.clear_animation(self.project, layer_id)
+        self.refresh_panels(); self.select_layer_by_id(layer_id); self.render_preview()
 
     def open_project(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Open TTG Studio Project", "", "TTG Studio (*.json *.ttgstudio)")
@@ -231,8 +225,7 @@ class CreativeStudioWidget(QWidget):
         try:
             self.project = TTGProject.load(path)
             self.project_path = Path(path)
-            self.refresh_panels()
-            self.render_preview()
+            self.refresh_panels(); self.render_preview()
         except Exception as exc:
             QMessageBox.critical(self, "Open Project", str(exc))
 
@@ -252,22 +245,16 @@ class CreativeStudioWidget(QWidget):
     def add_text(self) -> None:
         if self.project is None:
             self.new_project()
-        if self.project is None:
-            return
-        layer = self.action.add_text(self.project, "THETECHGUY", 120, 120)
-        self.refresh_panels()
-        self.select_layer_by_id(layer.id)
-        self.render_preview()
+        if self.project is not None:
+            layer = self.action.add_text(self.project, "THETECHGUY", 120, 120)
+            self.refresh_panels(); self.select_layer_by_id(layer.id); self.render_preview()
 
     def add_shape(self) -> None:
         if self.project is None:
             self.new_project()
-        if self.project is None:
-            return
-        layer = self.action.add_shape(self.project, "rectangle", 160, 220)
-        self.refresh_panels()
-        self.select_layer_by_id(layer.id)
-        self.render_preview()
+        if self.project is not None:
+            layer = self.action.add_shape(self.project, "rectangle", 160, 220)
+            self.refresh_panels(); self.select_layer_by_id(layer.id); self.render_preview()
 
     def validate_project(self) -> bool:
         if self.project is None:
@@ -314,9 +301,7 @@ class CreativeStudioWidget(QWidget):
         self.status_label.setText(f"Pack status loaded: {len(statuses)} packs.")
 
     def render_preview(self) -> None:
-        if self.project is None:
-            return
-        if not self.validate_project():
+        if self.project is None or not self.validate_project():
             return
         try:
             temp_dir = Path(tempfile.gettempdir()) / "ttg_creative_preview"
@@ -329,9 +314,7 @@ class CreativeStudioWidget(QWidget):
             QMessageBox.critical(self, "Render Preview", str(exc))
 
     def export_png(self) -> None:
-        if self.project is None:
-            return
-        if not self.validate_project():
+        if self.project is None or not self.validate_project():
             return
         target, _ = QFileDialog.getSaveFileName(self, "Export PNG", "ttg-export.png", "PNG Image (*.png)")
         if not target:
@@ -345,9 +328,7 @@ class CreativeStudioWidget(QWidget):
             QMessageBox.critical(self, "Export PNG", str(exc))
 
     def export_frames(self) -> None:
-        if self.project is None:
-            return
-        if not self.validate_project():
+        if self.project is None or not self.validate_project():
             return
         target = QFileDialog.getExistingDirectory(self, "Export Frames")
         if not target:
@@ -359,9 +340,7 @@ class CreativeStudioWidget(QWidget):
             QMessageBox.critical(self, "Export Frames", str(exc))
 
     def export_mp4(self) -> None:
-        if self.project is None:
-            return
-        if not self.validate_project():
+        if self.project is None or not self.validate_project():
             return
         target, _ = QFileDialog.getSaveFileName(self, "Export MP4", "ttg-export.mp4", "MP4 Video (*.mp4)")
         if not target:
@@ -381,16 +360,11 @@ class CreativeStudioWidget(QWidget):
         if self.project is None:
             return
         for layer in self.project.layers:
-            self.layer_list.addItem(f"{layer.type}: {layer.name}")
+            label = f"{layer.type}: {layer.name}"
+            if layer.keyframes:
+                label += "  • animated"
+            self.layer_list.addItem(label)
         self.projectChanged.emit(self.project)
-
-    def select_layer_by_id(self, layer_id: str) -> None:
-        if self.project is None:
-            return
-        for index, layer in enumerate(self.project.layers):
-            if layer.id == layer_id:
-                self.layer_list.setCurrentRow(index)
-                return
 
     def _selected_layer_changed(self, row: int) -> None:
         self.properties.clear()
@@ -404,5 +378,7 @@ class CreativeStudioWidget(QWidget):
         self.properties.addItem(f"y: {layer.transform.y}")
         self.properties.addItem(f"opacity: {layer.transform.opacity}")
         self.properties.addItem(f"scale: {layer.transform.scale_x}, {layer.transform.scale_y}")
+        for key, frames in layer.keyframes.items():
+            self.properties.addItem(f"keyframes/{key}: {len(frames)}")
         for key, value in layer.properties.items():
             self.properties.addItem(f"{key}: {value}")
