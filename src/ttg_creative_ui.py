@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import QFileDialog, QFrame, QHBoxLayout, QLabel, QListWidge
 from ttg_action_engine import ActionEngine
 from ttg_diagram_tools import add_basic_board_callout, add_basic_isp_diagram
 from ttg_export_service import ExportService
+from ttg_history import ProjectHistory
 from ttg_intro_builder import IntroBuilder
 from ttg_pack_status import PackStatusReader
 from ttg_project_schema import TTGProject, make_ttg_intro_project
@@ -47,6 +48,7 @@ class CreativeStudioWidget(QWidget):
         self.project_root = Path(project_root or Path.cwd())
         self.action = ActionEngine()
         self.timeline_actions = TimelineActions()
+        self.history = ProjectHistory()
         self.validator = ProjectValidator()
         self.planner = RenderPlanner()
         self.pack_reader = PackStatusReader(self.project_root)
@@ -63,6 +65,7 @@ class CreativeStudioWidget(QWidget):
         button_names = [
             ("new_button", "New"), ("intro_button", "Intro Template"), ("cinematic_intro_button", "Cinematic TTG"),
             ("isp_button", "ISP Diagram"), ("board_button", "Board Callout"), ("open_button", "Open"), ("save_button", "Save"),
+            ("undo_button", "Undo"), ("redo_button", "Redo"),
             ("add_text_button", "Add Text"), ("add_shape_button", "Add Shape"), ("duplicate_button", "Duplicate"),
             ("delete_button", "Delete"), ("up_button", "Layer Up"), ("down_button", "Layer Down"),
             ("nudge_left_button", "←"), ("nudge_right_button", "→"), ("nudge_up_button", "↑"), ("nudge_down_button", "↓"),
@@ -96,6 +99,8 @@ class CreativeStudioWidget(QWidget):
         self.board_button.clicked.connect(self.add_board_callout)
         self.open_button.clicked.connect(self.open_project)
         self.save_button.clicked.connect(self.save_project)
+        self.undo_button.clicked.connect(self.undo)
+        self.redo_button.clicked.connect(self.redo)
         self.add_text_button.clicked.connect(self.add_text)
         self.add_shape_button.clicked.connect(self.add_shape)
         self.duplicate_button.clicked.connect(self.duplicate_selected_layer)
@@ -122,6 +127,26 @@ class CreativeStudioWidget(QWidget):
     def _apply_theme(self) -> None:
         self.setStyleSheet("QWidget{background:#050814;color:#eaf3ff;} QPushButton{background:#182552;color:#f1f7ff;border:1px solid #3f72ff;border-radius:8px;padding:7px;} QListWidget,QFrame{background:#0b1220;border:1px solid #18305f;} QLabel{color:#9fd8ff;}")
 
+    def remember(self, label: str) -> None:
+        if self.project is not None:
+            self.history.remember(label, self.project)
+
+    def undo(self) -> None:
+        if self.project is None or not self.history.can_undo():
+            self.status_label.setText("Nothing to undo.")
+            return
+        self.project = self.history.undo(self.project)
+        self.refresh_panels(); self.render_preview()
+        self.status_label.setText("Undo applied.")
+
+    def redo(self) -> None:
+        if self.project is None or not self.history.can_redo():
+            self.status_label.setText("Nothing to redo.")
+            return
+        self.project = self.history.redo(self.project)
+        self.refresh_panels(); self.render_preview()
+        self.status_label.setText("Redo applied.")
+
     def selected_layer_id(self) -> str | None:
         if self.project is None:
             return None
@@ -138,28 +163,26 @@ class CreativeStudioWidget(QWidget):
                 self.layer_list.setCurrentRow(index)
                 return
 
-    def new_project(self) -> None:
-        self.project = self.action.new_project("Untitled TTG Project", "image")
+    def reset_project(self, project: TTGProject) -> None:
+        self.project = project
         self.project_path = None
-        self.refresh_panels()
-        self.render_preview()
+        self.history.clear()
+        self.refresh_panels(); self.render_preview()
+
+    def new_project(self) -> None:
+        self.reset_project(self.action.new_project("Untitled TTG Project", "image"))
 
     def load_intro_template(self) -> None:
-        self.project = make_ttg_intro_project()
-        self.project_path = None
-        self.refresh_panels()
-        self.render_preview()
+        self.reset_project(make_ttg_intro_project())
 
     def load_cinematic_intro(self) -> None:
-        self.project = IntroBuilder().build_ttg_intro()
-        self.project_path = None
-        self.refresh_panels()
-        self.render_preview()
+        self.reset_project(IntroBuilder().build_ttg_intro())
 
     def add_isp_diagram(self) -> None:
         if self.project is None:
             self.new_project()
         if self.project is not None:
+            self.remember("add ISP diagram")
             add_basic_isp_diagram(self.project)
             self.refresh_panels(); self.render_preview()
 
@@ -167,6 +190,7 @@ class CreativeStudioWidget(QWidget):
         if self.project is None:
             self.new_project()
         if self.project is not None:
+            self.remember("add board callout")
             add_basic_board_callout(self.project)
             self.refresh_panels(); self.render_preview()
 
@@ -175,6 +199,7 @@ class CreativeStudioWidget(QWidget):
             return
         layer_id = self.selected_layer_id()
         if layer_id:
+            self.remember("duplicate layer")
             duplicate = self.action.duplicate_layer(self.project, layer_id)
             self.refresh_panels(); self.select_layer_by_id(duplicate.id); self.render_preview()
 
@@ -183,6 +208,7 @@ class CreativeStudioWidget(QWidget):
             return
         layer_id = self.selected_layer_id()
         if layer_id:
+            self.remember("delete layer")
             self.action.remove_layer(self.project, layer_id)
             self.refresh_panels(); self.render_preview()
 
@@ -191,6 +217,7 @@ class CreativeStudioWidget(QWidget):
             return
         layer_id = self.selected_layer_id()
         if layer_id:
+            self.remember("reorder layer")
             self.action.move_layer_order(self.project, layer_id, direction)
             self.refresh_panels(); self.select_layer_by_id(layer_id); self.render_preview()
 
@@ -199,6 +226,7 @@ class CreativeStudioWidget(QWidget):
             return
         layer_id = self.selected_layer_id()
         if layer_id:
+            self.remember("nudge layer")
             self.action.offset_layer(self.project, layer_id, dx, dy)
             self.refresh_panels(); self.select_layer_by_id(layer_id); self.render_preview()
 
@@ -208,6 +236,7 @@ class CreativeStudioWidget(QWidget):
         layer_id = self.selected_layer_id()
         if not layer_id:
             return
+        self.remember(f"animation preset {preset}")
         if preset == "fly":
             self.timeline_actions.add_fly_in_left(self.project, layer_id, 0.0, min(1.2, self.project.canvas.duration))
         elif preset == "fade":
@@ -225,6 +254,7 @@ class CreativeStudioWidget(QWidget):
         try:
             self.project = TTGProject.load(path)
             self.project_path = Path(path)
+            self.history.clear()
             self.refresh_panels(); self.render_preview()
         except Exception as exc:
             QMessageBox.critical(self, "Open Project", str(exc))
@@ -246,6 +276,7 @@ class CreativeStudioWidget(QWidget):
         if self.project is None:
             self.new_project()
         if self.project is not None:
+            self.remember("add text")
             layer = self.action.add_text(self.project, "THETECHGUY", 120, 120)
             self.refresh_panels(); self.select_layer_by_id(layer.id); self.render_preview()
 
@@ -253,6 +284,7 @@ class CreativeStudioWidget(QWidget):
         if self.project is None:
             self.new_project()
         if self.project is not None:
+            self.remember("add shape")
             layer = self.action.add_shape(self.project, "rectangle", 160, 220)
             self.refresh_panels(); self.select_layer_by_id(layer.id); self.render_preview()
 
