@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Build outputs
+build/
+dist/
+installer/*.exe
+*.spec.bak
+
+# Large model files
+models/
+*.onnx
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+
+# Prereqs / installers
+prereqs/
+*.exe
+*.msi
+
+# Logs/temp
+*.log
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.env.*
+secrets/
+tokens/
+*.key
+*.pem
