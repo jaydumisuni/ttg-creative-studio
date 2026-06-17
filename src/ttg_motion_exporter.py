@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Motion preview/export foundation for TTG Creative Studio."""
+"""Motion preview/export for TTG Creative Studio."""
 
 from __future__ import annotations
 
 from pathlib import Path
-import shutil
 import subprocess
 
 from ttg_canvas_engine import CanvasRenderer, RenderContext
+from ttg_ffmpeg_manager import FFmpegManager
 from ttg_project_schema import TTGProject
 from ttg_timeline_engine import TimelineEngine
 
@@ -47,9 +47,7 @@ class MotionExporter:
         return result
 
     def export_mp4(self, project: TTGProject, output_path: str | Path, work_dir: str | Path) -> Path:
-        ffmpeg = shutil.which("ffmpeg")
-        if not ffmpeg:
-            raise RuntimeError("ffmpeg was not found. Install the video export pack or add ffmpeg to PATH.")
+        ffmpeg = FFmpegManager().require()
         work_dir = Path(work_dir)
         frames_dir = work_dir / "frames"
         self.export_frames(project, frames_dir)
