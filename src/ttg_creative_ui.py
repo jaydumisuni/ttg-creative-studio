@@ -12,8 +12,11 @@ from PyQt6.QtWidgets import QFileDialog, QFrame, QHBoxLayout, QLabel, QListWidge
 
 from ttg_action_engine import ActionEngine
 from ttg_canvas_engine import CanvasRenderer, RenderContext
+from ttg_diagram_tools import add_basic_board_callout, add_basic_isp_diagram
+from ttg_intro_builder import IntroBuilder
 from ttg_motion_exporter import MotionExporter
 from ttg_project_schema import TTGProject, make_ttg_intro_project
+from ttg_render_plan import RenderPlanner
 from ttg_validation import ProjectValidator
 
 
@@ -44,6 +47,7 @@ class CreativeStudioWidget(QWidget):
         self.project_root = Path(project_root or Path.cwd())
         self.action = ActionEngine()
         self.validator = ProjectValidator()
+        self.planner = RenderPlanner()
         self.project: TTGProject | None = None
         self.project_path: Path | None = None
         self._build_ui()
@@ -54,14 +58,19 @@ class CreativeStudioWidget(QWidget):
         toolbar = QHBoxLayout()
         self.new_button = QPushButton("New")
         self.intro_button = QPushButton("Intro Template")
+        self.cinematic_intro_button = QPushButton("Cinematic TTG")
+        self.isp_button = QPushButton("ISP Diagram")
+        self.board_button = QPushButton("Board Callout")
         self.open_button = QPushButton("Open")
         self.save_button = QPushButton("Save")
         self.add_text_button = QPushButton("Add Text")
         self.add_shape_button = QPushButton("Add Shape")
         self.validate_button = QPushButton("Validate")
+        self.plan_button = QPushButton("Render Plan")
         self.render_button = QPushButton("Render Preview")
+        self.export_png_button = QPushButton("Export PNG")
         self.export_frames_button = QPushButton("Export Frames")
-        for button in [self.new_button, self.intro_button, self.open_button, self.save_button, self.add_text_button, self.add_shape_button, self.validate_button, self.render_button, self.export_frames_button]:
+        for button in [self.new_button, self.intro_button, self.cinematic_intro_button, self.isp_button, self.board_button, self.open_button, self.save_button, self.add_text_button, self.add_shape_button, self.validate_button, self.plan_button, self.render_button, self.export_png_button, self.export_frames_button]:
             toolbar.addWidget(button)
         toolbar.addStretch()
         root.addLayout(toolbar)
@@ -80,12 +89,17 @@ class CreativeStudioWidget(QWidget):
 
         self.new_button.clicked.connect(self.new_project)
         self.intro_button.clicked.connect(self.load_intro_template)
+        self.cinematic_intro_button.clicked.connect(self.load_cinematic_intro)
+        self.isp_button.clicked.connect(self.add_isp_diagram)
+        self.board_button.clicked.connect(self.add_board_callout)
         self.open_button.clicked.connect(self.open_project)
         self.save_button.clicked.connect(self.save_project)
         self.add_text_button.clicked.connect(self.add_text)
         self.add_shape_button.clicked.connect(self.add_shape)
         self.validate_button.clicked.connect(self.validate_project)
+        self.plan_button.clicked.connect(self.show_render_plan)
         self.render_button.clicked.connect(self.render_preview)
+        self.export_png_button.clicked.connect(self.export_png)
         self.export_frames_button.clicked.connect(self.export_frames)
         self.layer_list.currentRowChanged.connect(self._selected_layer_changed)
 
@@ -101,6 +115,30 @@ class CreativeStudioWidget(QWidget):
     def load_intro_template(self) -> None:
         self.project = make_ttg_intro_project()
         self.project_path = None
+        self.refresh_panels()
+        self.render_preview()
+
+    def load_cinematic_intro(self) -> None:
+        self.project = IntroBuilder().build_ttg_intro()
+        self.project_path = None
+        self.refresh_panels()
+        self.render_preview()
+
+    def add_isp_diagram(self) -> None:
+        if self.project is None:
+            self.new_project()
+        if self.project is None:
+            return
+        add_basic_isp_diagram(self.project)
+        self.refresh_panels()
+        self.render_preview()
+
+    def add_board_callout(self) -> None:
+        if self.project is None:
+            self.new_project()
+        if self.project is None:
+            return
+        add_basic_board_callout(self.project)
         self.refresh_panels()
         self.render_preview()
 
@@ -167,6 +205,17 @@ class CreativeStudioWidget(QWidget):
             return False
         return True
 
+    def show_render_plan(self) -> None:
+        if self.project is None:
+            return
+        plan = self.planner.create_plan(self.project)
+        self.properties.clear()
+        self.properties.addItem(f"Project: {plan.project_name}")
+        self.properties.addItem(f"Canvas: {plan.canvas}")
+        for task in plan.tasks:
+            self.properties.addItem(f"{task.id}: {task.backend} / {len(task.layer_ids)} layers")
+        self.status_label.setText(f"Render plan has {len(plan.tasks)} tasks.")
+
     def render_preview(self) -> None:
         if self.project is None:
             return
@@ -181,6 +230,22 @@ class CreativeStudioWidget(QWidget):
             self.status_label.setText("Preview rendered.")
         except Exception as exc:
             QMessageBox.critical(self, "Render Preview", str(exc))
+
+    def export_png(self) -> None:
+        if self.project is None:
+            return
+        if not self.validate_project():
+            return
+        target, _ = QFileDialog.getSaveFileName(self, "Export PNG", "ttg-export.png", "PNG Image (*.png)")
+        if not target:
+            return
+        if not target.lower().endswith(".png"):
+            target = f"{target}.png"
+        try:
+            CanvasRenderer(RenderContext(project_root=self.project_root)).render(self.project).save(target)
+            self.status_label.setText(f"Exported {target}")
+        except Exception as exc:
+            QMessageBox.critical(self, "Export PNG", str(exc))
 
     def export_frames(self) -> None:
         if self.project is None:
