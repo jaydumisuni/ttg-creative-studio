@@ -1,0 +1,51 @@
+{
+  "version": "0.1.0",
+  "project_type": "motion",
+  "name": "TTG Cinematic Intro Template",
+  "canvas": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "duration": 8.0,
+    "background": "#050614"
+  },
+  "brand": {
+    "id": "ttg_default",
+    "name": "THETECHGUY DIGITAL SOLUTIONS",
+    "website": "thetechguyds.com",
+    "slogan": "Fairytale Business — Make a wish, we sort it.",
+    "pillars": ["SYSTEMS", "TOOLS", "ISP", "WEB"],
+    "colors": {
+      "black": "#050614",
+      "cyan": "#00E5FF",
+      "purple": "#BC13FE",
+      "white": "#F7FAFF"
+    },
+    "locked_assets": {
+      "ghost": "ttg_ghost_original"
+    }
+  },
+  "assets": [],
+  "layers": [
+    {"id":"bg_world","type":"image","name":"Digital world background","properties":{"pack_required":"motion-intro"}},
+    {"id":"particles","type":"particle","name":"Purple cyan energy particles","properties":{"colors":["#00E5FF","#BC13FE"],"density":180,"trail":true}},
+    {"id":"camera","type":"camera","name":"Cinematic camera"},
+    {"id":"wordmark","type":"text3d","name":"THETECHGUY 3D wordmark","properties":{"text":"THETECHGUY","bevel":0.08,"extrude":0.32,"material":"neon_metal"},"keyframes":{"position":[{"time":0.8,"value":[-900,200,-200],"easing":"ease_out_back"},{"time":1.8,"value":[0,0,0],"easing":"ease_out_back"}],"rotation":[{"time":0.8,"value":[20,-40,-8],"easing":"ease_out_back"},{"time":1.8,"value":[0,0,0],"easing":"ease_out_back"}]}},
+    {"id":"subtitle","type":"text","name":"DIGITAL SOLUTIONS","properties":{"text":"DIGITAL SOLUTIONS"}},
+    {"id":"ghost","type":"image","name":"Official TTG ghost","properties":{"asset":"ttg_ghost_original","locked_design":true}},
+    {"id":"service_systems","type":"text3d","name":"SYSTEMS service panel","properties":{"text":"SYSTEMS","material":"glass_neon"}},
+    {"id":"service_tools","type":"text3d","name":"TOOLS service panel","properties":{"text":"TOOLS","material":"glass_neon"}},
+    {"id":"service_isp","type":"text3d","name":"ISP service panel","properties":{"text":"ISP","material":"glass_neon"}},
+    {"id":"service_web","type":"text3d","name":"WEB service panel","properties":{"text":"WEB","material":"glass_neon"}},
+    {"id":"tagline","type":"text","name":"Tagline","properties":{"text":"Fairytale Business — Make a wish, we sort it."}},
+    {"id":"website","type":"text","name":"Website","properties":{"text":"thetechguyds.com"}}
+  ],
+  "audio_markers": [
+    {"time":0.7,"name":"startup bass hit"},
+    {"time":1.8,"name":"wordmark lock"},
+    {"time":3.4,"name":"ghost reveal"},
+    {"time":4.5,"name":"service panels lock"},
+    {"time":6.6,"name":"final chime"}
+  ],
+  "export": {"format":"mp4","quality":"1080p","codec":"h264"}
+}
