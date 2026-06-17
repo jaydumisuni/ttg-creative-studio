@@ -14,6 +14,7 @@ from ttg_action_engine import ActionEngine
 from ttg_canvas_engine import CanvasRenderer, RenderContext
 from ttg_motion_exporter import MotionExporter
 from ttg_project_schema import TTGProject, make_ttg_intro_project
+from ttg_validation import ProjectValidator
 
 
 class CreativeCanvasPreview(QFrame):
@@ -42,6 +43,7 @@ class CreativeStudioWidget(QWidget):
         super().__init__()
         self.project_root = Path(project_root or Path.cwd())
         self.action = ActionEngine()
+        self.validator = ProjectValidator()
         self.project: TTGProject | None = None
         self.project_path: Path | None = None
         self._build_ui()
@@ -56,9 +58,10 @@ class CreativeStudioWidget(QWidget):
         self.save_button = QPushButton("Save")
         self.add_text_button = QPushButton("Add Text")
         self.add_shape_button = QPushButton("Add Shape")
+        self.validate_button = QPushButton("Validate")
         self.render_button = QPushButton("Render Preview")
         self.export_frames_button = QPushButton("Export Frames")
-        for button in [self.new_button, self.intro_button, self.open_button, self.save_button, self.add_text_button, self.add_shape_button, self.render_button, self.export_frames_button]:
+        for button in [self.new_button, self.intro_button, self.open_button, self.save_button, self.add_text_button, self.add_shape_button, self.validate_button, self.render_button, self.export_frames_button]:
             toolbar.addWidget(button)
         toolbar.addStretch()
         root.addLayout(toolbar)
@@ -81,6 +84,7 @@ class CreativeStudioWidget(QWidget):
         self.save_button.clicked.connect(self.save_project)
         self.add_text_button.clicked.connect(self.add_text)
         self.add_shape_button.clicked.connect(self.add_shape)
+        self.validate_button.clicked.connect(self.validate_project)
         self.render_button.clicked.connect(self.render_preview)
         self.export_frames_button.clicked.connect(self.export_frames)
         self.layer_list.currentRowChanged.connect(self._selected_layer_changed)
@@ -143,8 +147,30 @@ class CreativeStudioWidget(QWidget):
         self.refresh_panels()
         self.render_preview()
 
+    def validate_project(self) -> bool:
+        if self.project is None:
+            self.status_label.setText("No project loaded.")
+            return False
+        messages = self.validator.validate(self.project, self.project_root)
+        warnings = [item for item in messages if item.level == "warning"]
+        errors = [item for item in messages if item.level == "error"]
+        self.properties.clear()
+        if not messages:
+            self.properties.addItem("Validation passed")
+            self.status_label.setText("Validation passed.")
+            return True
+        for item in messages:
+            self.properties.addItem(f"{item.level.upper()}: {item.message}")
+        self.status_label.setText(f"Validation: {len(errors)} errors, {len(warnings)} warnings.")
+        if errors:
+            QMessageBox.warning(self, "Project Validation", "Fix validation errors before export.")
+            return False
+        return True
+
     def render_preview(self) -> None:
         if self.project is None:
+            return
+        if not self.validate_project():
             return
         try:
             temp_dir = Path(tempfile.gettempdir()) / "ttg_creative_preview"
@@ -158,6 +184,8 @@ class CreativeStudioWidget(QWidget):
 
     def export_frames(self) -> None:
         if self.project is None:
+            return
+        if not self.validate_project():
             return
         target = QFileDialog.getExistingDirectory(self, "Export Frames")
         if not target:
