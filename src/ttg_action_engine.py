@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +47,30 @@ class ActionEngine:
         project.layers.append(layer)
         return layer
 
+    def duplicate_layer(self, project: TTGProject, layer_id: str) -> Layer:
+        source = self.get_layer(project, layer_id)
+        duplicate = deepcopy(source)
+        duplicate.id = new_id(source.type)
+        duplicate.name = f"{source.name} Copy"
+        duplicate.transform.x += 30
+        duplicate.transform.y += 30
+        index = project.layers.index(source)
+        project.layers.insert(index + 1, duplicate)
+        return duplicate
+
+    def remove_layer(self, project: TTGProject, layer_id: str) -> None:
+        layer = self.get_layer(project, layer_id)
+        project.layers.remove(layer)
+
+    def move_layer_order(self, project: TTGProject, layer_id: str, direction: int) -> None:
+        layer = self.get_layer(project, layer_id)
+        index = project.layers.index(layer)
+        target = max(0, min(len(project.layers) - 1, index + direction))
+        if target == index:
+            return
+        project.layers.pop(index)
+        project.layers.insert(target, layer)
+
     def add_keyframe(self, project: TTGProject, layer_id: str, prop: str, time: float, value: Any, easing: str = "ease_in_out") -> None:
         from ttg_project_schema import Keyframe
 
@@ -63,6 +88,15 @@ class ActionEngine:
         layer = self.get_layer(project, layer_id)
         layer.transform.x = x
         layer.transform.y = y
+
+    def offset_layer(self, project: TTGProject, layer_id: str, dx: float, dy: float) -> None:
+        layer = self.get_layer(project, layer_id)
+        layer.transform.x += dx
+        layer.transform.y += dy
+
+    def set_layer_opacity(self, project: TTGProject, layer_id: str, opacity: float) -> None:
+        layer = self.get_layer(project, layer_id)
+        layer.transform.opacity = max(0.0, min(1.0, opacity))
 
     def set_layer_property(self, project: TTGProject, layer_id: str, key: str, value: Any) -> None:
         self.get_layer(project, layer_id).properties[key] = value
