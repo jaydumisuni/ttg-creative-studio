@@ -1,0 +1,11 @@
+{
+  "id": "video-export",
+  "name": "Video Export Pack",
+  "version": "0.1.0",
+  "kind": "asset",
+  "required": false,
+  "description": "Optional FFmpeg binaries for MP4/video export when FFmpeg is not already installed.",
+  "files": [
+    {"name": "ffmpeg.exe", "url": "release-url-later", "path": "bin/ffmpeg.exe", "size_mb": 95, "sha256": "replace-later"}
+  ]
+}
