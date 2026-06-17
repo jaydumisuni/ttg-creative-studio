@@ -13,8 +13,8 @@ from PyQt6.QtWidgets import QFileDialog, QFrame, QHBoxLayout, QLabel, QListWidge
 from ttg_action_engine import ActionEngine
 from ttg_canvas_engine import CanvasRenderer, RenderContext
 from ttg_diagram_tools import add_basic_board_callout, add_basic_isp_diagram
+from ttg_export_service import ExportService
 from ttg_intro_builder import IntroBuilder
-from ttg_motion_exporter import MotionExporter
 from ttg_pack_status import PackStatusReader
 from ttg_project_schema import TTGProject, make_ttg_intro_project
 from ttg_render_plan import RenderPlanner
@@ -50,6 +50,7 @@ class CreativeStudioWidget(QWidget):
         self.validator = ProjectValidator()
         self.planner = RenderPlanner()
         self.pack_reader = PackStatusReader(self.project_root)
+        self.export_service = ExportService(self.project_root)
         self.project: TTGProject | None = None
         self.project_path: Path | None = None
         self._build_ui()
@@ -74,7 +75,8 @@ class CreativeStudioWidget(QWidget):
         self.render_button = QPushButton("Render Preview")
         self.export_png_button = QPushButton("Export PNG")
         self.export_frames_button = QPushButton("Export Frames")
-        for button in [self.new_button, self.intro_button, self.cinematic_intro_button, self.isp_button, self.board_button, self.open_button, self.save_button, self.add_text_button, self.add_shape_button, self.validate_button, self.plan_button, self.pack_button, self.render_button, self.export_png_button, self.export_frames_button]:
+        self.export_mp4_button = QPushButton("Export MP4")
+        for button in [self.new_button, self.intro_button, self.cinematic_intro_button, self.isp_button, self.board_button, self.open_button, self.save_button, self.add_text_button, self.add_shape_button, self.validate_button, self.plan_button, self.pack_button, self.render_button, self.export_png_button, self.export_frames_button, self.export_mp4_button]:
             toolbar.addWidget(button)
         toolbar.addStretch()
         root.addLayout(toolbar)
@@ -106,6 +108,7 @@ class CreativeStudioWidget(QWidget):
         self.render_button.clicked.connect(self.render_preview)
         self.export_png_button.clicked.connect(self.export_png)
         self.export_frames_button.clicked.connect(self.export_frames)
+        self.export_mp4_button.clicked.connect(self.export_mp4)
         self.layer_list.currentRowChanged.connect(self._selected_layer_changed)
 
     def _apply_theme(self) -> None:
@@ -243,7 +246,7 @@ class CreativeStudioWidget(QWidget):
             temp_dir = Path(tempfile.gettempdir()) / "ttg_creative_preview"
             temp_dir.mkdir(parents=True, exist_ok=True)
             preview_path = temp_dir / "preview.png"
-            CanvasRenderer(RenderContext(project_root=self.project_root)).render(self.project).save(preview_path)
+            self.export_service.export_png(self.project, preview_path)
             self.canvas.set_image(str(preview_path))
             self.status_label.setText("Preview rendered.")
         except Exception as exc:
@@ -260,7 +263,7 @@ class CreativeStudioWidget(QWidget):
         if not target.lower().endswith(".png"):
             target = f"{target}.png"
         try:
-            CanvasRenderer(RenderContext(project_root=self.project_root)).render(self.project).save(target)
+            self.export_service.export_png(self.project, target)
             self.status_label.setText(f"Exported {target}")
         except Exception as exc:
             QMessageBox.critical(self, "Export PNG", str(exc))
@@ -274,10 +277,27 @@ class CreativeStudioWidget(QWidget):
         if not target:
             return
         try:
-            frames = MotionExporter(RenderContext(project_root=self.project_root)).export_frames(self.project, target)
+            frames = self.export_service.export_frames(self.project, target)
             self.status_label.setText(f"Exported {len(frames)} frames.")
         except Exception as exc:
             QMessageBox.critical(self, "Export Frames", str(exc))
+
+    def export_mp4(self) -> None:
+        if self.project is None:
+            return
+        if not self.validate_project():
+            return
+        target, _ = QFileDialog.getSaveFileName(self, "Export MP4", "ttg-export.mp4", "MP4 Video (*.mp4)")
+        if not target:
+            return
+        if not target.lower().endswith(".mp4"):
+            target = f"{target}.mp4"
+        try:
+            work_dir = Path(tempfile.gettempdir()) / "ttg_creative_mp4_export"
+            output = self.export_service.export_mp4(self.project, target, work_dir)
+            self.status_label.setText(f"Exported {output}")
+        except Exception as exc:
+            QMessageBox.critical(self, "Export MP4", str(exc))
 
     def refresh_panels(self) -> None:
         self.layer_list.clear()
