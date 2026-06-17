@@ -15,6 +15,7 @@ from ttg_canvas_engine import CanvasRenderer, RenderContext
 from ttg_diagram_tools import add_basic_board_callout, add_basic_isp_diagram
 from ttg_intro_builder import IntroBuilder
 from ttg_motion_exporter import MotionExporter
+from ttg_pack_status import PackStatusReader
 from ttg_project_schema import TTGProject, make_ttg_intro_project
 from ttg_render_plan import RenderPlanner
 from ttg_validation import ProjectValidator
@@ -48,10 +49,12 @@ class CreativeStudioWidget(QWidget):
         self.action = ActionEngine()
         self.validator = ProjectValidator()
         self.planner = RenderPlanner()
+        self.pack_reader = PackStatusReader(self.project_root)
         self.project: TTGProject | None = None
         self.project_path: Path | None = None
         self._build_ui()
         self._apply_theme()
+        self.show_pack_status()
 
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
@@ -67,10 +70,11 @@ class CreativeStudioWidget(QWidget):
         self.add_shape_button = QPushButton("Add Shape")
         self.validate_button = QPushButton("Validate")
         self.plan_button = QPushButton("Render Plan")
+        self.pack_button = QPushButton("Packs")
         self.render_button = QPushButton("Render Preview")
         self.export_png_button = QPushButton("Export PNG")
         self.export_frames_button = QPushButton("Export Frames")
-        for button in [self.new_button, self.intro_button, self.cinematic_intro_button, self.isp_button, self.board_button, self.open_button, self.save_button, self.add_text_button, self.add_shape_button, self.validate_button, self.plan_button, self.render_button, self.export_png_button, self.export_frames_button]:
+        for button in [self.new_button, self.intro_button, self.cinematic_intro_button, self.isp_button, self.board_button, self.open_button, self.save_button, self.add_text_button, self.add_shape_button, self.validate_button, self.plan_button, self.pack_button, self.render_button, self.export_png_button, self.export_frames_button]:
             toolbar.addWidget(button)
         toolbar.addStretch()
         root.addLayout(toolbar)
@@ -98,6 +102,7 @@ class CreativeStudioWidget(QWidget):
         self.add_shape_button.clicked.connect(self.add_shape)
         self.validate_button.clicked.connect(self.validate_project)
         self.plan_button.clicked.connect(self.show_render_plan)
+        self.pack_button.clicked.connect(self.show_pack_status)
         self.render_button.clicked.connect(self.render_preview)
         self.export_png_button.clicked.connect(self.export_png)
         self.export_frames_button.clicked.connect(self.export_frames)
@@ -215,6 +220,19 @@ class CreativeStudioWidget(QWidget):
         for task in plan.tasks:
             self.properties.addItem(f"{task.id}: {task.backend} / {len(task.layer_ids)} layers")
         self.status_label.setText(f"Render plan has {len(plan.tasks)} tasks.")
+
+    def show_pack_status(self) -> None:
+        self.properties.clear()
+        statuses = self.pack_reader.list_statuses()
+        if not statuses:
+            self.properties.addItem("No pack manifests found.")
+            self.status_label.setText("No optional packs listed.")
+            return
+        for pack in statuses:
+            state = "installed" if pack.installed else "not installed"
+            optional = "required" if pack.required else "optional"
+            self.properties.addItem(f"{pack.name}: {state} / {optional} / {pack.kind}")
+        self.status_label.setText(f"Pack status loaded: {len(statuses)} packs.")
 
     def render_preview(self) -> None:
         if self.project is None:
