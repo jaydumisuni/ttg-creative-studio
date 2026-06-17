@@ -1,0 +1,12 @@
+{
+  "id": "motion-intro",
+  "name": "Motion Intro Pack",
+  "version": "0.1.0",
+  "kind": "motion",
+  "required": false,
+  "description": "Cinematic logo reveal templates, particles, light streaks, 3D text presets and sound hit markers.",
+  "files": [
+    {"name": "ttg-intro-presets.zip", "url": "release-url-later", "path": "templates/ttg-intro-presets.zip", "size_mb": 120, "sha256": "replace-later"},
+    {"name": "cinematic-sfx.zip", "url": "release-url-later", "path": "sounds/cinematic-sfx.zip", "size_mb": 80, "sha256": "replace-later"}
+  ]
+}
