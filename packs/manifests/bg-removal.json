@@ -1,0 +1,14 @@
+{
+  "id": "bg-removal",
+  "name": "Background Removal Pack",
+  "version": "0.1.0",
+  "kind": "model",
+  "required": false,
+  "description": "ONNX models used for local background removal. Download only when background removal is used.",
+  "files": [
+    {"name": "isnet-general-use.onnx", "url": "release-url-later", "path": "models/isnet-general-use.onnx", "size_mb": 180, "sha256": "replace-later"},
+    {"name": "u2net_human_seg.onnx", "url": "release-url-later", "path": "models/u2net_human_seg.onnx", "size_mb": 170, "sha256": "replace-later"},
+    {"name": "isnet-anime.onnx", "url": "release-url-later", "path": "models/isnet-anime.onnx", "size_mb": 180, "sha256": "replace-later"},
+    {"name": "u2netp.onnx", "url": "release-url-later", "path": "models/u2netp.onnx", "size_mb": 5, "sha256": "replace-later"}
+  ]
+}
