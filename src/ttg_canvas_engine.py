@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""
-2D canvas foundation for TTG Creative Studio.
-
-This module is intentionally simple and non-AI. It gives the app a real
-editable layer canvas that can later be connected to the PyQt UI, templates,
-and Hunter actions.
-"""
+"""2D canvas renderer for TTG Creative Studio."""
 
 from __future__ import annotations
 
@@ -16,6 +10,7 @@ from typing import Iterable
 from PIL import Image, ImageDraw, ImageFilter
 
 from ttg_project_schema import Layer, TTGProject
+from ttg_text_renderer import render_text_layer
 
 
 @dataclass
@@ -33,12 +28,6 @@ class RenderContext:
 
 
 class CanvasRenderer:
-    """Basic 2D renderer for still preview/export.
-
-    This is not the final high-end renderer. It is the first reliable manual
-    engine that can draw project layers in order.
-    """
-
     def __init__(self, context: RenderContext):
         self.context = context
 
@@ -71,8 +60,8 @@ class CanvasRenderer:
             if effect_type == "blur":
                 out = out.filter(ImageFilter.GaussianBlur(float(effect.get("amount", 2))))
             elif effect_type == "glow":
-                # Placeholder; proper glow will be upgraded in motion renderer.
-                out = out.filter(ImageFilter.GaussianBlur(float(effect.get("amount", 1))))
+                glow = out.filter(ImageFilter.GaussianBlur(float(effect.get("amount", 6))))
+                out = Image.alpha_composite(glow, out)
         return out
 
     def _draw_image_layer(self, canvas: Image.Image, layer: Layer) -> None:
@@ -95,11 +84,7 @@ class CanvasRenderer:
 
     def _draw_text_layer(self, canvas: Image.Image, layer: Layer) -> None:
         text = str(layer.properties.get("text", layer.name))
-        color = layer.properties.get("color", "#F7FAFF")
-        size = int(layer.properties.get("size", 72))
-        image = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(image)
-        draw.text((layer.transform.x, layer.transform.y), text, fill=color)
+        image = render_text_layer(canvas.size, text, layer.transform.x, layer.transform.y, layer.properties)
         if layer.transform.opacity < 1:
             image.putalpha(image.getchannel("A").point(lambda p: int(p * layer.transform.opacity)))
         canvas.alpha_composite(image)
@@ -115,13 +100,17 @@ class CanvasRenderer:
         if shape == "ellipse":
             draw.ellipse(box, fill=fill, outline=outline)
         else:
-            draw.rectangle(box, fill=fill, outline=outline)
+            radius = int(layer.properties.get("radius", 0))
+            if radius:
+                draw.rounded_rectangle(box, radius=radius, fill=fill, outline=outline)
+            else:
+                draw.rectangle(box, fill=fill, outline=outline)
 
     def _draw_particle_placeholder(self, canvas: Image.Image, layer: Layer) -> None:
         draw = ImageDraw.Draw(canvas)
         colors = layer.properties.get("colors", ["#00E5FF", "#BC13FE"])
         density = int(layer.properties.get("density", 30))
-        for i in range(min(density, 120)):
+        for i in range(min(density, 160)):
             x = (i * 97) % canvas.width
             y = (i * 53) % canvas.height
             color = colors[i % len(colors)]
