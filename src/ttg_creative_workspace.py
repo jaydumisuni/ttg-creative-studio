@@ -1,17 +1,33 @@
 #!/usr/bin/env python3
-"""TTG Creative Studio V2 workspace.
+"""TTG Creative Studio workspace.
 
-This is the release-track workspace: interactive canvas, editable properties,
-timeline panel, pack status/download path, FFmpeg status and background tool.
+Cleaner release-track workspace: grouped toolbar menus, calmer default size,
+interactive canvas, editable properties, timeline panel, pack status/download
+path, FFmpeg status and background tool.
 """
 
 from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+from typing import Callable
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QListWidget, QMessageBox, QPushButton, QSplitter, QTabWidget, QVBoxLayout, QWidget
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import (
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QSplitter,
+    QTabWidget,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ttg_action_engine import ActionEngine
 from ttg_background_tool import BackgroundRemovalTool
@@ -56,24 +72,67 @@ class CreativeWorkspace(QWidget):
         self._apply_theme()
         self.show_pack_status()
 
+    def _menu_button(self, title: str, actions: list[tuple[str, Callable[[], None]]]) -> QToolButton:
+        button = QToolButton()
+        button.setText(title)
+        button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        menu = QMenu(button)
+        for label, callback in actions:
+            action = QAction(label, self)
+            action.triggered.connect(callback)
+            menu.addAction(action)
+        button.setMenu(menu)
+        return button
+
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
+        root.setContentsMargins(10, 8, 10, 8)
+        root.setSpacing(8)
+
         toolbar = QHBoxLayout()
-        buttons = [
-            ("new_button", "New"), ("open_button", "Open"), ("save_button", "Save"),
-            ("intro_button", "Intro"), ("cinematic_button", "Cinematic"),
-            ("undo_button", "Undo"), ("redo_button", "Redo"),
-            ("text_button", "Text"), ("shape_button", "Shape"), ("image_button", "Image"),
-            ("duplicate_button", "Duplicate"), ("delete_button", "Delete"),
-            ("fly_button", "Fly"), ("fade_button", "Fade"), ("pulse_button", "Pulse"), ("clear_anim_button", "Clear Anim"),
-            ("isp_button", "ISP"), ("board_button", "Board"), ("bg_button", "BG Remove"),
-            ("pack_button", "Packs"), ("install_pack_button", "Install Pack"), ("ffmpeg_button", "FFmpeg"),
-            ("preview_button", "Preview"), ("png_button", "PNG"), ("frames_button", "Frames"), ("mp4_button", "MP4"),
-        ]
-        for attr, label in buttons:
-            button = QPushButton(label)
-            setattr(self, attr, button)
-            toolbar.addWidget(button)
+        toolbar.setSpacing(6)
+        toolbar.addWidget(self._menu_button("File", [
+            ("New Project", self.new_project),
+            ("Open Project", self.open_project),
+            ("Save Project", self.save_project),
+        ]))
+        toolbar.addWidget(self._menu_button("Templates", [
+            ("Basic Intro", lambda: self.reset_project(make_ttg_intro_project())),
+            ("Cinematic TTG Intro", lambda: self.reset_project(IntroBuilder().build_ttg_intro())),
+        ]))
+        toolbar.addWidget(self._menu_button("Add", [
+            ("Text", self.add_text),
+            ("Shape", self.add_shape),
+            ("Image", self.add_image),
+            ("ISP Diagram", self.add_isp),
+            ("Board Callout", self.add_board),
+        ]))
+        toolbar.addWidget(self._menu_button("Edit", [
+            ("Undo", self.undo),
+            ("Redo", self.redo),
+            ("Duplicate Layer", self.duplicate_layer),
+            ("Delete Layer", self.delete_layer),
+        ]))
+        toolbar.addWidget(self._menu_button("Animate", [
+            ("Fly In", lambda: self.apply_animation("fly")),
+            ("Fade In", lambda: self.apply_animation("fade")),
+            ("Pulse", lambda: self.apply_animation("pulse")),
+            ("Clear Animation", lambda: self.apply_animation("clear")),
+        ]))
+        toolbar.addWidget(self._menu_button("Tools", [
+            ("Remove Background", self.remove_background_into_project),
+            ("Show Packs", self.show_pack_status),
+            ("Install Selected Pack", self.install_selected_pack),
+            ("FFmpeg Status", self.show_ffmpeg_status),
+        ]))
+        self.preview_button = QPushButton("Preview")
+        self.preview_button.clicked.connect(self.refresh_canvas)
+        toolbar.addWidget(self.preview_button)
+        toolbar.addWidget(self._menu_button("Export", [
+            ("Export PNG", self.export_png),
+            ("Export Frames", self.export_frames),
+            ("Export MP4", self.export_mp4),
+        ]))
         toolbar.addStretch()
         root.addLayout(toolbar)
 
@@ -96,38 +155,12 @@ class CreativeWorkspace(QWidget):
         right_tabs.addTab(self.properties, "Properties")
         right_tabs.addTab(self.info, "Info")
         main.addWidget(right_tabs)
-        main.setSizes([290, 820, 340])
+        main.setSizes([260, 720, 300])
         root.addWidget(main, 1)
 
         self.status = QLabel("TTG Creative Studio ready.")
         root.addWidget(self.status)
 
-        self.new_button.clicked.connect(self.new_project)
-        self.open_button.clicked.connect(self.open_project)
-        self.save_button.clicked.connect(self.save_project)
-        self.intro_button.clicked.connect(lambda: self.reset_project(make_ttg_intro_project()))
-        self.cinematic_button.clicked.connect(lambda: self.reset_project(IntroBuilder().build_ttg_intro()))
-        self.undo_button.clicked.connect(self.undo)
-        self.redo_button.clicked.connect(self.redo)
-        self.text_button.clicked.connect(self.add_text)
-        self.shape_button.clicked.connect(self.add_shape)
-        self.image_button.clicked.connect(self.add_image)
-        self.duplicate_button.clicked.connect(self.duplicate_layer)
-        self.delete_button.clicked.connect(self.delete_layer)
-        self.fly_button.clicked.connect(lambda: self.apply_animation("fly"))
-        self.fade_button.clicked.connect(lambda: self.apply_animation("fade"))
-        self.pulse_button.clicked.connect(lambda: self.apply_animation("pulse"))
-        self.clear_anim_button.clicked.connect(lambda: self.apply_animation("clear"))
-        self.isp_button.clicked.connect(self.add_isp)
-        self.board_button.clicked.connect(self.add_board)
-        self.bg_button.clicked.connect(self.remove_background_into_project)
-        self.pack_button.clicked.connect(self.show_pack_status)
-        self.install_pack_button.clicked.connect(self.install_selected_pack)
-        self.ffmpeg_button.clicked.connect(self.show_ffmpeg_status)
-        self.preview_button.clicked.connect(self.refresh_canvas)
-        self.png_button.clicked.connect(self.export_png)
-        self.frames_button.clicked.connect(self.export_frames)
-        self.mp4_button.clicked.connect(self.export_mp4)
         self.layer_list.currentRowChanged.connect(self.select_layer_by_row)
         self.canvas.layerSelected.connect(self.select_layer_by_id)
         self.canvas.layerMoved.connect(self.canvas_moved_layer)
@@ -135,7 +168,21 @@ class CreativeWorkspace(QWidget):
         self.timeline.timeChanged.connect(lambda t: self.status.setText(f"Timeline time: {t:.2f}s"))
 
     def _apply_theme(self) -> None:
-        self.setStyleSheet("QWidget{background:#050814;color:#eaf3ff;} QPushButton{background:#16224d;color:#f1f7ff;border:1px solid #3f72ff;border-radius:7px;padding:6px;} QPushButton:hover{background:#25356d;} QListWidget,QTabWidget::pane{background:#0b1220;border:1px solid #18305f;} QLabel{color:#9fd8ff;} QLineEdit,QSpinBox,QDoubleSpinBox{background:#0b1220;color:#ffffff;border:1px solid #2c4f99;padding:4px;}")
+        self.setStyleSheet(
+            """
+            QWidget{background:#050814;color:#eaf3ff;font-family:Segoe UI;}
+            QPushButton,QToolButton{background:#16224d;color:#f1f7ff;border:1px solid #3f72ff;border-radius:7px;padding:6px 10px;}
+            QPushButton:hover,QToolButton:hover{background:#25356d;}
+            QMenu{background:#0b1220;color:#eaf3ff;border:1px solid #2c4f99;padding:4px;}
+            QMenu::item{padding:7px 22px;}
+            QMenu::item:selected{background:#25356d;}
+            QListWidget,QTabWidget::pane{background:#0b1220;border:1px solid #18305f;}
+            QTabBar::tab{background:#09111f;color:#dcecff;padding:6px 12px;border:1px solid #18305f;}
+            QTabBar::tab:selected{background:#16224d;color:#ffffff;}
+            QLabel{color:#9fd8ff;}
+            QLineEdit,QSpinBox,QDoubleSpinBox{background:#0b1220;color:#ffffff;border:1px solid #2c4f99;padding:4px;}
+            """
+        )
 
     def remember(self, label: str) -> None:
         if self.project is not None:
@@ -144,7 +191,7 @@ class CreativeWorkspace(QWidget):
     def reset_project(self, project: TTGProject) -> None:
         self.project = project
         self.project_path = None
-        self.selected_layer_id = None
+        self.selected_layer_id = project.layers[0].id if project.layers else None
         self.history.clear()
         self.refresh_all()
 
@@ -157,13 +204,19 @@ class CreativeWorkspace(QWidget):
         return None
 
     def refresh_all(self) -> None:
+        self.layer_list.blockSignals(True)
         self.layer_list.clear()
+        selected_row = -1
         if self.project is not None:
-            for layer in self.project.layers:
+            for index, layer in enumerate(self.project.layers):
                 label = f"{layer.type}: {layer.name}"
                 if layer.keyframes:
                     label += " • animated"
                 self.layer_list.addItem(label)
+                if layer.id == self.selected_layer_id:
+                    selected_row = index
+        self.layer_list.setCurrentRow(selected_row)
+        self.layer_list.blockSignals(False)
         self.timeline.set_project(self.project)
         self.canvas.set_project(self.project, self.selected_layer_id)
         self.properties.set_layer(self.selected_layer())
@@ -195,8 +248,10 @@ class CreativeWorkspace(QWidget):
         if not path:
             return
         try:
-            self.project = TTGProject.load(path)
+            project = TTGProject.load(path)
+            self.project = project
             self.project_path = Path(path)
+            self.selected_layer_id = project.layers[0].id if project.layers else None
             self.history.clear()
             self.refresh_all()
         except Exception as exc:
@@ -218,11 +273,15 @@ class CreativeWorkspace(QWidget):
     def undo(self) -> None:
         if self.project is not None and self.history.can_undo():
             self.project = self.history.undo(self.project)
+            if self.project.layers and (not self.selected_layer_id or not self.selected_layer()):
+                self.selected_layer_id = self.project.layers[0].id
             self.refresh_all()
 
     def redo(self) -> None:
         if self.project is not None and self.history.can_redo():
             self.project = self.history.redo(self.project)
+            if self.project.layers and (not self.selected_layer_id or not self.selected_layer()):
+                self.selected_layer_id = self.project.layers[0].id
             self.refresh_all()
 
     def add_text(self) -> None:
@@ -231,7 +290,7 @@ class CreativeWorkspace(QWidget):
         if self.project is not None:
             self.remember("add text")
             layer = self.action.add_text(self.project, "THETECHGUY", 120, 120)
-            layer.properties.update({"shadow": True, "glow": True, "stroke_width": 1})
+            layer.properties.update({"shadow": True, "glow": True, "stroke_width": 1, "size": 72})
             self.select_layer_by_id(layer.id)
 
     def add_shape(self) -> None:
@@ -263,7 +322,7 @@ class CreativeWorkspace(QWidget):
         if self.project and self.selected_layer_id:
             self.remember("delete layer")
             self.action.remove_layer(self.project, self.selected_layer_id)
-            self.selected_layer_id = None
+            self.selected_layer_id = self.project.layers[0].id if self.project.layers else None
             self.refresh_all()
 
     def add_isp(self) -> None:
@@ -271,7 +330,10 @@ class CreativeWorkspace(QWidget):
             self.new_project()
         if self.project:
             self.remember("add ISP diagram")
+            before = len(self.project.layers)
             add_basic_isp_diagram(self.project)
+            if len(self.project.layers) > before:
+                self.selected_layer_id = self.project.layers[before].id
             self.refresh_all()
 
     def add_board(self) -> None:
@@ -279,7 +341,10 @@ class CreativeWorkspace(QWidget):
             self.new_project()
         if self.project:
             self.remember("add board callout")
+            before = len(self.project.layers)
             add_basic_board_callout(self.project)
+            if len(self.project.layers) > before:
+                self.selected_layer_id = self.project.layers[before].id
             self.refresh_all()
 
     def apply_animation(self, preset: str) -> None:
@@ -299,15 +364,12 @@ class CreativeWorkspace(QWidget):
     def select_layer_by_row(self, row: int) -> None:
         if self.project is None or row < 0 or row >= len(self.project.layers):
             return
-        self.select_layer_by_id(self.project.layers[row].id)
+        self.selected_layer_id = self.project.layers[row].id
+        self.canvas.set_project(self.project, self.selected_layer_id)
+        self.properties.set_layer(self.selected_layer())
 
     def select_layer_by_id(self, layer_id: str) -> None:
         self.selected_layer_id = layer_id
-        if self.project:
-            for index, layer in enumerate(self.project.layers):
-                if layer.id == layer_id:
-                    self.layer_list.setCurrentRow(index)
-                    break
         self.refresh_all()
 
     def canvas_moved_layer(self, layer_id: str, x: float, y: float) -> None:
