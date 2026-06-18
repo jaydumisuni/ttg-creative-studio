@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify still first, then render repo-native motion proof frames."""
+"""Verify still first, then render and score repo-native motion proof frames."""
 
 from __future__ import annotations
 
@@ -33,7 +33,18 @@ def main() -> int:
     if not all(path.exists() and path.stat().st_size > 0 for path in frames):
         print("ERROR: one or more rendered frames are missing/empty")
         return 1
-    print(f"Motion proof frames rendered: {len(frames)}")
+
+    from build_motion_contact_sheet import main as build_sheet
+    from score_reference_motion import main as score_motion
+
+    sheet_code = build_sheet()
+    if sheet_code != 0:
+        return sheet_code
+    motion_code = score_motion()
+    if motion_code != 0:
+        return motion_code
+
+    print(f"Motion proof frames rendered and scored: {len(frames)}")
     return 0
 
 
