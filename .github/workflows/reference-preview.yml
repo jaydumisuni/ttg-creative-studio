@@ -43,6 +43,7 @@ jobs:
         with:
           name: ttg-reference-animated-preview
           path: |
+            outputs\index.html
             outputs\FAILURE_REPORT.md
             outputs\VISUAL_PROOF_REVIEW.md
             outputs\ttg_reference_still.jpg
