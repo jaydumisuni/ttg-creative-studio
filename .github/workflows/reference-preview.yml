@@ -29,12 +29,17 @@ jobs:
       - name: Generate visual proof package
         run: python scripts\generate_visual_proof_package.py
 
+      - name: Write failure report if needed
+        if: failure()
+        run: python scripts\write_failure_report.py
+
       - name: Upload animated preview package
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ttg-reference-animated-preview
           path: |
+            outputs\FAILURE_REPORT.md
             outputs\VISUAL_PROOF_REVIEW.md
             outputs\ttg_reference_still.jpg
             outputs\ttg_reference_still_score.json
