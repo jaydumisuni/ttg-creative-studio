@@ -35,6 +35,7 @@ def main() -> int:
     from score_reference_motion import main as score_motion
     from build_motion_gif_preview import main as build_gif
     from build_proof_manifest import main as build_manifest
+    from build_review_summary import main as build_summary
 
     if build_sheet() != 0:
         return 1
@@ -42,6 +43,7 @@ def main() -> int:
     if build_gif() != 0:
         return 1
     build_manifest()
+    build_summary()
     print("Visual proof package generated for review.")
     return 0
 
