@@ -37,18 +37,14 @@ def main() -> int:
     from build_motion_contact_sheet import main as build_sheet
     from score_reference_motion import main as score_motion
     from build_motion_gif_preview import main as build_gif
+    from build_proof_manifest import main as build_manifest
 
-    sheet_code = build_sheet()
-    if sheet_code != 0:
-        return sheet_code
-    motion_code = score_motion()
-    if motion_code != 0:
-        return motion_code
-    gif_code = build_gif()
-    if gif_code != 0:
-        return gif_code
+    for step in (build_sheet, score_motion, build_gif, build_manifest):
+        code = step()
+        if code != 0:
+            return code
 
-    print(f"Motion proof frames rendered, scored, contact-sheeted and GIF-previewed: {len(frames)}")
+    print(f"Motion proof package completed: {len(frames)} frames plus manifest")
     return 0
 
 
