@@ -16,18 +16,13 @@ def main() -> int:
     if len(frames) < 12:
         print(f"ERROR: expected at least 12 frames, got {len(frames)}")
         return 1
-    # Use every second frame to keep artifact small while still showing motion.
     selected = frames[::2]
-    images = [Image.open(path).convert("P", palette=Image.Palette.ADAPTIVE).resize((640, 360), Image.Resampling.LANCZOS) for path in selected]
+    images = []
+    for path in selected:
+        img = Image.open(path).convert("RGB").resize((640, 360), Image.Resampling.LANCZOS)
+        images.append(img.convert("P", palette=Image.ADAPTIVE))
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    images[0].save(
-        OUT,
-        save_all=True,
-        append_images=images[1:],
-        duration=70,
-        loop=0,
-        optimize=True,
-    )
+    images[0].save(OUT, save_all=True, append_images=images[1:], duration=70, loop=0, optimize=True)
     print(f"Saved GIF preview: {OUT}")
     return 0
 
