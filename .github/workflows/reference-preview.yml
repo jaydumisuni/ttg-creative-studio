@@ -33,6 +33,10 @@ jobs:
         if: failure()
         run: python scripts\write_failure_report.py
 
+      - name: Write workflow summary
+        if: always()
+        run: python scripts\write_workflow_summary.py
+
       - name: Upload animated preview package
         uses: actions/upload-artifact@v4
         if: always()
