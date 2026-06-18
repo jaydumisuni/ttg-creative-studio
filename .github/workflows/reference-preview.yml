@@ -35,6 +35,7 @@ jobs:
         with:
           name: ttg-reference-animated-preview
           path: |
+            outputs\VISUAL_PROOF_REVIEW.md
             outputs\ttg_reference_still.jpg
             outputs\ttg_reference_still_score.json
             outputs\reference_motion_preview.gif
