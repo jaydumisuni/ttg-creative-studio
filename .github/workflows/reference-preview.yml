@@ -1,0 +1,40 @@
+name: Reference Animated Preview
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'src/**'
+      - 'scripts/**'
+      - 'resources/**'
+      - '.github/workflows/reference-preview.yml'
+
+jobs:
+  reference-preview:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install minimal render dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install Pillow numpy
+
+      - name: Render motion preview package
+        run: python scripts\verify_reference_motion.py
+
+      - name: Upload animated preview package
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ttg-reference-animated-preview
+          path: |
+            outputs\reference_motion_preview.gif
+            outputs\reference_motion_contact_sheet.jpg
+            outputs\reference_motion_score.json
