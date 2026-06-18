@@ -1,0 +1,17 @@
+{
+  "id": "video-export-pack",
+  "name": "Video Export Pack",
+  "kind": "runtime-tooling",
+  "status": "placeholder",
+  "required_for": [
+    "mp4_export",
+    "final_video_proof"
+  ],
+  "contains": [
+    "ffmpeg",
+    "ffprobe"
+  ],
+  "install_mode": "optional_download",
+  "core_installer_includes": false,
+  "notes": "Keep the main Creative Studio installer small. Download/install this pack only when MP4/video export is requested. Real download URLs and checksums must be filled before release."
+}
