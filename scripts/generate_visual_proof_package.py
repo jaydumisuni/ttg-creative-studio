@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""Generate visual proof artifacts without treating quality scores as CI crashes."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from ttg_reference_still_renderer import render_reference_still
+from ttg_reference_motion_renderer import render_reference_motion_frames
+from score_reference_still import score_image
+
+
+def main() -> int:
+    still = ROOT / "outputs" / "ttg_reference_still.jpg"
+    render_reference_still(ROOT, still)
+    still_score = score_image(still)
+    print("Still score passed:", still_score.get("passed"))
+
+    frames_dir = ROOT / "outputs" / "reference_motion_frames"
+    frames = render_reference_motion_frames(ROOT, frames_dir, frames=48)
+    if len(frames) != 48:
+        print(f"ERROR: expected 48 frames, got {len(frames)}")
+        return 1
+    if not all(path.exists() and path.stat().st_size > 0 for path in frames):
+        print("ERROR: one or more rendered frames are missing or empty")
+        return 1
+
+    from build_motion_contact_sheet import main as build_sheet
+    from score_reference_motion import main as score_motion
+    from build_motion_gif_preview import main as build_gif
+    from build_proof_manifest import main as build_manifest
+
+    if build_sheet() != 0:
+        return 1
+    score_motion()
+    if build_gif() != 0:
+        return 1
+    build_manifest()
+    print("Visual proof package generated for review.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
