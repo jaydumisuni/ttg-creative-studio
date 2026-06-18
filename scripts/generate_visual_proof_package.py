@@ -23,9 +23,9 @@ def main() -> int:
     print("Still score passed:", still_score.get("passed"))
 
     frames_dir = ROOT / "outputs" / "reference_motion_frames"
-    frames = render_reference_motion_frames(ROOT, frames_dir, frames=48)
-    if len(frames) != 48:
-        print(f"ERROR: expected 48 frames, got {len(frames)}")
+    frames = render_reference_motion_frames(ROOT, frames_dir, frames=72)
+    if len(frames) != 72:
+        print(f"ERROR: expected 72 frames, got {len(frames)}")
         return 1
     if not all(path.exists() and path.stat().st_size > 0 for path in frames):
         print("ERROR: one or more rendered frames are missing or empty")
