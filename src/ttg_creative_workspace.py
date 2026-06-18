@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""TTG Creative Studio workspace.
-
-Cleaner release-track workspace: grouped toolbar menus, calmer default size,
-interactive canvas, editable properties, timeline panel, pack status/download
-path, FFmpeg status and background tool.
-"""
+"""TTG Creative Studio workspace with Advanced Mode."""
 
 from __future__ import annotations
 
@@ -30,8 +25,11 @@ from PyQt6.QtWidgets import (
 )
 
 from ttg_action_engine import ActionEngine
+from ttg_advanced_panel import AdvancedModePanel
+from ttg_asset_browser import AssetTemplateBrowser
 from ttg_background_tool import BackgroundRemovalTool
 from ttg_diagram_tools import add_basic_board_callout, add_basic_isp_diagram
+from ttg_effect_actions import EffectActions
 from ttg_export_service import ExportService
 from ttg_ffmpeg_manager import FFmpegManager
 from ttg_history import ProjectHistory
@@ -39,6 +37,7 @@ from ttg_interactive_canvas import InteractiveCanvas
 from ttg_intro_builder import IntroBuilder
 from ttg_pack_downloader import PackDownloader
 from ttg_pack_status import PackStatusReader
+from ttg_playback_panel import PlaybackPanel
 from ttg_project_schema import TTGProject, make_ttg_intro_project
 from ttg_properties_panel import PropertiesPanel
 from ttg_property_actions import PropertyActions
@@ -56,6 +55,7 @@ class CreativeWorkspace(QWidget):
         self.project_root = Path(project_root or Path.cwd())
         self.action = ActionEngine()
         self.props = PropertyActions()
+        self.effects = EffectActions()
         self.timeline_actions = TimelineActions()
         self.history = ProjectHistory()
         self.validator = ProjectValidator()
@@ -68,6 +68,7 @@ class CreativeWorkspace(QWidget):
         self.project: TTGProject | None = None
         self.project_path: Path | None = None
         self.selected_layer_id: str | None = None
+        self.still_preview_approved = False
         self._build_ui()
         self._apply_theme()
         self.show_pack_status()
@@ -98,6 +99,7 @@ class CreativeWorkspace(QWidget):
         ]))
         toolbar.addWidget(self._menu_button("Templates", [
             ("Basic Intro", lambda: self.reset_project(make_ttg_intro_project())),
+            ("THETECHGUY Reference Intro", self.load_reference_intro),
             ("Cinematic TTG Intro", lambda: self.reset_project(IntroBuilder().build_ttg_intro())),
         ]))
         toolbar.addWidget(self._menu_button("Add", [
@@ -113,11 +115,20 @@ class CreativeWorkspace(QWidget):
             ("Duplicate Layer", self.duplicate_layer),
             ("Delete Layer", self.delete_layer),
         ]))
+        toolbar.addWidget(self._menu_button("Effects", [
+            ("Glow", lambda: self.apply_effect("glow")),
+            ("Stroke + Shadow", lambda: self.apply_effect("stroke_shadow")),
+            ("Bevel + Extrude", lambda: self.apply_effect("bevel_extrude")),
+            ("Reflection", lambda: self.apply_effect("reflection")),
+            ("Gradient Chrome", lambda: self.apply_effect("gradient")),
+            ("Premium Text Stack", lambda: self.apply_effect("premium_text")),
+        ]))
         toolbar.addWidget(self._menu_button("Animate", [
             ("Fly In", lambda: self.apply_animation("fly")),
             ("Fade In", lambda: self.apply_animation("fade")),
             ("Pulse", lambda: self.apply_animation("pulse")),
             ("Clear Animation", lambda: self.apply_animation("clear")),
+            ("Playback Preview", self.try_playback_preview),
         ]))
         toolbar.addWidget(self._menu_button("Tools", [
             ("Remove Background", self.remove_background_into_project),
@@ -125,8 +136,8 @@ class CreativeWorkspace(QWidget):
             ("Install Selected Pack", self.install_selected_pack),
             ("FFmpeg Status", self.show_ffmpeg_status),
         ]))
-        self.preview_button = QPushButton("Preview")
-        self.preview_button.clicked.connect(self.refresh_canvas)
+        self.preview_button = QPushButton("Preview Still")
+        self.preview_button.clicked.connect(self.preview_still)
         toolbar.addWidget(self.preview_button)
         toolbar.addWidget(self._menu_button("Export", [
             ("Export PNG", self.export_png),
@@ -141,21 +152,29 @@ class CreativeWorkspace(QWidget):
         self.layer_list = QListWidget()
         self.timeline = TimelinePanel()
         self.pack_list = QListWidget()
+        self.asset_browser = AssetTemplateBrowser(self.project_root)
         left_tabs.addTab(self.layer_list, "Layers")
         left_tabs.addTab(self.timeline, "Timeline")
         left_tabs.addTab(self.pack_list, "Packs")
+        left_tabs.addTab(self.asset_browser, "Assets")
         main.addWidget(left_tabs)
 
+        center_tabs = QTabWidget()
         self.canvas = InteractiveCanvas(self.project_root)
-        main.addWidget(self.canvas)
+        self.playback = PlaybackPanel(self.project_root)
+        center_tabs.addTab(self.canvas, "Canvas")
+        center_tabs.addTab(self.playback, "Playback")
+        main.addWidget(center_tabs)
 
         right_tabs = QTabWidget()
         self.properties = PropertiesPanel()
+        self.advanced = AdvancedModePanel()
         self.info = QListWidget()
         right_tabs.addTab(self.properties, "Properties")
+        right_tabs.addTab(self.advanced, "Advanced")
         right_tabs.addTab(self.info, "Info")
         main.addWidget(right_tabs)
-        main.setSizes([260, 720, 300])
+        main.setSizes([270, 760, 330])
         root.addWidget(main, 1)
 
         self.status = QLabel("TTG Creative Studio ready.")
@@ -166,6 +185,11 @@ class CreativeWorkspace(QWidget):
         self.canvas.layerMoved.connect(self.canvas_moved_layer)
         self.properties.propertyChanged.connect(self.apply_property_change)
         self.timeline.timeChanged.connect(lambda t: self.status.setText(f"Timeline time: {t:.2f}s"))
+        self.advanced.effectRequested.connect(self.apply_effect)
+        self.advanced.templateRequested.connect(self.load_template_by_id)
+        self.advanced.previewRequested.connect(self.preview_still)
+        self.asset_browser.assetSelected.connect(self.add_asset_from_browser)
+        self.asset_browser.templateSelected.connect(self.load_template_by_id)
 
     def _apply_theme(self) -> None:
         self.setStyleSheet(
@@ -187,11 +211,13 @@ class CreativeWorkspace(QWidget):
     def remember(self, label: str) -> None:
         if self.project is not None:
             self.history.remember(label, self.project)
+            self.still_preview_approved = False
 
     def reset_project(self, project: TTGProject) -> None:
         self.project = project
         self.project_path = None
         self.selected_layer_id = project.layers[0].id if project.layers else None
+        self.still_preview_approved = False
         self.history.clear()
         self.refresh_all()
 
@@ -218,6 +244,7 @@ class CreativeWorkspace(QWidget):
         self.layer_list.setCurrentRow(selected_row)
         self.layer_list.blockSignals(False)
         self.timeline.set_project(self.project)
+        self.playback.set_project(self.project if self.still_preview_approved else None)
         self.canvas.set_project(self.project, self.selected_layer_id)
         self.properties.set_layer(self.selected_layer())
         self.projectChanged.emit(self.project)
@@ -225,6 +252,19 @@ class CreativeWorkspace(QWidget):
     def refresh_canvas(self) -> None:
         self.validate_project(show_dialog=False)
         self.canvas.set_project(self.project, self.selected_layer_id)
+
+    def preview_still(self) -> None:
+        self.refresh_canvas()
+        if self.project is not None:
+            self.still_preview_approved = True
+            self.playback.set_project(self.project)
+            self.status.setText("Still preview refreshed. Playback preview is now enabled for this version.")
+
+    def try_playback_preview(self) -> None:
+        if not self.still_preview_approved:
+            QMessageBox.information(self, "Playback Preview", "Preview the still frame first. Playback is enabled after the still looks right.")
+            return
+        self.playback.start()
 
     def validate_project(self, show_dialog: bool = True) -> bool:
         if self.project is None:
@@ -243,6 +283,15 @@ class CreativeWorkspace(QWidget):
     def new_project(self) -> None:
         self.reset_project(self.action.new_project("Untitled TTG Project", "image"))
 
+    def load_reference_intro(self) -> None:
+        self.reset_project(IntroBuilder().build_reference_intro())
+
+    def load_template_by_id(self, template_id: str) -> None:
+        if template_id in {"template:ttg_cinematic", "ttg_reference_intro", "template:ttg_reference_intro"}:
+            self.load_reference_intro()
+        elif template_id == "template:basic_intro":
+            self.reset_project(make_ttg_intro_project())
+
     def open_project(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Open Project", "", "TTG Studio (*.json *.ttgstudio)")
         if not path:
@@ -252,6 +301,7 @@ class CreativeWorkspace(QWidget):
             self.project = project
             self.project_path = Path(path)
             self.selected_layer_id = project.layers[0].id if project.layers else None
+            self.still_preview_approved = False
             self.history.clear()
             self.refresh_all()
         except Exception as exc:
@@ -273,6 +323,7 @@ class CreativeWorkspace(QWidget):
     def undo(self) -> None:
         if self.project is not None and self.history.can_undo():
             self.project = self.history.undo(self.project)
+            self.still_preview_approved = False
             if self.project.layers and (not self.selected_layer_id or not self.selected_layer()):
                 self.selected_layer_id = self.project.layers[0].id
             self.refresh_all()
@@ -280,6 +331,7 @@ class CreativeWorkspace(QWidget):
     def redo(self) -> None:
         if self.project is not None and self.history.can_redo():
             self.project = self.history.redo(self.project)
+            self.still_preview_approved = False
             if self.project.layers and (not self.selected_layer_id or not self.selected_layer()):
                 self.selected_layer_id = self.project.layers[0].id
             self.refresh_all()
@@ -311,6 +363,15 @@ class CreativeWorkspace(QWidget):
             self.remember("add image")
             layer = self.action.add_image(self.project, path, 80, 80)
             self.select_layer_by_id(layer.id)
+
+    def add_asset_from_browser(self, path: str) -> None:
+        if self.project is None:
+            self.new_project()
+        if self.project is None:
+            return
+        self.remember("add browser asset")
+        layer = self.action.add_image(self.project, path, 80, 80)
+        self.select_layer_by_id(layer.id)
 
     def duplicate_layer(self) -> None:
         if self.project and self.selected_layer_id:
@@ -346,6 +407,25 @@ class CreativeWorkspace(QWidget):
             if len(self.project.layers) > before:
                 self.selected_layer_id = self.project.layers[before].id
             self.refresh_all()
+
+    def apply_effect(self, effect_id: str) -> None:
+        if not self.project or not self.selected_layer_id:
+            QMessageBox.information(self, "Advanced Effect", "Select a layer first.")
+            return
+        self.remember(f"effect {effect_id}")
+        if effect_id == "glow":
+            self.effects.apply_neon_glow(self.project, self.selected_layer_id)
+        elif effect_id == "stroke_shadow":
+            self.effects.apply_stroke_shadow(self.project, self.selected_layer_id)
+        elif effect_id == "bevel_extrude":
+            self.effects.apply_bevel_extrude(self.project, self.selected_layer_id)
+        elif effect_id == "reflection":
+            self.effects.apply_reflection(self.project, self.selected_layer_id)
+        elif effect_id == "gradient":
+            self.effects.apply_gradient(self.project, self.selected_layer_id)
+        elif effect_id == "premium_text":
+            self.effects.apply_premium_text_stack(self.project, self.selected_layer_id)
+        self.refresh_all()
 
     def apply_animation(self, preset: str) -> None:
         if not self.project or not self.selected_layer_id:
@@ -460,6 +540,9 @@ class CreativeWorkspace(QWidget):
     def export_frames(self) -> None:
         if not self.project or not self.validate_project():
             return
+        if not self.still_preview_approved:
+            QMessageBox.information(self, "Export Frames", "Preview the still frame first.")
+            return
         path = QFileDialog.getExistingDirectory(self, "Export Frames")
         if path:
             frames = self.export_service.export_frames(self.project, path)
@@ -467,6 +550,9 @@ class CreativeWorkspace(QWidget):
 
     def export_mp4(self) -> None:
         if not self.project or not self.validate_project():
+            return
+        if not self.still_preview_approved:
+            QMessageBox.information(self, "Export MP4", "Preview the still frame first.")
             return
         path, _ = QFileDialog.getSaveFileName(self, "Export MP4", "ttg-export.mp4", "MP4 (*.mp4)")
         if path:
