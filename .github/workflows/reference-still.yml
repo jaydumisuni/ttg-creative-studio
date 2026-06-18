@@ -1,4 +1,4 @@
-name: Reference Still Verification
+name: Reference Still And Motion Verification
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ on:
       - '.github/workflows/reference-still.yml'
 
 jobs:
-  reference-still:
+  reference-still-motion:
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -29,11 +29,15 @@ jobs:
       - name: Render and score reference still
         run: python scripts\verify_reference_still.py
 
-      - name: Upload reference still artifact
+      - name: Render gated reference motion frames
+        run: python scripts\verify_reference_motion.py
+
+      - name: Upload reference still and motion artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ttg-reference-still
+          name: ttg-reference-still-motion
           path: |
             outputs\ttg_reference_still.jpg
             outputs\ttg_reference_still_score.json
+            outputs\reference_motion_frames\*.jpg
