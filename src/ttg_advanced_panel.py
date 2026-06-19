@@ -62,8 +62,28 @@ class AdvancedModePanel(QWidget):
         for preset in self.presets.get(group, []):
             self.preset_combo.addItem(preset.name, preset.id)
 
+    def _find_workspace(self):
+        parent = self.parent()
+        while parent is not None:
+            if parent.__class__.__name__ == "CreativeWorkspace":
+                return parent
+            parent = parent.parent()
+        return None
+
     def _emit_preset(self) -> None:
         group = self.group_combo.currentText()
         preset_id = self.preset_combo.currentData()
-        if preset_id:
-            self.presetRequested.emit(group, str(preset_id))
+        if not preset_id:
+            return
+        preset_id = str(preset_id)
+        workspace = self._find_workspace()
+        if workspace is not None:
+            try:
+                from ttg_workspace_preset_bridge import apply_advanced_preset
+
+                apply_advanced_preset(workspace, group, preset_id)
+                return
+            except Exception:
+                # Fall back to signal emission so callers/tests can still handle it.
+                pass
+        self.presetRequested.emit(group, preset_id)
