@@ -26,6 +26,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install Pillow numpy
 
+      - name: Structural self-check
+        run: python scripts\self_check_visual_pipeline.py
+
       - name: Generate visual proof package
         run: python scripts\generate_visual_proof_package.py
 
@@ -46,6 +49,7 @@ jobs:
             outputs\index.html
             outputs\FAILURE_REPORT.md
             outputs\VISUAL_PROOF_REVIEW.md
+            outputs\ADVANCED_PRESET_REPORT.md
             outputs\ttg_reference_still.jpg
             outputs\ttg_reference_still_score.json
             outputs\reference_motion_preview.gif
