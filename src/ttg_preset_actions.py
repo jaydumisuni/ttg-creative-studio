@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from ttg_advanced_presets import find_preset
 from ttg_project_schema import TTGProject
 
@@ -13,6 +15,11 @@ class PresetActions:
             if layer.id == layer_id:
                 return layer
         raise KeyError(layer_id)
+
+    def _meta(self, project: TTGProject) -> dict[str, Any]:
+        # Current schema has project.export but not project.metadata. Keep Advanced
+        # Mode data in export["advanced"] so it survives save/load without schema breakage.
+        return project.export.setdefault("advanced", {})
 
     def apply_to_layer(self, project: TTGProject, layer_id: str, preset_id: str) -> None:
         preset = find_preset(preset_id)
@@ -26,22 +33,25 @@ class PresetActions:
 
     def apply_scene_preset(self, project: TTGProject, preset_id: str) -> None:
         preset = find_preset(preset_id)
-        project.metadata["scene_preset"] = preset_id
-        project.metadata["scene_preset_name"] = preset.name
-        project.metadata.setdefault("advanced_scene", {}).update(preset.properties)
+        meta = self._meta(project)
+        meta["scene_preset"] = preset_id
+        meta["scene_preset_name"] = preset.name
+        meta.setdefault("scene", {}).update(preset.properties)
 
     def apply_motion_preset(self, project: TTGProject, preset_id: str) -> None:
         preset = find_preset(preset_id)
-        project.metadata["motion_preset"] = preset_id
-        project.metadata["motion_preset_name"] = preset.name
-        project.metadata.setdefault("advanced_motion", {}).update(preset.properties)
+        meta = self._meta(project)
+        meta["motion_preset"] = preset_id
+        meta["motion_preset_name"] = preset.name
+        meta.setdefault("motion", {}).update(preset.properties)
 
     def apply_export_preset(self, project: TTGProject, preset_id: str) -> None:
         preset = find_preset(preset_id)
-        project.metadata["export_preset"] = preset_id
-        project.metadata["export_preset_name"] = preset.name
+        meta = self._meta(project)
+        meta["export_preset"] = preset_id
+        meta["export_preset_name"] = preset.name
         for key, value in preset.properties.items():
             if key in {"width", "height", "fps"}:
                 setattr(project.canvas, key, value)
             else:
-                project.metadata.setdefault("export", {})[key] = value
+                project.export[key] = value
