@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Self-test Image Intelligence Worker architecture."""
+"""Self-test TTG Native Image Brain architecture."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from ttg_hunter_image_bridge import HunterImageBridge
-from ttg_image_intelligence import ImageIntelligenceRequest, ImageIntelligenceTask, ImageIntelligenceWorker, provider_ids
+from ttg_image_intelligence import ImageIntelligenceRequest, ImageIntelligenceTask, ImageIntelligenceWorker, native_module_ids
 
 
 def main() -> int:
@@ -20,20 +20,26 @@ def main() -> int:
     bridge = HunterImageBridge(worker)
     result = worker.run(ImageIntelligenceRequest(task=ImageIntelligenceTask.SUGGEST_EDITS, image_paths=["example.png"]))
     hunter_result = bridge.plan_banana_workflow(prompt="make this premium")
+    render_plan = worker.run(ImageIntelligenceRequest(task=ImageIntelligenceTask.SCENE_TO_LAYERS, prompt="build editable intro"))
+    modules = native_module_ids()
     checks = [
-        "native_multimodal_transformer" in provider_ids(),
-        "dalle_3_style_provider" in provider_ids(),
-        "chatgpt_images_2_style_provider" in provider_ids(),
-        result.status == "stubbed",
+        "vision_encoder" in modules,
+        "layout_reasoner" in modules,
+        "scene_planner" in modules,
+        "image_generator_core" in modules,
+        "edit_planner" in modules,
+        "tool_worker_router" in modules,
+        result.status == "stubbed_native_architecture",
         len(result.suggested_actions) >= 1,
         hunter_result.task == ImageIntelligenceTask.BANANA_WORKFLOW_PLAN,
         len(hunter_result.suggested_actions) >= 1,
+        len(render_plan.suggested_actions) >= 1,
     ]
     if not all(checks):
-        print("Image Intelligence self-test failed")
+        print("TTG Native Image Brain self-test failed")
         print(checks)
         return 1
-    print("Image Intelligence self-test passed")
+    print("TTG Native Image Brain self-test passed")
     return 0
 
 
