@@ -35,6 +35,9 @@ jobs:
       - name: Property schema check
         run: python scripts\check_property_schema.py
 
+      - name: Canvas tools self-test
+        run: python scripts\self_test_canvas_tools.py
+
       - name: Banana Level self-test
         run: python scripts\self_test_banana_level.py
 
