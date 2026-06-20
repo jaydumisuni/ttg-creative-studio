@@ -8,6 +8,7 @@ import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QStatusBar
 
 from ttg_creative_workspace import CreativeWorkspace
+from ttg_workspace_preset_bridge import install_preset_bridge
 
 
 class CreativeStudioWindow(QMainWindow):
@@ -17,7 +18,9 @@ class CreativeStudioWindow(QMainWindow):
         self.resize(1280, 760)
         self.setMinimumSize(1024, 640)
         self.setStatusBar(QStatusBar())
-        self.setCentralWidget(CreativeWorkspace())
+        workspace = CreativeWorkspace()
+        install_preset_bridge(workspace)
+        self.setCentralWidget(workspace)
         self.statusBar().showMessage("Ready")
 
 
