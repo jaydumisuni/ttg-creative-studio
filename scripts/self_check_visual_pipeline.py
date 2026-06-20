@@ -17,6 +17,7 @@ REQUIRED = [
     "scripts/self_test_presets.py",
     "scripts/self_test_workspace_preset_bridge.py",
     "scripts/self_test_app_wiring.py",
+    "scripts/self_test_ui_offscreen.py",
     "scripts/generate_visual_proof_package.py",
     "scripts/build_motion_contact_sheet.py",
     "scripts/build_motion_gif_preview.py",
