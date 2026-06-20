@@ -38,6 +38,9 @@ jobs:
       - name: Workspace preset bridge self-test
         run: python scripts\self_test_workspace_preset_bridge.py
 
+      - name: App wiring import self-test
+        run: python scripts\self_test_app_wiring.py
+
       - name: Generate visual proof package
         run: python scripts\generate_visual_proof_package.py
 
