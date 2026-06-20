@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""Interactive canvas widget: click select, drag, snap-grid and bounds overlay."""
+"""Interactive canvas widget: click select, drag, snap-grid and transform overlay."""
 
 from __future__ import annotations
 
 from pathlib import Path
 import tempfile
 
-from PyQt6.QtCore import QPoint, Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QMouseEvent, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import QLabel
 
-from ttg_canvas_selection import CanvasSelection
+from ttg_canvas_interaction import CanvasInteractionController
+from ttg_canvas_tools import ResizeHandle, get_layer, layer_rect
 from ttg_export_service import ExportService
 from ttg_project_schema import TTGProject
 
@@ -24,11 +25,7 @@ class InteractiveCanvas(QLabel):
         self.project_root = Path(project_root)
         self.project: TTGProject | None = None
         self.selected_layer_id: str | None = None
-        self.snap_enabled = True
-        self.grid_size = 10
-        self.drag_start: QPoint | None = None
-        self.drag_layer_start: tuple[float, float] | None = None
-        self.selector = CanvasSelection()
+        self.interaction = CanvasInteractionController()
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setMinimumSize(640, 420)
         self.setMouseTracking(True)
@@ -36,6 +33,9 @@ class InteractiveCanvas(QLabel):
     def set_project(self, project: TTGProject | None, selected_layer_id: str | None = None) -> None:
         self.project = project
         self.selected_layer_id = selected_layer_id
+        self.interaction.set_project(project)
+        if selected_layer_id:
+            self.interaction.selection.select(selected_layer_id)
         self.render_preview()
 
     def render_preview(self) -> None:
@@ -58,60 +58,80 @@ class InteractiveCanvas(QLabel):
         sy = self.project.canvas.height / max(1, pm.height())
         return ((event.position().x() - x_offset) * sx, (event.position().y() - y_offset) * sy)
 
-    def snap(self, value: float) -> float:
-        if not self.snap_enabled:
-            return value
-        return round(value / self.grid_size) * self.grid_size
-
-    def mousePressEvent(self, event: QMouseEvent) -> None:
-        if self.project is None:
-            return
-        x, y = self.canvas_point(event)
-        layer_id = self.selector.hit_test(self.project, x, y)
-        if layer_id:
-            self.selected_layer_id = layer_id
-            self.layerSelected.emit(layer_id)
-            layer = next(layer for layer in self.project.layers if layer.id == layer_id)
-            self.drag_start = event.pos()
-            self.drag_layer_start = (layer.transform.x, layer.transform.y)
-        self.update()
-
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if self.project is None or not self.selected_layer_id or self.drag_start is None or self.drag_layer_start is None:
-            return
-        pm = self.pixmap()
-        if pm is None:
-            return
-        dx_view = event.pos().x() - self.drag_start.x()
-        dy_view = event.pos().y() - self.drag_start.y()
-        sx = self.project.canvas.width / max(1, pm.width())
-        sy = self.project.canvas.height / max(1, pm.height())
-        new_x = self.snap(self.drag_layer_start[0] + dx_view * sx)
-        new_y = self.snap(self.drag_layer_start[1] + dy_view * sy)
-        self.layerMoved.emit(self.selected_layer_id, new_x, new_y)
-
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        self.drag_start = None
-        self.drag_layer_start = None
-
-    def paintEvent(self, event) -> None:  # noqa: ANN001
-        super().paintEvent(event)
-        if self.project is None or not self.selected_layer_id or self.pixmap() is None:
-            return
-        bounds = None
-        for b in self.selector.all_bounds(self.project):
-            if b.layer_id == self.selected_layer_id:
-                bounds = b
-                break
-        if bounds is None:
-            return
+    def _project_to_view(self, x: float, y: float) -> tuple[float, float]:
+        if self.project is None or self.pixmap() is None:
+            return x, y
         pm = self.pixmap()
         x_offset = (self.width() - pm.width()) / 2
         y_offset = (self.height() - pm.height()) / 2
         sx = pm.width() / self.project.canvas.width
         sy = pm.height() / self.project.canvas.height
+        return (x_offset + x * sx, y_offset + y * sy)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if self.project is None:
+            return
+        x, y = self.canvas_point(event)
+        additive = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+        layer_id = self.interaction.mouse_press(x, y, additive=additive)
+        if layer_id:
+            self.selected_layer_id = layer_id
+            self.layerSelected.emit(layer_id)
+        self.update()
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self.project is None:
+            return
+        x, y = self.canvas_point(event)
+        changed = self.interaction.mouse_move(x, y)
+        if changed and self.interaction.active_layer_id():
+            layer = get_layer(self.project, self.interaction.active_layer_id())
+            self.selected_layer_id = layer.id
+            self.layerMoved.emit(layer.id, layer.transform.x, layer.transform.y)
+        self.update()
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if self.project is None:
+            return
+        x, y = self.canvas_point(event)
+        changed = self.interaction.mouse_release(x, y)
+        if changed and self.interaction.active_layer_id():
+            layer = get_layer(self.project, self.interaction.active_layer_id())
+            self.selected_layer_id = layer.id
+            self.layerMoved.emit(layer.id, layer.transform.x, layer.transform.y)
+        self.update()
+
+    def _draw_handle(self, painter: QPainter, x: float, y: float, size: int = 8) -> None:
+        half = size // 2
+        painter.drawRect(int(x - half), int(y - half), size, size)
+
+    def paintEvent(self, event) -> None:  # noqa: ANN001
+        super().paintEvent(event)
+        if self.project is None or not self.selected_layer_id or self.pixmap() is None:
+            return
+        try:
+            layer = get_layer(self.project, self.selected_layer_id)
+        except KeyError:
+            return
+        rect = layer_rect(layer)
+        x1, y1 = self._project_to_view(rect.x, rect.y)
+        x2, y2 = self._project_to_view(rect.right, rect.bottom)
+        cx, cy = self._project_to_view(rect.cx, rect.cy)
         painter = QPainter(self)
         pen = QPen(Qt.GlobalColor.cyan)
         pen.setWidth(2)
         painter.setPen(pen)
-        painter.drawRect(int(x_offset + bounds.x * sx), int(y_offset + bounds.y * sy), int(bounds.width * sx), int(bounds.height * sy))
+        painter.drawRect(int(x1), int(y1), int(x2 - x1), int(y2 - y1))
+
+        # Resize handles: corners + edges. These are visual first; resize hit logic follows next.
+        for hx, hy in [
+            (x1, y1), (cx, y1), (x2, y1),
+            (x2, cy), (x2, y2), (cx, y2),
+            (x1, y2), (x1, cy),
+        ]:
+            self._draw_handle(painter, hx, hy)
+
+        # Rotate handle line above the selection.
+        rotate_y = y1 - 34
+        painter.drawLine(int(cx), int(y1), int(cx), int(rotate_y))
+        painter.drawEllipse(int(cx - 6), int(rotate_y - 6), 12, 12)
