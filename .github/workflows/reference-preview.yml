@@ -35,6 +35,12 @@ jobs:
       - name: Property schema check
         run: python scripts\check_property_schema.py
 
+      - name: Banana Level self-test
+        run: python scripts\self_test_banana_level.py
+
+      - name: Image Intelligence self-test
+        run: python scripts\self_test_image_intelligence.py
+
       - name: Advanced preset self-test
         run: python scripts\self_test_presets.py
 
