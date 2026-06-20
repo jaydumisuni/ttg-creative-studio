@@ -16,11 +16,17 @@ REQUIRED = [
     "src/ttg_product_targets.py",
     "src/ttg_user_modes.py",
     "src/ttg_tool_registry.py",
+    "src/ttg_banana_level.py",
+    "src/ttg_banana_actions.py",
+    "src/ttg_image_intelligence.py",
+    "src/ttg_hunter_image_bridge.py",
     "scripts/check_property_schema.py",
     "scripts/self_test_presets.py",
     "scripts/self_test_workspace_preset_bridge.py",
     "scripts/self_test_app_wiring.py",
     "scripts/self_test_ui_offscreen.py",
+    "scripts/self_test_banana_level.py",
+    "scripts/self_test_image_intelligence.py",
     "scripts/product_direction_report.py",
     "scripts/generate_visual_proof_package.py",
     "scripts/build_motion_contact_sheet.py",
@@ -32,6 +38,8 @@ REQUIRED = [
     "scripts/check_video_gate.py",
     "scripts/build_video_proof.py",
     "docs/PRODUCT_STANDARD.md",
+    "docs/BANANA_LEVEL.md",
+    "docs/IMAGE_INTELLIGENCE_WORKER.md",
     "docs/VISUAL_APPROVAL_GATE.md",
     "docs/VIDEO_PROOF_STAGE.md",
     "docs/NO_RELEASE_UNTIL.md",
@@ -51,7 +59,7 @@ def main() -> int:
             print(f"  - {path}")
         return 1
     print(f"All required files present: {len(REQUIRED)}")
-    print("Target: Photoshop power + Canva simplicity + Filmora motion.")
+    print("Target: Photoshop power + Canva simplicity + Filmora motion + Banana Level + Image Intelligence Worker.")
     return 0
 
 
