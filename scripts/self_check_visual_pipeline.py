@@ -12,6 +12,8 @@ REQUIRED = [
     "src/ttg_advanced_presets.py",
     "src/ttg_preset_actions.py",
     "src/ttg_workspace_preset_bridge.py",
+    "src/ttg_property_schema.py",
+    "scripts/check_property_schema.py",
     "scripts/self_test_presets.py",
     "scripts/self_test_workspace_preset_bridge.py",
     "scripts/generate_visual_proof_package.py",
