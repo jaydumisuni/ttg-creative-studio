@@ -41,6 +41,9 @@ jobs:
       - name: App wiring import self-test
         run: python scripts\self_test_app_wiring.py
 
+      - name: Offscreen UI smoke test
+        run: python scripts\self_test_ui_offscreen.py
+
       - name: Generate visual proof package
         run: python scripts\generate_visual_proof_package.py
 
