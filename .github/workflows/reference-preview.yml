@@ -29,6 +29,9 @@ jobs:
       - name: Structural self-check
         run: python scripts\self_check_visual_pipeline.py
 
+      - name: Product direction report
+        run: python scripts\product_direction_report.py
+
       - name: Property schema check
         run: python scripts\check_property_schema.py
 
