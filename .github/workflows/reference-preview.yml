@@ -41,6 +41,9 @@ jobs:
       - name: Canvas interaction self-test
         run: python scripts\self_test_canvas_interaction.py
 
+      - name: Interactive canvas wiring self-test
+        run: python scripts\self_test_interactive_canvas_wiring.py
+
       - name: Banana Level self-test
         run: python scripts\self_test_banana_level.py
 
