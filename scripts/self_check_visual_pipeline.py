@@ -25,6 +25,7 @@ REQUIRED = [
     "scripts/check_property_schema.py",
     "scripts/self_test_canvas_tools.py",
     "scripts/self_test_canvas_interaction.py",
+    "scripts/self_test_interactive_canvas_wiring.py",
     "scripts/self_test_presets.py",
     "scripts/self_test_workspace_preset_bridge.py",
     "scripts/self_test_app_wiring.py",
