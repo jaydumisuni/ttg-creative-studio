@@ -38,6 +38,9 @@ jobs:
       - name: Canvas tools self-test
         run: python scripts\self_test_canvas_tools.py
 
+      - name: Canvas interaction self-test
+        run: python scripts\self_test_canvas_interaction.py
+
       - name: Banana Level self-test
         run: python scripts\self_test_banana_level.py
 
