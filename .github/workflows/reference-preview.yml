@@ -29,6 +29,9 @@ jobs:
       - name: Structural self-check
         run: python scripts\self_check_visual_pipeline.py
 
+      - name: Property schema check
+        run: python scripts\check_property_schema.py
+
       - name: Advanced preset self-test
         run: python scripts\self_test_presets.py
 
