@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Image Intelligence Worker architecture for TTG Creative Studio.
+"""TTG Native Image Brain architecture for Creative Studio and Hunter.
 
-This layer is optional and provider-based. The editor must work without it, but
-Hunter can later call this worker to understand images, suggest edits, generate
-assets, and drive Banana Level workflows.
+This is not a set of reserved external provider slots. TTG builds its own native
+multimodal image engine and borrows the best architectural ideas: image
+understanding, generation planning, image editing, scene-to-layer conversion,
+layout critique and tool-worker execution.
+
+The editor must still work without the brain. The brain becomes Hunter's image
+worker and Creative Studio's Banana Level intelligence layer later.
 """
 
 from __future__ import annotations
@@ -22,42 +26,48 @@ class ImageIntelligenceTask(str, Enum):
     PROMPT_TO_SCENE = "prompt_to_scene"
     SCENE_TO_LAYERS = "scene_to_layers"
     BANANA_WORKFLOW_PLAN = "banana_workflow_plan"
+    RENDER_PLAN = "render_plan"
+    EDIT_PLAN = "edit_plan"
 
 
 @dataclass(frozen=True)
-class ImageProviderSpec:
+class NativeImageBrainModule:
     id: str
     name: str
-    kind: str
     role: str
-    optional: bool = True
-    notes: str = ""
+    required: bool = True
 
 
-PROVIDERS = (
-    ImageProviderSpec(
-        "native_multimodal_transformer",
-        "Native Multimodal Transformer",
-        "local_or_cloud",
-        "Image understanding, layout reasoning, object/style analysis and edit planning.",
-        True,
-        "Future provider. Can be local, private, or cloud depending on hardware and model availability.",
+NATIVE_MODULES = (
+    NativeImageBrainModule(
+        "vision_encoder",
+        "Vision Encoder",
+        "Understands image content, composition, objects, text regions, colors and style.",
     ),
-    ImageProviderSpec(
-        "dalle_3_style_provider",
-        "DALL-E 3 compatible provider",
-        "cloud_generation",
-        "Prompt-to-image generation and concept asset creation.",
-        True,
-        "Provider interface only. No hard dependency in the core editor.",
+    NativeImageBrainModule(
+        "layout_reasoner",
+        "Layout Reasoner",
+        "Judges hierarchy, alignment, spacing, balance and brand fit.",
     ),
-    ImageProviderSpec(
-        "chatgpt_images_2_style_provider",
-        "ChatGPT Images 2.0 style provider",
-        "cloud_generation_editing",
-        "Image generation, image editing and creative variation workflows.",
-        True,
-        "Future-facing provider slot so the app can adapt without redesigning the architecture.",
+    NativeImageBrainModule(
+        "scene_planner",
+        "Scene Planner",
+        "Turns prompts or image understanding into editable TTG project/layer plans.",
+    ),
+    NativeImageBrainModule(
+        "image_generator_core",
+        "Image Generator Core",
+        "Creates native assets, backgrounds, concepts and variants when generation is needed.",
+    ),
+    NativeImageBrainModule(
+        "edit_planner",
+        "Edit Planner",
+        "Plans safe image edits that can map back to layers, masks, effects and Banana workflows.",
+    ),
+    NativeImageBrainModule(
+        "tool_worker_router",
+        "Tool Worker Router",
+        "Routes plans into deterministic Creative Studio actions instead of hiding everything in a flat bitmap.",
     ),
 )
 
@@ -75,23 +85,25 @@ class ImageIntelligenceRequest:
 @dataclass
 class ImageIntelligenceResult:
     task: ImageIntelligenceTask
-    provider_id: str
+    engine_id: str
     status: str
     message: str
     suggested_actions: list[dict[str, Any]] = field(default_factory=list)
     generated_assets: list[str] = field(default_factory=list)
     project_updates: dict[str, Any] = field(default_factory=dict)
+    native_modules_used: list[str] = field(default_factory=list)
 
 
 class ImageIntelligenceWorker:
-    """Provider-neutral worker facade used by Hunter and Banana Level later."""
+    """TTG-native worker facade used by Hunter and Banana Level later."""
 
-    def __init__(self, provider_id: str = "offline_stub") -> None:
-        self.provider_id = provider_id
+    def __init__(self, engine_id: str = "ttg_native_image_brain_stub") -> None:
+        self.engine_id = engine_id
 
     def run(self, request: ImageIntelligenceRequest) -> ImageIntelligenceResult:
-        # Offline deterministic stub. Real providers plug in later.
+        # Offline deterministic architecture stub. The future native brain plugs in here.
         actions: list[dict[str, Any]] = []
+        modules = ["vision_encoder", "layout_reasoner", "scene_planner", "tool_worker_router"]
         if request.task == ImageIntelligenceTask.SUGGEST_EDITS:
             actions.extend([
                 {"action": "apply_banana_workflow", "workflow": "make_it_pop"},
@@ -105,14 +117,18 @@ class ImageIntelligenceWorker:
             ])
         elif request.task == ImageIntelligenceTask.UNDERSTAND_IMAGE:
             actions.append({"action": "describe_layers", "confidence": "stub"})
+        elif request.task in {ImageIntelligenceTask.RENDER_PLAN, ImageIntelligenceTask.EDIT_PLAN, ImageIntelligenceTask.SCENE_TO_LAYERS}:
+            modules.extend(["image_generator_core", "edit_planner"])
+            actions.append({"action": "create_editable_scene_plan", "format": "ttg_project_layers"})
         return ImageIntelligenceResult(
             task=request.task,
-            provider_id=self.provider_id,
-            status="stubbed",
-            message="Image Intelligence Worker is wired as architecture. Real providers are optional future plugins.",
+            engine_id=self.engine_id,
+            status="stubbed_native_architecture",
+            message="TTG Native Image Brain architecture is wired. External slots removed; this is our own engine path.",
             suggested_actions=actions,
+            native_modules_used=modules,
         )
 
 
-def provider_ids() -> list[str]:
-    return [provider.id for provider in PROVIDERS]
+def native_module_ids() -> list[str]:
+    return [module.id for module in NATIVE_MODULES]
