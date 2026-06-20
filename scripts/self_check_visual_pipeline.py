@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fast structural self-check for the visual proof and Advanced Mode pipeline."""
+"""Fast structural self-check for the visual proof and product direction pipeline."""
 
 from __future__ import annotations
 
@@ -13,11 +13,15 @@ REQUIRED = [
     "src/ttg_preset_actions.py",
     "src/ttg_workspace_preset_bridge.py",
     "src/ttg_property_schema.py",
+    "src/ttg_product_targets.py",
+    "src/ttg_user_modes.py",
+    "src/ttg_tool_registry.py",
     "scripts/check_property_schema.py",
     "scripts/self_test_presets.py",
     "scripts/self_test_workspace_preset_bridge.py",
     "scripts/self_test_app_wiring.py",
     "scripts/self_test_ui_offscreen.py",
+    "scripts/product_direction_report.py",
     "scripts/generate_visual_proof_package.py",
     "scripts/build_motion_contact_sheet.py",
     "scripts/build_motion_gif_preview.py",
@@ -27,6 +31,7 @@ REQUIRED = [
     "scripts/proof_status.py",
     "scripts/check_video_gate.py",
     "scripts/build_video_proof.py",
+    "docs/PRODUCT_STANDARD.md",
     "docs/VISUAL_APPROVAL_GATE.md",
     "docs/VIDEO_PROOF_STAGE.md",
     "docs/NO_RELEASE_UNTIL.md",
@@ -38,15 +43,15 @@ REQUIRED = [
 
 def main() -> int:
     missing = [path for path in REQUIRED if not (ROOT / path).exists()]
-    print("TTG visual pipeline structural self-check")
-    print("========================================")
+    print("TTG product/visual pipeline structural self-check")
+    print("================================================")
     if missing:
         print("Missing files:")
         for path in missing:
             print(f"  - {path}")
         return 1
     print(f"All required files present: {len(REQUIRED)}")
-    print("Render proof still happens in generate_visual_proof_package.py / GitHub Actions.")
+    print("Target: Photoshop power + Canva simplicity + Filmora motion.")
     return 0
 
 
