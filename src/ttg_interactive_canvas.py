@@ -10,7 +10,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QMouseEvent, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import QLabel
 
-from ttg_canvas_interaction import CanvasInteractionController
+from ttg_canvas_interaction import CanvasInteractionController, DragMode
 from ttg_canvas_tools import ResizeHandle, get_layer, layer_rect
 from ttg_export_service import ExportService
 from ttg_project_schema import TTGProject
@@ -68,12 +68,68 @@ class InteractiveCanvas(QLabel):
         sy = pm.height() / self.project.canvas.height
         return (x_offset + x * sx, y_offset + y * sy)
 
+    def _view_to_project_delta(self, delta: float, axis: str) -> float:
+        if self.project is None or self.pixmap() is None:
+            return delta
+        pm = self.pixmap()
+        if axis == "x":
+            return delta * self.project.canvas.width / max(1, pm.width())
+        return delta * self.project.canvas.height / max(1, pm.height())
+
+    def _handle_points(self) -> dict[ResizeHandle, tuple[float, float]]:
+        if self.project is None or not self.selected_layer_id:
+            return {}
+        try:
+            layer = get_layer(self.project, self.selected_layer_id)
+        except KeyError:
+            return {}
+        rect = layer_rect(layer)
+        x1, y1 = self._project_to_view(rect.x, rect.y)
+        x2, y2 = self._project_to_view(rect.right, rect.bottom)
+        cx, cy = self._project_to_view(rect.cx, rect.cy)
+        return {
+            ResizeHandle.TOP_LEFT: (x1, y1),
+            ResizeHandle.TOP: (cx, y1),
+            ResizeHandle.TOP_RIGHT: (x2, y1),
+            ResizeHandle.RIGHT: (x2, cy),
+            ResizeHandle.BOTTOM_RIGHT: (x2, y2),
+            ResizeHandle.BOTTOM: (cx, y2),
+            ResizeHandle.BOTTOM_LEFT: (x1, y2),
+            ResizeHandle.LEFT: (x1, cy),
+        }
+
+    def hit_resize_handle(self, view_x: float, view_y: float, radius: float = 10) -> ResizeHandle | None:
+        for handle, (hx, hy) in self._handle_points().items():
+            if abs(view_x - hx) <= radius and abs(view_y - hy) <= radius:
+                return handle
+        return None
+
+    def hit_rotate_handle(self, view_x: float, view_y: float, radius: float = 12) -> bool:
+        if self.project is None or not self.selected_layer_id:
+            return False
+        try:
+            layer = get_layer(self.project, self.selected_layer_id)
+        except KeyError:
+            return False
+        rect = layer_rect(layer)
+        cx, _ = self._project_to_view(rect.cx, rect.cy)
+        _, y1 = self._project_to_view(rect.x, rect.y)
+        rotate_y = y1 - 34
+        return abs(view_x - cx) <= radius and abs(view_y - rotate_y) <= radius
+
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if self.project is None:
             return
         x, y = self.canvas_point(event)
+        view_x, view_y = event.position().x(), event.position().y()
         additive = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
-        layer_id = self.interaction.mouse_press(x, y, additive=additive)
+        resize_handle = self.hit_resize_handle(view_x, view_y)
+        if resize_handle is not None:
+            layer_id = self.interaction.mouse_press(x, y, additive=additive, mode=DragMode.RESIZE, resize_handle=resize_handle)
+        elif self.hit_rotate_handle(view_x, view_y):
+            layer_id = self.interaction.mouse_press(x, y, additive=additive, mode=DragMode.ROTATE)
+        else:
+            layer_id = self.interaction.mouse_press(x, y, additive=additive)
         if layer_id:
             self.selected_layer_id = layer_id
             self.layerSelected.emit(layer_id)
@@ -88,6 +144,7 @@ class InteractiveCanvas(QLabel):
             layer = get_layer(self.project, self.interaction.active_layer_id())
             self.selected_layer_id = layer.id
             self.layerMoved.emit(layer.id, layer.transform.x, layer.transform.y)
+            self.render_preview()
         self.update()
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
@@ -99,6 +156,7 @@ class InteractiveCanvas(QLabel):
             layer = get_layer(self.project, self.interaction.active_layer_id())
             self.selected_layer_id = layer.id
             self.layerMoved.emit(layer.id, layer.transform.x, layer.transform.y)
+            self.render_preview()
         self.update()
 
     def _draw_handle(self, painter: QPainter, x: float, y: float, size: int = 8) -> None:
@@ -123,15 +181,9 @@ class InteractiveCanvas(QLabel):
         painter.setPen(pen)
         painter.drawRect(int(x1), int(y1), int(x2 - x1), int(y2 - y1))
 
-        # Resize handles: corners + edges. These are visual first; resize hit logic follows next.
-        for hx, hy in [
-            (x1, y1), (cx, y1), (x2, y1),
-            (x2, cy), (x2, y2), (cx, y2),
-            (x1, y2), (x1, cy),
-        ]:
+        for hx, hy in self._handle_points().values():
             self._draw_handle(painter, hx, hy)
 
-        # Rotate handle line above the selection.
         rotate_y = y1 - 34
         painter.drawLine(int(cx), int(y1), int(cx), int(rotate_y))
         painter.drawEllipse(int(cx - 6), int(rotate_y - 6), 12, 12)
