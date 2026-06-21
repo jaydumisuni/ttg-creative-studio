@@ -9,9 +9,17 @@ controller.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 
-from ttg_canvas_tools import CanvasTool, SelectionState, get_layer, hit_test, move_layer
+from ttg_canvas_tools import CanvasTool, ResizeHandle, SelectionState, get_layer, hit_test, layer_rect, move_layer, resize_layer, rotate_layer
 from ttg_project_schema import TTGProject
+
+
+class DragMode(str, Enum):
+    NONE = "none"
+    MOVE = "move"
+    RESIZE = "resize"
+    ROTATE = "rotate"
 
 
 @dataclass
@@ -22,6 +30,8 @@ class PointerState:
     last_y: float = 0
     dragging: bool = False
     moved: bool = False
+    mode: DragMode = DragMode.NONE
+    resize_handle: ResizeHandle | None = None
 
 
 class CanvasInteractionController:
@@ -35,12 +45,15 @@ class CanvasInteractionController:
         self.selection.select(None)
         self.pointer = PointerState()
 
-    def mouse_press(self, x: float, y: float, *, additive: bool = False) -> str | None:
-        self.pointer = PointerState(start_x=x, start_y=y, last_x=x, last_y=y, dragging=True, moved=False)
+    def mouse_press(self, x: float, y: float, *, additive: bool = False, mode: DragMode | str | None = None, resize_handle: ResizeHandle | None = None) -> str | None:
+        drag_mode = DragMode(mode) if isinstance(mode, str) else (mode or DragMode.NONE)
+        self.pointer = PointerState(start_x=x, start_y=y, last_x=x, last_y=y, dragging=True, moved=False, mode=drag_mode, resize_handle=resize_handle)
         if self.project is None:
             return None
-        layer_id = hit_test(self.project, x, y)
+        layer_id = self.selection.active_layer_id if drag_mode in {DragMode.RESIZE, DragMode.ROTATE} else hit_test(self.project, x, y)
         self.selection.select(layer_id, additive=additive)
+        if self.pointer.mode == DragMode.NONE and layer_id:
+            self.pointer.mode = DragMode.MOVE
         return layer_id
 
     def mouse_move(self, x: float, y: float) -> bool:
@@ -53,17 +66,30 @@ class CanvasInteractionController:
         if abs(dx) < 0.001 and abs(dy) < 0.001:
             return False
         self.pointer.moved = True
-        if self.selection.tool in {CanvasTool.SELECT, CanvasTool.MOVE} and self.selection.active_layer_id:
-            layer = get_layer(self.project, self.selection.active_layer_id)
-            if not layer.locked:
-                move_layer(layer, dx, dy, snap_enabled=self.selection.snap_enabled, grid=self.selection.snap_grid)
-                return True
+        layer_id = self.selection.active_layer_id
+        if not layer_id:
+            return False
+        layer = get_layer(self.project, layer_id)
+        if layer.locked:
+            return False
+        if self.pointer.mode in {DragMode.MOVE, DragMode.NONE} and self.selection.tool in {CanvasTool.SELECT, CanvasTool.MOVE}:
+            move_layer(layer, dx, dy, snap_enabled=self.selection.snap_enabled, grid=self.selection.snap_grid)
+            return True
+        if self.pointer.mode == DragMode.RESIZE and self.pointer.resize_handle is not None:
+            resize_layer(layer, self.pointer.resize_handle, dx, dy, snap_enabled=self.selection.snap_enabled, grid=self.selection.snap_grid)
+            return True
+        if self.pointer.mode == DragMode.ROTATE:
+            rect = layer_rect(layer)
+            rotate_layer(layer, rect.cx, rect.cy, x, y, snap_enabled=self.selection.snap_enabled, step=5)
+            return True
         return False
 
     def mouse_release(self, x: float, y: float) -> bool:
         changed = self.mouse_move(x, y)
         was_dragging = self.pointer.dragging
         self.pointer.dragging = False
+        self.pointer.mode = DragMode.NONE
+        self.pointer.resize_handle = None
         return changed or (was_dragging and self.pointer.moved)
 
     def active_layer_id(self) -> str | None:
