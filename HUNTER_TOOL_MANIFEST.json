@@ -1,0 +1,113 @@
+{
+  "schema": "thetechguy.hunter.tool_manifest.v1",
+  "tool_id": "ttg_creative_studio",
+  "product_name": "TTG Creative Studio",
+  "owner": "THETECHGUY DIGITAL SOLUTIONS",
+  "status": "active_development",
+  "replaces": [
+    "ttg-image-editor-worker",
+    "THETECHGUY Image Editor",
+    "image-editor"
+  ],
+  "purpose": "Local-first creative editor and Hunter-callable creative engine for image, design, GIF, and future video/intro generation tasks.",
+  "audiences": [
+    "human_designer",
+    "owner_admin",
+    "staff_operator",
+    "hunter_local_executor"
+  ],
+  "runtime_modes": {
+    "human_app": {
+      "description": "Normal user opens the desktop app and edits manually.",
+      "current": true
+    },
+    "hunter_engine": {
+      "description": "Hunter calls reusable engine/CLI jobs without opening the human UI.",
+      "current": "planned_next",
+      "note": "Create CLI/job runner before Hunter depends on this mode."
+    },
+    "online_ui": {
+      "description": "Cloud/website UI for uploads, templates, job queue, and results.",
+      "current": false,
+      "note": "Do not treat this repo as a Cloudflare Worker yet; no wrangler/package web app config exists currently."
+    }
+  },
+  "current_capabilities": [
+    {
+      "id": "background_removal",
+      "label": "Background removal",
+      "usable_by_hunter": "after_cli_or_job_runner"
+    },
+    {
+      "id": "image_processing_core",
+      "label": "Image processing core",
+      "usable_by_hunter": "after_cli_or_job_runner"
+    },
+    {
+      "id": "gif_loading_support",
+      "label": "GIF/loading support",
+      "usable_by_hunter": "after_cli_or_job_runner"
+    },
+    {
+      "id": "desktop_exe_build",
+      "label": "Desktop executable build scripts",
+      "usable_by_hunter": false
+    },
+    {
+      "id": "installer_build",
+      "label": "Installer scripts",
+      "usable_by_hunter": false
+    }
+  ],
+  "roadmap_capabilities": [
+    "layer_based_editor",
+    "timeline_keyframe_motion_editor",
+    "brand_kit_system",
+    "diagram_schematic_tools",
+    "3d_logo_intro_renderer",
+    "video_editing_render_pipeline",
+    "hunter_ai_control"
+  ],
+  "hunter_rules": {
+    "name_resolution": {
+      "preferred_name": "TTG Creative Studio",
+      "do_not_use_as_primary_name": [
+        "ttg-image-editor-worker",
+        "image editor worker"
+      ]
+    },
+    "when_user_asks_for_image_or_video_work": "Hunter may suggest TTG Creative Studio as the THETECHGUY creative tool. Hunter may only execute work through it after a local CLI/job runner exists and is registered.",
+    "cloudflare_rule": "Do not deploy heavy image/video processing inside a Cloudflare Worker. Use Cloudflare for auth, job queue, uploads/downloads, status, and routing; run processing locally or on a proper server/GPU.",
+    "local_execution_rule": "Heavy processing runs through ATHENA/local executor now, later GT502/server/GPU. Outputs should be stored through Hunter-approved storage and linked back to the case/chat/job.",
+    "public_wording": "Public users see TTG Creative Studio as a creative/design tool. They should not see internal engine, Hunter routing, or local executor details."
+  },
+  "planned_interfaces": {
+    "cli": {
+      "entry": "src/ttg_creative_studio/cli.py",
+      "status": "planned",
+      "example_jobs": [
+        "remove_background",
+        "resize_image",
+        "clean_image",
+        "apply_brand_template",
+        "generate_event_poster",
+        "render_gif_or_intro",
+        "prepare_social_ad"
+      ]
+    },
+    "job_json": {
+      "status": "planned",
+      "description": "Hunter creates a job JSON file with input assets, task type, options, output path, and callback/status target. Creative Studio engine processes it and returns a result manifest."
+    },
+    "desktop_app": {
+      "status": "current",
+      "description": "PyQt desktop application built with PyInstaller and installer scripts."
+    }
+  },
+  "safety": {
+    "requires_human_approval_for_client_delivery": true,
+    "preserve_original_assets": true,
+    "log_job_inputs_outputs": true,
+    "avoid_overwriting_source_files": true
+  }
+}
