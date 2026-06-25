@@ -1,0 +1,11 @@
+{
+  "jobId": "creative_demo_resize_001",
+  "task": "resize_image",
+  "input": "D:/aimob/ttg-creative-studio/examples/input/sample.png",
+  "output": "D:/aimob/ttg-creative-studio/outputs/sample_1080.png",
+  "options": {
+    "width": 1080,
+    "overwrite": false,
+    "quality": 95
+  }
+}
