@@ -1,0 +1,9 @@
+{
+  "jobId": "creative_demo_remove_bg_001",
+  "task": "remove_background",
+  "input": "D:/aimob/ttg-creative-studio/examples/input/sample.png",
+  "output": "D:/aimob/ttg-creative-studio/outputs/sample_no_bg.png",
+  "options": {
+    "overwrite": false
+  }
+}
