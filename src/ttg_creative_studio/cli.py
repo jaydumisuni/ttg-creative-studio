@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import json
@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 if __package__ in (None, ""):
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from ttg_creative_studio.engine import run_image_job
 from ttg_creative_studio.engine.image_jobs import CreativeJobError
