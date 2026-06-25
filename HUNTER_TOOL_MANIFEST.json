@@ -23,8 +23,8 @@
     },
     "hunter_engine": {
       "description": "Hunter calls reusable engine/CLI jobs without opening the human UI.",
-      "current": "planned_next",
-      "note": "Create CLI/job runner before Hunter depends on this mode."
+      "current": true,
+      "note": "V1 CLI/job runner added for basic image jobs. More creative/video jobs will be added in later stages."
     },
     "online_ui": {
       "description": "Cloud/website UI for uploads, templates, job queue, and results.",
@@ -36,17 +36,37 @@
     {
       "id": "background_removal",
       "label": "Background removal",
-      "usable_by_hunter": "after_cli_or_job_runner"
+      "usable_by_hunter": true,
+      "interface": "cli_job"
+    },
+    {
+      "id": "image_resize",
+      "label": "Image resize",
+      "usable_by_hunter": true,
+      "interface": "cli_job"
+    },
+    {
+      "id": "image_convert",
+      "label": "Image convert/export",
+      "usable_by_hunter": true,
+      "interface": "cli_job"
+    },
+    {
+      "id": "image_info",
+      "label": "Image metadata/readout",
+      "usable_by_hunter": true,
+      "interface": "cli_job"
     },
     {
       "id": "image_processing_core",
       "label": "Image processing core",
-      "usable_by_hunter": "after_cli_or_job_runner"
+      "usable_by_hunter": true,
+      "interface": "python_engine"
     },
     {
       "id": "gif_loading_support",
       "label": "GIF/loading support",
-      "usable_by_hunter": "after_cli_or_job_runner"
+      "usable_by_hunter": "partial"
     },
     {
       "id": "desktop_exe_build",
@@ -60,6 +80,11 @@
     }
   ],
   "roadmap_capabilities": [
+    "clean_image",
+    "apply_brand_template",
+    "generate_event_poster",
+    "render_gif_or_intro",
+    "prepare_social_ad",
     "layer_based_editor",
     "timeline_keyframe_motion_editor",
     "brand_kit_system",
@@ -76,28 +101,25 @@
         "image editor worker"
       ]
     },
-    "when_user_asks_for_image_or_video_work": "Hunter may suggest TTG Creative Studio as the THETECHGUY creative tool. Hunter may only execute work through it after a local CLI/job runner exists and is registered.",
+    "when_user_asks_for_image_or_video_work": "Hunter may suggest TTG Creative Studio as the THETECHGUY creative tool. Hunter may execute V1 image jobs through the local CLI/job runner when the local executor has access to this repository and dependencies are installed.",
     "cloudflare_rule": "Do not deploy heavy image/video processing inside a Cloudflare Worker. Use Cloudflare for auth, job queue, uploads/downloads, status, and routing; run processing locally or on a proper server/GPU.",
     "local_execution_rule": "Heavy processing runs through ATHENA/local executor now, later GT502/server/GPU. Outputs should be stored through Hunter-approved storage and linked back to the case/chat/job.",
     "public_wording": "Public users see TTG Creative Studio as a creative/design tool. They should not see internal engine, Hunter routing, or local executor details."
   },
-  "planned_interfaces": {
+  "current_interfaces": {
     "cli": {
       "entry": "src/ttg_creative_studio/cli.py",
-      "status": "planned",
-      "example_jobs": [
-        "remove_background",
+      "status": "current_v1",
+      "supported_jobs": [
+        "image_info",
         "resize_image",
-        "clean_image",
-        "apply_brand_template",
-        "generate_event_poster",
-        "render_gif_or_intro",
-        "prepare_social_ad"
+        "convert_image",
+        "remove_background"
       ]
     },
     "job_json": {
-      "status": "planned",
-      "description": "Hunter creates a job JSON file with input assets, task type, options, output path, and callback/status target. Creative Studio engine processes it and returns a result manifest."
+      "status": "current_v1",
+      "description": "Hunter creates a job JSON file with input assets, task type, options, output path, and result path. Creative Studio engine processes it and returns a result manifest."
     },
     "desktop_app": {
       "status": "current",
