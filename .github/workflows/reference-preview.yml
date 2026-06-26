@@ -92,3 +92,13 @@ jobs:
             outputs\reference_motion_contact_sheet.jpg
             outputs\reference_motion_score.json
             outputs\ttg_visual_proof_manifest.json
+
+      - name: Upload ad workflow proof
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ttg-ad-workflow-proof
+          path: |
+            outputs\ad_workflow\AD_WORKFLOW_PROOF.md
+            outputs\ad_workflow\ttg_ad_from_assets.ttgstudio.json
+            outputs\ad_workflow\ttg_ad_contact_sheet.jpg
