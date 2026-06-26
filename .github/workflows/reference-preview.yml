@@ -35,6 +35,9 @@ jobs:
       - name: Property schema check
         run: python scripts\check_property_schema.py
 
+      - name: Ad project workflow self-test
+        run: python scripts\self_test_ad_project_workflow.py
+
       - name: Canvas tools self-test
         run: python scripts\self_test_canvas_tools.py
 
