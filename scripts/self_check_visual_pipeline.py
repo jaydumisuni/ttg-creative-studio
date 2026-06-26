@@ -24,6 +24,8 @@ REQUIRED = [
     "src/ttg_image_intelligence.py",
     "src/ttg_hunter_image_bridge.py",
     "scripts/check_property_schema.py",
+    "scripts/build_ad_project_from_assets.py",
+    "scripts/self_test_ad_project_workflow.py",
     "scripts/self_test_canvas_tools.py",
     "scripts/self_test_canvas_interaction.py",
     "scripts/self_test_interactive_canvas_widget.py",
@@ -44,6 +46,7 @@ REQUIRED = [
     "scripts/check_video_gate.py",
     "scripts/build_video_proof.py",
     "docs/PRODUCT_STANDARD.md",
+    "docs/UI_LAST_RULE.md",
     "docs/BANANA_LEVEL.md",
     "docs/IMAGE_INTELLIGENCE_WORKER.md",
     "docs/VISUAL_APPROVAL_GATE.md",
@@ -65,7 +68,7 @@ def main() -> int:
             print(f"  - {path}")
         return 1
     print(f"All required files present: {len(REQUIRED)}")
-    print("Target: Photoshop power + Canva simplicity + Filmora motion + Banana Level + Image Intelligence Worker.")
+    print("Target: engine/workflow/proof first, UI last; Photoshop + Canva + Filmora + Banana + Workers.")
     return 0
 
 
