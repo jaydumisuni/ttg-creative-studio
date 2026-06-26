@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Build a TTG Creative Studio ad project from an asset folder.
+"""Build a TTG Creative Studio ad project from an asset folder or ZIP.
 
-This is the real Creative Studio workflow test target: given a folder of images,
-create an editable .ttgstudio.json project with scene layers, captions, timing
-metadata and export settings. The UI/renderer can then open and improve it.
+This is the real Creative Studio workflow test target: given a folder or ZIP of
+media, create an editable .ttgstudio.json project with scene layers, captions,
+timing metadata and export settings. The UI/renderer can then open and improve it.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from ttg_asset_package import import_asset_package
 from ttg_project_schema import Asset, CanvasSpec, Keyframe, Layer, TTGProject, Transform, new_id
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
@@ -26,15 +27,26 @@ def discover_images(asset_dir: Path) -> list[Path]:
     return sorted(path for path in asset_dir.rglob("*") if path.suffix.lower() in IMAGE_EXTS and path.is_file())
 
 
-def build_ad_project(asset_dir: Path, output: Path, title: str = "TTG Events Ad") -> TTGProject:
-    images = discover_images(asset_dir)
+def normalize_asset_source(source: Path, workspace: Path | None = None) -> list[Path]:
+    source = source.expanduser().resolve()
+    if source.is_file() and source.suffix.lower() == ".zip":
+        package = import_asset_package(source, workspace or ROOT / "outputs" / "asset_import_workspace")
+        return list(package.image_files)
+    if source.is_dir():
+        return discover_images(source)
+    raise SystemExit(f"Unsupported asset source: {source}")
+
+
+def build_ad_project(asset_source: Path, output: Path, title: str = "TTG Events Ad", workspace: Path | None = None) -> TTGProject:
+    images = normalize_asset_source(asset_source, workspace=workspace)
     if not images:
-        raise SystemExit(f"No images found in {asset_dir}")
+        raise SystemExit(f"No images found in {asset_source}")
 
     project = TTGProject(name=title, project_type="motion")
     project.canvas = CanvasSpec(width=1080, height=1920, fps=30, duration=max(8.0, len(images) * 1.4), background="#050614")
     project.export.update({"format": "mp4", "quality": "1080x1920", "codec": "h264", "workflow": "ad_from_assets"})
-    project.export.setdefault("creative_studio_test", {})["source_asset_dir"] = str(asset_dir)
+    project.export.setdefault("creative_studio_test", {})["source_asset_dir"] = str(asset_source)
+    project.export["creative_studio_test"]["normalized_images"] = len(images)
 
     for index, image in enumerate(images):
         asset_id = new_id("asset")
@@ -110,11 +122,12 @@ def build_ad_project(asset_dir: Path, output: Path, title: str = "TTG Events Ad"
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("asset_dir", type=Path)
+    parser.add_argument("asset_source", type=Path, help="Folder or ZIP containing ad images/assets")
     parser.add_argument("--output", type=Path, default=ROOT / "outputs" / "ttg_ad_from_assets.ttgstudio.json")
     parser.add_argument("--title", default="TTG Events Ad")
+    parser.add_argument("--workspace", type=Path, default=ROOT / "outputs" / "asset_import_workspace")
     args = parser.parse_args()
-    project = build_ad_project(args.asset_dir, args.output, args.title)
+    project = build_ad_project(args.asset_source, args.output, args.title, workspace=args.workspace)
     print(f"Saved Creative Studio ad project: {args.output}")
     print(f"Assets: {len(project.assets)}")
     print(f"Layers: {len(project.layers)}")
