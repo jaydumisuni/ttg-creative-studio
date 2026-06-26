@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Self-test Creative Studio ad workflow from generated assets.
 
-This proves the engine/workflow can create an editable ad project before UI polish.
+This proves the engine/workflow can create an editable ad project and visual
+proof output before UI polish.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ for path in (SRC, SCRIPTS):
 from PIL import Image, ImageDraw
 
 from build_ad_project_from_assets import build_ad_project
+from render_ad_project_contact_sheet import render_contact_sheet
 from ttg_project_schema import TTGProject
 
 
@@ -38,13 +40,20 @@ def main() -> int:
     work = Path(tempfile.gettempdir()) / "ttg_ad_project_workflow_self_test"
     asset_dir = work / "assets"
     output = work / "ttg_ad_from_assets.ttgstudio.json"
+    contact_sheet = work / "ttg_ad_contact_sheet.jpg"
     make_sample_assets(asset_dir)
     project = build_ad_project(asset_dir, output, "Workflow Self Test Ad")
+    rendered = render_contact_sheet(output, contact_sheet)
     loaded = TTGProject.load(output)
 
     image_layers = [layer for layer in loaded.layers if layer.type == "image"]
+    with Image.open(rendered) as proof:
+        proof_size = proof.size
     checks = [
         output.exists(),
+        rendered.exists(),
+        proof_size[0] >= 800,
+        proof_size[1] >= 600,
         loaded.project_type == "motion",
         loaded.canvas.width == 1080,
         loaded.canvas.height == 1920,
@@ -61,10 +70,12 @@ def main() -> int:
     if not all(checks):
         print("Ad project workflow self-test failed")
         print(checks)
-        print(f"Output: {output}")
+        print(f"Project: {output}")
+        print(f"Contact sheet: {rendered}")
         return 1
     print("Ad project workflow self-test passed")
-    print(f"Output: {output}")
+    print(f"Project: {output}")
+    print(f"Contact sheet: {rendered} {proof_size}")
     print(f"Assets: {len(loaded.assets)} Layers: {len(loaded.layers)} Duration: {loaded.canvas.duration:.2f}s")
     return 0
 
