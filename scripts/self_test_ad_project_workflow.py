@@ -7,6 +7,8 @@ proof output before UI polish.
 
 from __future__ import annotations
 
+import os
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -36,6 +38,22 @@ def make_sample_assets(asset_dir: Path, count: int = 4) -> None:
         image.save(asset_dir / f"scene_{index + 1:02d}.jpg", quality=92)
 
 
+def publish_artifacts(project_path: Path, contact_sheet: Path) -> None:
+    artifact_dir = Path(os.environ.get("TTG_AD_WORKFLOW_ARTIFACT_DIR", ROOT / "outputs" / "ad_workflow"))
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(project_path, artifact_dir / project_path.name)
+    shutil.copy2(contact_sheet, artifact_dir / contact_sheet.name)
+    report = artifact_dir / "AD_WORKFLOW_PROOF.md"
+    report.write_text(
+        "# TTG Ad Workflow Proof\n\n"
+        "This artifact proves the engine/workflow path before UI polish.\n\n"
+        f"- Project: `{project_path.name}`\n"
+        f"- Contact sheet: `{contact_sheet.name}`\n\n"
+        "Pipeline: generated assets → editable `.ttgstudio.json` project → visual contact sheet proof.\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> int:
     work = Path(tempfile.gettempdir()) / "ttg_ad_project_workflow_self_test"
     asset_dir = work / "assets"
@@ -45,6 +63,7 @@ def main() -> int:
     project = build_ad_project(asset_dir, output, "Workflow Self Test Ad")
     rendered = render_contact_sheet(output, contact_sheet)
     loaded = TTGProject.load(output)
+    publish_artifacts(output, rendered)
 
     image_layers = [layer for layer in loaded.layers if layer.type == "image"]
     with Image.open(rendered) as proof:
