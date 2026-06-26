@@ -42,6 +42,22 @@ TTG Creative Studio must support motion and video creation:
 - Frame export.
 - Optional Video Export Pack for MP4.
 
+## UI Last Rule
+
+The UI should be the last layer, not the first layer.
+
+```text
+Engine first
+Workflow second
+Proof output third
+UI last
+Polish after real use
+```
+
+A feature should not get a polished UI until the underlying action works and has a proof/test path.
+
+The UI must fit on top like a glove: professional, useful, simple, and connected to real capability.
+
 ## Modes
 
 The UI should be organized around three main modes:
@@ -63,3 +79,4 @@ A feature is not considered done unless it is:
 3. Connected to image/video output where relevant.
 4. Tested by script or workflow.
 5. Not hidden only in backend code.
+6. Not exposed as UI clutter before it is useful.
