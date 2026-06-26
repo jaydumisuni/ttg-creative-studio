@@ -41,6 +41,9 @@ jobs:
       - name: Ad project workflow self-test
         run: python scripts\self_test_ad_project_workflow.py
 
+      - name: One-command ad workflow self-test
+        run: python scripts\self_test_run_ad_workflow.py
+
       - name: Canvas tools self-test
         run: python scripts\self_test_canvas_tools.py
 
@@ -103,5 +106,6 @@ jobs:
           name: ttg-ad-workflow-proof
           path: |
             outputs\ad_workflow\AD_WORKFLOW_PROOF.md
-            outputs\ad_workflow\ttg_ad_from_assets.ttgstudio.json
+            outputs\ad_workflow\ttg_ad_from_folder.ttgstudio.json
+            outputs\ad_workflow\ttg_ad_from_zip.ttgstudio.json
             outputs\ad_workflow\ttg_ad_contact_sheet.jpg
