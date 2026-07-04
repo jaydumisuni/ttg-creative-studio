@@ -28,59 +28,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install Pillow numpy PyQt6
 
-      - name: Structural self-check
-        run: python scripts\self_check_visual_pipeline.py
-
-      - name: Review compile gate
-        run: python scripts\review_compile_gate.py
-
-      - name: Building standard report
-        run: python scripts\building_standard_report.py
-
-      - name: Product direction report
-        run: python scripts\product_direction_report.py
-
-      - name: Property schema check
-        run: python scripts\check_property_schema.py
-
-      - name: Asset package self-test
-        run: python scripts\self_test_asset_package.py
-
-      - name: Ad project workflow self-test
-        run: python scripts\self_test_ad_project_workflow.py
-
-      - name: One-command ad workflow self-test
-        run: python scripts\self_test_run_ad_workflow.py
-
-      - name: Canvas tools self-test
-        run: python scripts\self_test_canvas_tools.py
-
-      - name: Canvas interaction self-test
-        run: python scripts\self_test_canvas_interaction.py
-
-      - name: Interactive canvas widget self-test
-        run: python scripts\self_test_interactive_canvas_widget.py
-
-      - name: Banana Level self-test
-        run: python scripts\self_test_banana_level.py
-
-      - name: Image Intelligence self-test
-        run: python scripts\self_test_image_intelligence.py
-
-      - name: Advanced preset self-test
-        run: python scripts\self_test_presets.py
-
-      - name: Workspace preset bridge self-test
-        run: python scripts\self_test_workspace_preset_bridge.py
-
-      - name: App wiring import self-test
-        run: python scripts\self_test_app_wiring.py
-
-      - name: Offscreen UI smoke test
-        run: python scripts\self_test_ui_offscreen.py
-
-      - name: Generate visual proof package
-        run: python scripts\generate_visual_proof_package.py
+      - name: Review gate all
+        run: python scripts\review_gate_all.py
 
       - name: Write failure report if needed
         if: failure()
