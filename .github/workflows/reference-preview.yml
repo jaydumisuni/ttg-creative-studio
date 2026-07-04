@@ -29,6 +29,9 @@ jobs:
       - name: Structural self-check
         run: python scripts\self_check_visual_pipeline.py
 
+      - name: Building standard report
+        run: python scripts\building_standard_report.py
+
       - name: Product direction report
         run: python scripts\product_direction_report.py
 
