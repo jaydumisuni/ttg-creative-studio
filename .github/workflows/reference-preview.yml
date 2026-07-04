@@ -6,6 +6,8 @@ on:
     paths:
       - 'src/**'
       - 'scripts/**'
+      - 'docs/**'
+      - 'packs/**'
       - 'resources/**'
       - '.github/workflows/reference-preview.yml'
 
@@ -28,6 +30,9 @@ jobs:
 
       - name: Structural self-check
         run: python scripts\self_check_visual_pipeline.py
+
+      - name: Review compile gate
+        run: python scripts\review_compile_gate.py
 
       - name: Building standard report
         run: python scripts\building_standard_report.py
