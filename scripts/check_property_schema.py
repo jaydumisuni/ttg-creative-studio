@@ -10,7 +10,15 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from ttg_action_engine import ActionEngine
-from ttg_property_engine import PropertyEdit, apply_property_edits, describe_editable_properties
+from ttg_property_engine import (
+    PropertyEdit,
+    add_layer_keyframe,
+    apply_property_edits,
+    describe_editable_properties,
+    evaluate_keyframes,
+    list_timeline_clips,
+    set_layer_time,
+)
 from ttg_property_schema import editable_keys_for_layer_type, spec_by_key
 
 
@@ -43,7 +51,12 @@ def check_engine() -> bool:
         PropertyEdit(layer.id, "properties.font_size", 64),
         PropertyEdit(layer.id, "effect.style.radius", 18),
     ])
+    set_layer_time(project, layer.id, 1.0, 3.5)
+    add_layer_keyframe(project, layer.id, "opacity", 1.0, 0.0)
+    add_layer_keyframe(project, layer.id, "opacity", 3.0, 1.0)
     desc = describe_editable_properties(layer)
+    clips = list_timeline_clips(project)
+    halfway = evaluate_keyframes(project, layer.id, "opacity", 2.0)
     return all([
         layer.name == "Title",
         layer.transform.x == 120,
@@ -53,13 +66,18 @@ def check_engine() -> bool:
         layer.properties["font_size"] == 64,
         layer.effects[0]["id"] == "style",
         layer.effects[0]["radius"] == 18,
+        layer.properties["start_time"] == 1.0,
+        layer.properties["end_time"] == 3.5,
+        len(layer.keyframes["opacity"]) == 2,
+        clips[0].layer_id == layer.id,
+        halfway == 0.5,
         desc["transform"]["x"] == 120,
     ])
 
 
 def main() -> int:
     ok = check_schema() and check_engine()
-    print("Property schema + engine check:", "ok" if ok else "not ok")
+    print("Property schema + engine + timeline check:", "ok" if ok else "not ok")
     return 0 if ok else 1
 
 
