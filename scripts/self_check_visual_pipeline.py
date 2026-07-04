@@ -29,6 +29,7 @@ REQUIRED = [
     "scripts/run_ad_workflow.py",
     "scripts/building_standard_report.py",
     "scripts/review_compile_gate.py",
+    "scripts/review_claims_gate.py",
     "scripts/review_gate_all.py",
     "scripts/self_test_asset_package.py",
     "scripts/self_test_ad_project_workflow.py",
