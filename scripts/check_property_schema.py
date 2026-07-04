@@ -9,10 +9,12 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from ttg_action_engine import ActionEngine
+from ttg_property_engine import PropertyEdit, apply_property_edits, describe_editable_properties
 from ttg_property_schema import editable_keys_for_layer_type, spec_by_key
 
 
-def main() -> int:
+def check_schema() -> bool:
     text_keys = editable_keys_for_layer_type("text")
     text3d_keys = editable_keys_for_layer_type("text3d")
     shape_keys = editable_keys_for_layer_type("shape")
@@ -25,7 +27,39 @@ def main() -> int:
     ok = ok and "fill" in shape_keys
     ok = ok and spec_by_key("opacity").min_value == 0.0
     ok = ok and spec_by_key("opacity").max_value == 1.0
-    print("Property schema check:", "ok" if ok else "not ok")
+    return ok
+
+
+def check_engine() -> bool:
+    action = ActionEngine()
+    project = action.new_project("Property Engine Check", "image")
+    layer = action.add_text(project, "Start", 10, 20)
+    apply_property_edits(project, [
+        PropertyEdit(layer.id, "name", "Title"),
+        PropertyEdit(layer.id, "transform.x", 120),
+        PropertyEdit(layer.id, "transform.y", 240),
+        PropertyEdit(layer.id, "transform.opacity", 0.75),
+        PropertyEdit(layer.id, "properties.text", "Updated"),
+        PropertyEdit(layer.id, "properties.font_size", 64),
+        PropertyEdit(layer.id, "effect.style.radius", 18),
+    ])
+    desc = describe_editable_properties(layer)
+    return all([
+        layer.name == "Title",
+        layer.transform.x == 120,
+        layer.transform.y == 240,
+        layer.transform.opacity == 0.75,
+        layer.properties["text"] == "Updated",
+        layer.properties["font_size"] == 64,
+        layer.effects[0]["id"] == "style",
+        layer.effects[0]["radius"] == 18,
+        desc["transform"]["x"] == 120,
+    ])
+
+
+def main() -> int:
+    ok = check_schema() and check_engine()
+    print("Property schema + engine check:", "ok" if ok else "not ok")
     return 0 if ok else 1
 
 
