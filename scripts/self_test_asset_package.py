@@ -27,6 +27,7 @@ def main() -> int:
     work = Path(tempfile.gettempdir()) / "ttg_asset_package_self_test"
     source_dir = work / "source"
     zip_path = work / "sample_assets.zip"
+    unsafe_zip = work / "unsafe_assets.zip"
     make_image(source_dir / "scene_01.jpg", (10, 20, 40))
     make_image(source_dir / "nested" / "scene_02.png", (40, 20, 80))
     (source_dir / "ignore.txt").write_text("ignore me", encoding="utf-8")
@@ -36,8 +37,16 @@ def main() -> int:
             if path.is_file():
                 zf.write(path, path.relative_to(source_dir))
 
+    with zipfile.ZipFile(unsafe_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("../escape.jpg", b"not a real image but should never extract")
+
     folder_import = import_asset_package(source_dir, work / "folder_workspace")
     zip_import = import_asset_package(zip_path, work / "zip_workspace")
+    unsafe_rejected = False
+    try:
+        import_asset_package(unsafe_zip, work / "unsafe_workspace")
+    except ValueError:
+        unsafe_rejected = True
 
     checks = [
         len(folder_import.image_files) == 2,
@@ -48,6 +57,7 @@ def main() -> int:
         not any(path.name == "ignore.txt" for path in zip_import.files),
         folder_import.has_images,
         zip_import.has_images,
+        unsafe_rejected,
     ]
     if not all(checks):
         print("Asset package self-test failed")
@@ -56,6 +66,7 @@ def main() -> int:
     print("Asset package self-test passed")
     print(f"Folder import images: {len(folder_import.image_files)}")
     print(f"ZIP import images: {len(zip_import.image_files)}")
+    print("Unsafe ZIP path rejected")
     return 0
 
 
