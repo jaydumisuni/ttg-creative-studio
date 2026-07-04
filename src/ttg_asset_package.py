@@ -35,8 +35,10 @@ class ImportedAssetPackage:
 def _safe_member_path(base: Path, member_name: str) -> Path:
     target = (base / member_name).resolve()
     base_resolved = base.resolve()
-    if not str(target).startswith(str(base_resolved)):
-        raise ValueError(f"Unsafe ZIP member path: {member_name}")
+    try:
+        target.relative_to(base_resolved)
+    except ValueError as exc:
+        raise ValueError(f"Unsafe ZIP member path: {member_name}") from exc
     return target
 
 
