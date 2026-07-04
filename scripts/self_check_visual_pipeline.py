@@ -27,6 +27,7 @@ REQUIRED = [
     "scripts/check_property_schema.py",
     "scripts/build_ad_project_from_assets.py",
     "scripts/run_ad_workflow.py",
+    "scripts/building_standard_report.py",
     "scripts/self_test_asset_package.py",
     "scripts/self_test_ad_project_workflow.py",
     "scripts/self_test_run_ad_workflow.py",
@@ -49,6 +50,7 @@ REQUIRED = [
     "scripts/proof_status.py",
     "scripts/check_video_gate.py",
     "scripts/build_video_proof.py",
+    "docs/THETECHGUY_BUILDING_STANDARD.md",
     "docs/PRODUCT_STANDARD.md",
     "docs/UI_LAST_RULE.md",
     "docs/BANANA_LEVEL.md",
@@ -72,7 +74,7 @@ def main() -> int:
             print(f"  - {path}")
         return 1
     print(f"All required files present: {len(REQUIRED)}")
-    print("Target: engine/workflow/proof first, UI last; Photoshop + Canva + Filmora + Banana + Workers.")
+    print("Target: THETECHGUY Building Standard + engine/workflow/proof first, UI last.")
     return 0
 
 
