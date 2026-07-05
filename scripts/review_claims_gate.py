@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Claims-vs-implementation review gate.
-
-This is intentionally lightweight but strict: if the project claims a capability
-or engineering rule in docs, the corresponding implementation/test artifact must
-exist in the repo.
-"""
+"""Claims-vs-implementation review gate."""
 
 from __future__ import annotations
 
@@ -24,6 +19,12 @@ CLAIMS = [
         "docs": ["docs/UI_LAST_RULE.md", "docs/PRODUCT_STANDARD.md"],
         "code": ["scripts/review_gate_all.py"],
         "phrases": ["Engine first", "UI last"],
+    },
+    {
+        "claim": "Property and timeline engines are implemented and tested",
+        "docs": [],
+        "code": ["src/ttg_property_engine.py", "scripts/check_property_schema.py"],
+        "phrases": ["PropertyEdit", "set_layer_time", "add_layer_keyframe", "evaluate_keyframes"],
     },
     {
         "claim": "ZIP/folder asset import is implemented and tested",
@@ -66,7 +67,7 @@ CLAIMS = [
         "claim": "Hunter image worker is a worker bridge, not external-provider dependency",
         "docs": ["docs/IMAGE_INTELLIGENCE_WORKER.md"],
         "code": ["src/ttg_image_intelligence.py", "src/ttg_hunter_image_bridge.py", "scripts/self_test_image_intelligence.py"],
-        "phrases": ["Hunter", "worker", "optional"],
+        "phrases": ["Hunter", "worker", "optional", "background_remover_adapter"],
     },
 ]
 
