@@ -51,6 +51,12 @@ CLAIMS = [
         "phrases": ["ttgstudio.json", "contact sheet", "build_ad_project"],
     },
     {
+        "claim": "Video export is gated behind review and FFmpeg pack detection",
+        "docs": ["packs/video-export-pack.json"],
+        "code": ["scripts/check_video_gate.py", "scripts/build_video_proof.py"],
+        "phrases": ["Video Export Pack", "ffmpeg", "VIDEO BLOCKED", "accepted_for_video_proof"],
+    },
+    {
         "claim": "Canvas interaction has math/controller/widget tests",
         "docs": [],
         "code": [
