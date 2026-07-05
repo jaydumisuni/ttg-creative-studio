@@ -27,6 +27,12 @@ CLAIMS = [
         "phrases": ["PropertyEdit", "set_layer_time", "add_layer_keyframe", "evaluate_keyframes"],
     },
     {
+        "claim": "Advanced text rendering is implemented and used",
+        "docs": [],
+        "code": ["src/ttg_text_renderer.py", "src/ttg_reference_still_renderer.py"],
+        "phrases": ["gradient", "stroke_width", "shadow", "glow", "spacing", "render_text_layer"],
+    },
+    {
         "claim": "ZIP/folder asset import is implemented and tested",
         "docs": [],
         "code": ["src/ttg_asset_package.py", "scripts/self_test_asset_package.py"],
