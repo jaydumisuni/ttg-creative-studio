@@ -28,7 +28,10 @@ The TTG Native Image Brain is planned as modules:
 - Scene Planner
 - Image Generator Core
 - Edit Planner
+- Background Remover Adapter
 - Tool Worker Router
+
+The `background_remover_adapter` makes background cleanup/cutout work feel like one Creative Studio tool instead of a separate old utility.
 
 ## Hunter usage
 
@@ -51,6 +54,7 @@ Hunter should not hide the result as a flat image only. The goal is editable Cre
 - Scene to layers.
 - Render plan.
 - Edit plan.
+- Background cleanup/cutout plan.
 - Banana workflow planning.
 
 ## Important architecture decision
