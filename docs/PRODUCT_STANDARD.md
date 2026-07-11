@@ -58,6 +58,21 @@ A feature should not get a polished UI until the underlying action works and has
 
 The UI must fit on top like a glove: professional, useful, simple, and connected to real capability.
 
+## Closure levels
+
+There are two different closure gates:
+
+```text
+Engine/workflow closure
+User-release closure
+```
+
+Engine/workflow closure means the feature has code, proof path, claims gate coverage, and honest status.
+
+User-release closure means the feature is exposed in the final UI, easy to use, polished, packaged, and clean-clone/runtime proven.
+
+The current phase closes engine/workflow items. It does not pretend the final UI is release-ready.
+
 ## Modes
 
 The UI should be organized around three main modes:
@@ -72,11 +87,12 @@ Motion Mode should feel like Filmora.
 
 ## Release rule
 
-A feature is not considered done unless it is:
+A feature is not user-release-ready unless it is:
 
 1. Easy enough for a normal user.
 2. Powerful enough for advanced editing.
 3. Connected to image/video output where relevant.
 4. Tested by script or workflow.
-5. Not hidden only in backend code.
+5. Exposed through useful UI, not hidden only in backend code.
 6. Not exposed as UI clutter before it is useful.
+7. Clean-clone/runtime proven on the target environment.
