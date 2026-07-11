@@ -33,6 +33,9 @@ def main() -> int:
         hasattr(workspace, "canvas"),
         hasattr(workspace, "properties"),
         hasattr(workspace, "preset_actions"),
+        hasattr(workspace, "import_ad_zip"),
+        hasattr(workspace, "import_ad_folder"),
+        hasattr(workspace, "import_ad_source"),
     ]
     window.close()
     app.processEvents()
