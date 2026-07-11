@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import sys
 import tempfile
 from pathlib import Path
 from typing import Callable
@@ -38,6 +39,7 @@ from ttg_intro_builder import IntroBuilder
 from ttg_pack_downloader import PackDownloader
 from ttg_pack_status import PackStatusReader
 from ttg_playback_panel import PlaybackPanel
+from ttg_preset_actions import PresetActions
 from ttg_project_schema import TTGProject, make_ttg_intro_project
 from ttg_properties_panel import PropertiesPanel
 from ttg_property_actions import PropertyActions
@@ -57,6 +59,7 @@ class CreativeWorkspace(QWidget):
         self.props = PropertyActions()
         self.effects = EffectActions()
         self.timeline_actions = TimelineActions()
+        self.preset_actions = PresetActions()
         self.history = ProjectHistory()
         self.validator = ProjectValidator()
         self.planner = RenderPlanner()
@@ -96,6 +99,8 @@ class CreativeWorkspace(QWidget):
             ("New Project", self.new_project),
             ("Open Project", self.open_project),
             ("Save Project", self.save_project),
+            ("Import Ad ZIP", self.import_ad_zip),
+            ("Import Ad Folder", self.import_ad_folder),
         ]))
         toolbar.addWidget(self._menu_button("Templates", [
             ("Basic Intro", lambda: self.reset_project(make_ttg_intro_project())),
@@ -306,6 +311,38 @@ class CreativeWorkspace(QWidget):
             self.refresh_all()
         except Exception as exc:
             QMessageBox.critical(self, "Open Project", str(exc))
+
+    def import_ad_zip(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "Import Ad ZIP", "", "Ad Package (*.zip)")
+        if path:
+            self.import_ad_source(Path(path))
+
+    def import_ad_folder(self) -> None:
+        path = QFileDialog.getExistingDirectory(self, "Import Ad Folder")
+        if path:
+            self.import_ad_source(Path(path))
+
+    def import_ad_source(self, source: Path) -> None:
+        try:
+            scripts_dir = self.project_root / "scripts"
+            if str(scripts_dir) not in sys.path:
+                sys.path.insert(0, str(scripts_dir))
+            from build_ad_project_from_assets import build_ad_project
+
+            output_dir = Path(tempfile.gettempdir()) / "ttg_creative_studio_imported_ad"
+            output_dir.mkdir(parents=True, exist_ok=True)
+            project_path = output_dir / "imported_ad.ttgstudio.json"
+            workspace = output_dir / "asset_workspace"
+            project = build_ad_project(source, project_path, "Imported TTG Ad", workspace=workspace)
+            self.project = project
+            self.project_path = project_path
+            self.selected_layer_id = project.layers[0].id if project.layers else None
+            self.still_preview_approved = False
+            self.history.clear()
+            self.refresh_all()
+            self.status.setText(f"Imported ad workflow project: {source}")
+        except Exception as exc:
+            QMessageBox.warning(self, "Import Ad Workflow", str(exc))
 
     def save_project(self) -> None:
         if self.project is None:
