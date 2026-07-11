@@ -2,7 +2,7 @@
 
 This standard applies across THETECHGUY projects: Hunter, Creative Studio, Software Builder, Tool, Events, Pay Gateway, and future worker systems.
 
-It exists to keep engineering claims honest, implementation complete, and testing meaningful.
+It exists to keep engineering claims honest, implementation complete, visual quality verified, and testing meaningful.
 
 ## 1. Finish, then prove
 
@@ -46,6 +46,7 @@ Use live sources:
 - Actual scripts.
 - Test outputs.
 - Generated artifacts.
+- Screenshots, previews, rendered frames, videos, or UI captures where visual quality matters.
 
 Do not rely on cached summaries or memory when proof is required.
 
@@ -64,7 +65,37 @@ Most issues found after this stage should be:
 
 They should not be fundamental design surprises.
 
-## 6. Engine first, UI last
+## 6. Visual verification is mandatory for visual work
+
+Implementation proof is not enough for visual work.
+
+Anything involving UI, layout, branding, image generation, video, animation, ads, previews, exports, or customer-facing creative output must be visually verified.
+
+Visual verification means reviewing real output, such as:
+
+- Screenshot.
+- Rendered still image.
+- Contact sheet.
+- GIF preview.
+- Video proof.
+- UI capture.
+- Exported artifact.
+
+For visual work, the proof chain is:
+
+```text
+Code review
+↓
+Workflow/test proof
+↓
+Visual artifact
+↓
+Visual review
+```
+
+A visual feature is not done just because the code runs. It must look correct for the intended use.
+
+## 7. Engine first, UI last
 
 For user tools, build in this order:
 
@@ -82,7 +113,7 @@ A capable engine with an ugly UI is fixable.
 
 The UI should fit on top like a glove after the workflow is proven.
 
-## 7. Editable output first
+## 8. Editable output first
 
 For creative tools, generated output must remain editable where possible.
 
@@ -100,7 +131,7 @@ Preview proof
 Export
 ```
 
-## 8. Hunter coordinates, workers execute
+## 9. Hunter coordinates, workers execute
 
 Hunter should not personally do every specialist task.
 
@@ -120,7 +151,7 @@ Specialist workers should execute:
 - Export work.
 - Device/service workflows.
 
-## 9. Release gate
+## 10. Release gate
 
 A feature is not release-ready until:
 
@@ -128,11 +159,12 @@ A feature is not release-ready until:
 2. Claims match implementation.
 3. Proof script/workflow exists.
 4. Generated artifact or runtime result exists where relevant.
-5. Clean environment path is known.
-6. Failure mode is documented.
-7. UI only exposes what is useful.
+5. Visual artifact/review exists where visual quality matters.
+6. Clean environment path is known.
+7. Failure mode is documented.
+8. UI only exposes what is useful.
 
-## 10. Reviewer standard
+## 11. Reviewer standard
 
 The reviewer must ask:
 
@@ -140,6 +172,7 @@ The reviewer must ask:
 What does the project claim?
 What does the code actually do?
 What proof exists?
+What visual proof exists, if visual quality matters?
 Can a clean environment reproduce it?
 What is still missing?
 ```
@@ -154,6 +187,7 @@ Code should justify execution.
 Claims must match implementation.
 Evidence before conclusions.
 Tests are proof, not discovery.
+Visual verification is mandatory for visual work.
 Engine first, UI last.
 Editable output first.
 Hunter coordinates, workers execute.
