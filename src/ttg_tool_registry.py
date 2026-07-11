@@ -21,16 +21,16 @@ class ToolSpec:
 
 
 TOOLS = (
-    ToolSpec("select_move", "Select / Move", "advanced", "photoshop_power", "planned", "Click, select and drag layers on the canvas."),
-    ToolSpec("resize_rotate", "Resize / Rotate", "advanced", "photoshop_power", "planned", "Handles for scaling and rotating selected layers."),
-    ToolSpec("properties_editor", "Properties Editor", "advanced", "photoshop_power", "partial", "Editable fields for position, size, color, opacity and effects."),
-    ToolSpec("templates", "Templates", "easy", "canva_simplicity", "partial", "Guided starting points and brand-ready layouts."),
-    ToolSpec("asset_browser", "Asset Browser", "easy", "canva_simplicity", "partial", "Logo, image, background and template assets."),
+    ToolSpec("select_move", "Select / Move", "advanced", "photoshop_power", "engine_done", "Canvas math, interaction controller and widget smoke test exist."),
+    ToolSpec("resize_rotate", "Resize / Rotate", "advanced", "photoshop_power", "engine_done", "Resize and rotate handle paths exist at controller/widget level."),
+    ToolSpec("properties_editor", "Properties Editor", "advanced", "photoshop_power", "engine_done", "Property engine edits layer name, transform, opacity, properties and effects."),
+    ToolSpec("templates", "Templates", "easy", "canva_simplicity", "workflow_done", "Template/preset workflow exists; final browser UI remains UI-last."),
+    ToolSpec("asset_browser", "Asset Browser", "easy", "canva_simplicity", "engine_done", "Folder/ZIP asset import is implemented and tested."),
     ToolSpec("preset_picker", "Preset Picker", "easy", "canva_simplicity", "wired", "One-click presets for text, scene, motion and export."),
-    ToolSpec("background_remover", "Background Remover", "advanced", "photoshop_power", "partial", "Cutout tool integrated into Creative Studio."),
-    ToolSpec("timeline", "Timeline", "motion", "filmora_motion", "partial", "Tracks, timing and keyframes for motion/video."),
-    ToolSpec("playback_preview", "Playback Preview", "motion", "filmora_motion", "partial", "Preview motion after still frame is approved."),
-    ToolSpec("video_export", "Video Export", "motion", "filmora_motion", "gated", "MP4 export through optional Video Export Pack."),
+    ToolSpec("background_remover", "Background Adapter", "advanced", "photoshop_power", "adapter_done", "Image worker adapter maps cutout/background cleanup into Creative Studio action planning."),
+    ToolSpec("timeline", "Timeline", "motion", "filmora_motion", "engine_done", "Layer timing, keyframes, clip listing and interpolation exist in the engine."),
+    ToolSpec("playback_preview", "Playback Preview", "motion", "filmora_motion", "proof_done", "GIF/contact-sheet motion proof exists before full UI playback."),
+    ToolSpec("video_export", "Video Export", "motion", "filmora_motion", "gated", "MP4 export is gated behind review and optional Video Export Pack/FFmpeg detection."),
 )
 
 
