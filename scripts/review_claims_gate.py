@@ -12,7 +12,7 @@ CLAIMS = [
         "claim": "THETECHGUY Building Standard exists",
         "docs": ["docs/THETECHGUY_BUILDING_STANDARD.md"],
         "code": ["scripts/building_standard_report.py"],
-        "phrases": ["Finish, then prove", "Claims must match implementation"],
+        "phrases": ["Finish, then prove", "Claims must match implementation", "Visual verification is mandatory for visual work"],
     },
     {
         "claim": "Engine first, UI last is documented",
@@ -70,6 +70,12 @@ CLAIMS = [
             "scripts/self_test_interactive_canvas_widget.py",
         ],
         "phrases": ["ResizeHandle", "DragMode", "InteractiveCanvas"],
+    },
+    {
+        "claim": "Visual proof artifacts are generated for review",
+        "docs": ["docs/VISUAL_APPROVAL_GATE.md"],
+        "code": ["scripts/generate_visual_proof_package.py", "scripts/build_motion_contact_sheet.py", "scripts/build_motion_gif_preview.py", "scripts/build_artifact_index.py", "scripts/build_review_summary.py"],
+        "phrases": ["VISUAL_PROOF_REVIEW", "contact_sheet", "gif", "ttg_reference_still"],
     },
     {
         "claim": "Banana Level is deterministic first",
