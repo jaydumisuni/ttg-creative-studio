@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Print TTG Creative Studio product direction report."""
+"""Print TTG Creative Studio product direction and phase-closure report."""
 
 from __future__ import annotations
 
@@ -14,6 +14,8 @@ if str(SRC) not in sys.path:
 from ttg_product_targets import TARGETS
 from ttg_user_modes import MODES
 from ttg_tool_registry import TOOLS, status_counts
+
+CLOSED_OR_GATED = {"engine_done", "workflow_done", "adapter_done", "proof_done", "wired", "gated"}
 
 
 def main() -> int:
@@ -30,12 +32,21 @@ def main() -> int:
         print(f"- {mode.name}: {mode.description}")
     print("")
     print("Tools:")
+    open_items = []
     for tool in TOOLS:
         print(f"- {tool.label} [{tool.mode}/{tool.status}]: {tool.description}")
+        if tool.status not in CLOSED_OR_GATED:
+            open_items.append(tool)
     print("")
     print("Status counts:", status_counts())
     if len(TARGETS) < 3 or len(MODES) < 3 or len(TOOLS) < 8:
         return 1
+    if open_items:
+        print("Open ungated tool statuses:")
+        for tool in open_items:
+            print(f"- {tool.id}: {tool.status}")
+        return 1
+    print("Phase closure status: engine/workflow/proof/gated items are closed for UI-last pass.")
     return 0
 
 
