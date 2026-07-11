@@ -47,8 +47,10 @@ CLAIMS = [
             "scripts/render_ad_project_contact_sheet.py",
             "scripts/self_test_ad_project_workflow.py",
             "scripts/self_test_run_ad_workflow.py",
+            "src/ttg_creative_workspace.py",
+            "scripts/self_test_ui_offscreen.py",
         ],
-        "phrases": ["ttgstudio.json", "contact sheet", "build_ad_project"],
+        "phrases": ["ttgstudio.json", "contact sheet", "build_ad_project", "import_ad_source", "import_ad_zip", "import_ad_folder"],
     },
     {
         "claim": "Video export is gated behind review and FFmpeg pack detection",
