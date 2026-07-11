@@ -13,6 +13,7 @@ REQUIRED_PHRASES = [
     "Claims must match implementation",
     "Evidence before conclusions",
     "Tests are proof, not discovery",
+    "Visual verification is mandatory for visual work",
     "Engine first, UI last",
     "Editable output first",
     "Hunter coordinates, workers execute",
