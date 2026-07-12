@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TTG Visual Proof Review</title>
+<style>
+body { margin:0; background:#050814; color:#eaf3ff; font-family:Segoe UI,Arial,sans-serif; }
+main { max-width:1100px; margin:0 auto; padding:28px; }
+.card { background:#0b1220; border:1px solid #1d3f80; border-radius:16px; padding:18px; margin:18px 0; box-shadow:0 0 24px #001b44; }
+h1,h2 { color:#9fd8ff; }
+a { color:#00e5ff; }
+img { max-width:100%; border-radius:14px; border:1px solid #18305f; }
+.badge { display:inline-block; padding:6px 10px; border-radius:999px; background:#16224d; border:1px solid #3f72ff; }
+.warning { color:#ffcf70; }
+</style>
+</head>
+<body>
+<main>
+<h1>TTG Creative Studio Visual Proof</h1>
+<p class="badge">Human review required before video proof or release work.</p>
+<div class="card">
+<h2>Gate status</h2>
+<ul>
+<li>Automated status: passed</li>
+<li>Human approval: pending</li>
+<li>Video export: blocked_until_human_approval</li>
+<li>Release packaging: blocked_until_human_approval</li>
+</ul>
+</div>
+<div class="card">
+<h2>Scores</h2>
+<ul>
+<li>Still passed guardrails: True</li>
+<li>Still contrast: 50.184779429515004</li>
+<li>Still neon ratio: 0.10140625</li>
+<li>Motion passed guardrails: True</li>
+<li>Motion score: 43.55759259259259</li>
+</ul>
+</div>
+<div class="card">
+<h2>Review files</h2>
+<ul>
+<li><a href='VISUAL_PROOF_REVIEW.md'>Readable markdown review</a> <small>(1,397 bytes)</small></li>
+<li><a href='ttg_reference_still.jpg'>Reference still</a> <small>(768,632 bytes)</small></li>
+<li><a href='reference_motion_contact_sheet.jpg'>Motion contact sheet</a> <small>(344,100 bytes)</small></li>
+<li><a href='reference_motion_preview.gif'>Animated GIF preview</a> <small>(5,750,128 bytes)</small></li>
+<li><a href='ttg_visual_proof_manifest.json'>Proof manifest</a> <small>(1,649 bytes)</small></li>
+<li><strong>Failure report if workflow crashed</strong>: missing</li>
+</ul>
+</div>
+<div class="card">
+<h2>Still preview</h2>
+<img src="ttg_reference_still.jpg" alt="TTG reference still">
+</div>
+<div class="card">
+<h2>Motion contact sheet</h2>
+<img src="reference_motion_contact_sheet.jpg" alt="TTG motion contact sheet">
+</div>
+<p class="warning">If this does not look premium enough, improve the renderer/template first. Do not move to release packaging.</p>
+</main>
+</body>
+</html>

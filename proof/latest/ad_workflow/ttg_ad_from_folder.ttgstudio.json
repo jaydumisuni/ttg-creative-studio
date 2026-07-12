@@ -1,0 +1,486 @@
+{
+  "version": "0.1.0",
+  "project_type": "motion",
+  "name": "Workflow Folder Self Test Ad",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "duration": 8.0,
+    "background": "#050614"
+  },
+  "brand": {
+    "id": "ttg_default",
+    "name": "THETECHGUY DIGITAL SOLUTIONS",
+    "website": "thetechguyds.com",
+    "slogan": "Fairytale Business \u2014 Make a wish, we sort it.",
+    "pillars": [
+      "SYSTEMS",
+      "TOOLS",
+      "ISP",
+      "WEB"
+    ],
+    "colors": {
+      "black": "#050614",
+      "cyan": "#00E5FF",
+      "purple": "#BC13FE",
+      "white": "#F7FAFF"
+    },
+    "locked_assets": {}
+  },
+  "assets": [
+    {
+      "id": "asset_b0aaf8a1d1",
+      "kind": "image",
+      "name": "scene_01",
+      "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\assets\\scene_01.jpg",
+      "sha256": null,
+      "pack_id": null,
+      "required": false
+    },
+    {
+      "id": "asset_12daf45eaa",
+      "kind": "image",
+      "name": "scene_02",
+      "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\assets\\scene_02.jpg",
+      "sha256": null,
+      "pack_id": null,
+      "required": false
+    },
+    {
+      "id": "asset_74d44c26da",
+      "kind": "image",
+      "name": "scene_03",
+      "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\assets\\scene_03.jpg",
+      "sha256": null,
+      "pack_id": null,
+      "required": false
+    },
+    {
+      "id": "asset_b67b56ec9d",
+      "kind": "image",
+      "name": "scene_04",
+      "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\assets\\scene_04.jpg",
+      "sha256": null,
+      "pack_id": null,
+      "required": false
+    }
+  ],
+  "layers": [
+    {
+      "id": "scene_96e8b96f71",
+      "type": "image",
+      "name": "Scene 1: scene_01",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 90,
+        "y": 210,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "asset": "asset_b0aaf8a1d1",
+        "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\assets\\scene_01.jpg",
+        "width": 900,
+        "height": 1280,
+        "fit": "contain",
+        "scene_index": 0,
+        "start_time": 0.0,
+        "end_time": 1.25,
+        "motion": "push_in",
+        "shadow": true,
+        "glow": true
+      },
+      "effects": [],
+      "keyframes": {
+        "opacity": [
+          {
+            "time": 0.0,
+            "value": 0.0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 0.18,
+            "value": 1.0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.07,
+            "value": 1.0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.25,
+            "value": 0.0,
+            "easing": "ease_in_out"
+          }
+        ],
+        "scale_x": [
+          {
+            "time": 0.0,
+            "value": 0.96,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.25,
+            "value": 1.04,
+            "easing": "ease_in_out"
+          }
+        ],
+        "scale_y": [
+          {
+            "time": 0.0,
+            "value": 0.96,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.25,
+            "value": 1.04,
+            "easing": "ease_in_out"
+          }
+        ]
+      },
+      "children": []
+    },
+    {
+      "id": "scene_2c43fa5c58",
+      "type": "image",
+      "name": "Scene 2: scene_02",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 90,
+        "y": 210,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "asset": "asset_12daf45eaa",
+        "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\assets\\scene_02.jpg",
+        "width": 900,
+        "height": 1280,
+        "fit": "contain",
+        "scene_index": 1,
+        "start_time": 1.4,
+        "end_time": 2.65,
+        "motion": "slide_up",
+        "shadow": true,
+        "glow": true
+      },
+      "effects": [],
+      "keyframes": {
+        "opacity": [
+          {
+            "time": 1.4,
+            "value": 0.0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.5799999999999998,
+            "value": 1.0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 2.4699999999999998,
+            "value": 1.0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 2.65,
+            "value": 0.0,
+            "easing": "ease_in_out"
+          }
+        ],
+        "scale_x": [
+          {
+            "time": 1.4,
+            "value": 0.96,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 2.65,
+            "value": 1.04,
+            "easing": "ease_in_out"
+          }
+        ],
+        "scale_y": [
+          {
+            "time": 1.4,
+            "value": 0.96,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 2.65,
+            "value": 1.04,
+            "easing": "ease_in_out"
+          }
+        ]
+      },
+      "children": []
+    },
+    {
+      "id": "scene_b30ff1812a",
+      "type": "image",
+      "name": "Scene 3: scene_03",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 90,
+        "y": 210,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "asset": "asset_74d44c26da",
+        "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\assets\\scene_03.jpg",
+        "width": 900,
+        "height": 1280,
+        "fit": "contain",
+        "scene_index": 2,
+        "start_time": 2.8,
+        "end_time": 4.05,
+        "motion": "push_in",
+        "shadow": true,
+        "glow": true
+      },
+      "effects": [],
+      "keyframes": {
+        "opacity": [
+          {
+            "time": 2.8,
+            "value": 0.0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 2.98,
+            "value": 1.0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 3.8699999999999997,
+            "value": 1.0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 4.05,
+            "value": 0.0,
+            "easing": "ease_in_out"
+          }
+        ],
+        "scale_x": [
+          {
+            "time": 2.8,
+            "value": 0.96,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 4.05,
+            "value": 1.04,
+            "easing": "ease_in_out"
+          }
+        ],
+        "scale_y": [
+          {
+            "time": 2.8,
+            "value": 0.96,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 4.05,
+            "value": 1.04,
+            "easing": "ease_in_out"
+          }
+        ]
+      },
+      "children": []
+    },
+    {
+      "id": "scene_19af0b85b6",
+      "type": "image",
+      "name": "Scene 4: scene_04",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 90,
+        "y": 210,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "asset": "asset_b67b56ec9d",
+        "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\assets\\scene_04.jpg",
+        "width": 900,
+        "height": 1280,
+        "fit": "contain",
+        "scene_index": 3,
+        "start_time": 4.2,
+        "end_time": 5.45,
+        "motion": "slide_up",
+        "shadow": true,
+        "glow": true
+      },
+      "effects": [],
+      "keyframes": {
+        "opacity": [
+          {
+            "time": 4.2,
+            "value": 0.0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 4.38,
+            "value": 1.0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 5.2700000000000005,
+            "value": 1.0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 5.45,
+            "value": 0.0,
+            "easing": "ease_in_out"
+          }
+        ],
+        "scale_x": [
+          {
+            "time": 4.2,
+            "value": 0.96,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 5.45,
+            "value": 1.04,
+            "easing": "ease_in_out"
+          }
+        ],
+        "scale_y": [
+          {
+            "time": 4.2,
+            "value": 0.96,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 5.45,
+            "value": 1.04,
+            "easing": "ease_in_out"
+          }
+        ]
+      },
+      "children": []
+    },
+    {
+      "id": "ad_title",
+      "type": "text3d",
+      "name": "Ad Title",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 90,
+        "y": 70,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "THETECHGUY DIGITAL EVENTS",
+        "width": 900,
+        "height": 90,
+        "font_size": 54,
+        "gradient": true,
+        "gradient_start": "#BC13FE",
+        "gradient_end": "#00E5FF",
+        "glow": true,
+        "stroke_width": 3
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "ad_cta",
+      "type": "text",
+      "name": "Call To Action",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 110,
+        "y": 1740,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "Create invites \u2022 Manage guests \u2022 Share events",
+        "width": 860,
+        "height": 80,
+        "font_size": 38,
+        "color": "#F7FAFF",
+        "glow": true
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    }
+  ],
+  "audio_markers": [
+    {
+      "time": 0.0,
+      "name": "intro hit"
+    },
+    {
+      "time": 1.4,
+      "name": "scene change"
+    },
+    {
+      "time": 7.0,
+      "name": "final CTA"
+    }
+  ],
+  "export": {
+    "format": "mp4",
+    "quality": "1080x1920",
+    "codec": "h264",
+    "workflow": "ad_from_assets",
+    "creative_studio_test": {
+      "source_asset_dir": "C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\assets",
+      "normalized_images": 4
+    }
+  }
+}

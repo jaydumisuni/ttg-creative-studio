@@ -1,0 +1,40 @@
+{
+  "proof_stage": "visual-proof",
+  "automated_status": "passed",
+  "human_approval": "pending",
+  "video_export": "blocked_until_human_approval",
+  "release_packaging": "blocked_until_human_approval",
+  "missing": [],
+  "artifacts": [
+    {
+      "name": "ttg_reference_still.jpg",
+      "path": "D:\\a\\ttg-creative-studio\\ttg-creative-studio\\outputs\\ttg_reference_still.jpg",
+      "size_bytes": 768632,
+      "sha256": "82071be7d36b186fd3ff79301c00f642154a4368809fcec358a01df49441f358"
+    },
+    {
+      "name": "ttg_reference_still_score.json",
+      "path": "D:\\a\\ttg-creative-studio\\ttg-creative-studio\\outputs\\ttg_reference_still_score.json",
+      "size_bytes": 506,
+      "sha256": "45c33da39afe9a1500217d301c6b47692310bb97a65aea4a667aac6b1c181b90"
+    },
+    {
+      "name": "reference_motion_score.json",
+      "path": "D:\\a\\ttg-creative-studio\\ttg-creative-studio\\outputs\\reference_motion_score.json",
+      "size_bytes": 268,
+      "sha256": "393375c81a3ad8f788994bb8cea7f60682ba3e422f4b43f26f7395945147acd1"
+    },
+    {
+      "name": "reference_motion_contact_sheet.jpg",
+      "path": "D:\\a\\ttg-creative-studio\\ttg-creative-studio\\outputs\\reference_motion_contact_sheet.jpg",
+      "size_bytes": 344100,
+      "sha256": "e23295827701a230f26be9c13c01113d2b902d8d0df644444d2dc389151fb852"
+    },
+    {
+      "name": "reference_motion_preview.gif",
+      "path": "D:\\a\\ttg-creative-studio\\ttg-creative-studio\\outputs\\reference_motion_preview.gif",
+      "size_bytes": 5750128,
+      "sha256": "31acc7040e7bdc434d355811e7f39064faa72bf4d3dad1554aeb4d8d27a09ff7"
+    }
+  ]
+}

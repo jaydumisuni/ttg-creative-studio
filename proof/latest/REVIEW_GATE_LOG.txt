@@ -1,0 +1,252 @@
+THETECHGUY Creative Studio review gate
+======================================
+
+=== scripts/self_check_visual_pipeline.py ===
+TTG product/visual pipeline structural self-check
+================================================
+All required files present: 62
+Target: THETECHGUY Building Standard + engine/workflow/proof + visual benchmark pressure + release decision, UI last.
+Exit code: 0
+
+=== scripts/review_compile_gate.py ===
+TTG review compile gate
+=======================
+Python files checked: 120
+Compile gate passed
+Exit code: 0
+
+=== scripts/building_standard_report.py ===
+THETECHGUY Building Standard
+============================
+- Finish, then prove
+- Code should justify execution
+- Claims must match implementation
+- Evidence before conclusions
+- Tests are proof, not discovery
+- Visual verification is mandatory for visual work
+- Engine first, UI last
+- Editable output first
+- Hunter coordinates, workers execute
+Building standard is present and complete.
+Exit code: 0
+
+=== scripts/benchmark_targets_report.py ===
+TTG benchmark targets
+=====================
+- Penpot
+- tldraw
+- Excalidraw
+- CreatiPoster
+- OpenShot
+- Flowblade
+- Olive
+- Remotion
+- Motion Canvas
+- Blender
+- Visual proof artifact
+- Next implementation target
+Benchmark target strategy is present.
+Exit code: 0
+
+=== scripts/review_claims_gate.py ===
+TTG claims-vs-implementation gate
+=================================
+- THETECHGUY Building Standard exists
+- Engine first, UI last is documented
+- Property and timeline engines are implemented and tested
+- Advanced text rendering is implemented and used
+- ZIP/folder asset import is implemented and tested
+- Ad ZIP/folder workflow creates editable project and visual proof
+- Video export is gated behind review and FFmpeg pack detection
+- Canvas interaction has math/controller/widget tests
+- Visual proof artifacts are generated for review
+- Benchmark targets and gap reports guide next implementation work
+- Final release decision is generated from source and visual proof requirements
+- Banana Level is deterministic first
+- Hunter image worker is a worker bridge, not external-provider dependency
+Claims gate passed
+Exit code: 0
+
+=== scripts/product_direction_report.py ===
+TTG Creative Studio Direction
+=============================
+Target: Photoshop power + Canva simplicity + Filmora motion
+
+Targets:
+- Photoshop Power: Precise layered editing, effects, masks, text polish and pixel-level control.
+- Canva Simplicity: Templates, presets and guided workflows that make good results easy.
+- Filmora Motion: Timeline, keyframes, playback preview and clean video export flow.
+
+Modes:
+- Easy Mode: Canva-like guided creation: templates, presets, brand assets and quick export.
+- Advanced Mode: Photoshop-like layer control: canvas editing, effects, masks and detailed properties.
+- Motion Mode: Filmora-like video flow: timeline, keyframes, playback and export packs.
+
+Tools:
+- Select / Move [advanced/engine_done]: Canvas math, interaction controller and widget smoke test exist.
+- Resize / Rotate [advanced/engine_done]: Resize and rotate handle paths exist at controller/widget level.
+- Properties Editor [advanced/engine_done]: Property engine edits layer name, transform, opacity, properties and effects.
+- Templates [easy/workflow_done]: Template/preset workflow exists; final browser UI remains UI-last.
+- Asset Browser [easy/engine_done]: Folder/ZIP asset import is implemented and tested.
+- Preset Picker [easy/wired]: One-click presets for text, scene, motion and export.
+- Background Adapter [advanced/adapter_done]: Image worker adapter maps cutout/background cleanup into Creative Studio action planning.
+- Timeline [motion/engine_done]: Layer timing, keyframes, clip listing and interpolation exist in the engine.
+- Playback Preview [motion/proof_done]: GIF/contact-sheet motion proof exists before full UI playback.
+- Video Export [motion/gated]: MP4 export is gated behind review and optional Video Export Pack/FFmpeg detection.
+
+Status counts: {'engine_done': 5, 'workflow_done': 1, 'wired': 1, 'adapter_done': 1, 'proof_done': 1, 'gated': 1}
+Phase closure status: engine/workflow/proof/gated items are closed for UI-last pass.
+Exit code: 0
+
+=== scripts/check_property_schema.py ===
+Property schema + engine + timeline check: ok
+Exit code: 0
+
+=== scripts/self_test_asset_package.py ===
+Asset package self-test passed
+Folder import images: 2
+ZIP import images: 2
+Unsafe ZIP path rejected
+Exit code: 0
+
+=== scripts/self_test_ad_project_workflow.py ===
+Ad project workflow self-test passed
+Folder project: C:\Users\RUNNER~1\AppData\Local\Temp\ttg_ad_project_workflow_self_test\ttg_ad_from_folder.ttgstudio.json
+ZIP project: C:\Users\RUNNER~1\AppData\Local\Temp\ttg_ad_project_workflow_self_test\ttg_ad_from_zip.ttgstudio.json
+Contact sheet: C:\Users\RUNNER~1\AppData\Local\Temp\ttg_ad_project_workflow_self_test\ttg_ad_contact_sheet.jpg (1004, 1300)
+Folder assets: 4 ZIP assets: 4
+Exit code: 0
+
+=== scripts/self_test_run_ad_workflow.py ===
+Run ad workflow self-test passed
+Project: C:\Users\RUNNER~1\AppData\Local\Temp\ttg_run_ad_workflow_self_test\outputs\ttg_ad_project.ttgstudio.json
+Contact sheet: C:\Users\RUNNER~1\AppData\Local\Temp\ttg_run_ad_workflow_self_test\outputs\ttg_ad_contact_sheet.jpg
+Report: C:\Users\RUNNER~1\AppData\Local\Temp\ttg_run_ad_workflow_self_test\outputs\AD_WORKFLOW_REPORT.md
+Exit code: 0
+
+=== scripts/self_test_canvas_tools.py ===
+Canvas tools self-test passed
+Exit code: 0
+
+=== scripts/self_test_canvas_interaction.py ===
+Canvas interaction self-test passed
+Exit code: 0
+
+=== scripts/self_test_interactive_canvas_widget.py ===
+Interactive canvas widget self-test passed
+Exit code: 0
+
+=== scripts/self_test_banana_level.py ===
+Banana Level self-test passed
+Exit code: 0
+
+=== scripts/self_test_image_intelligence.py ===
+TTG Native Image Brain self-test passed
+Exit code: 0
+
+=== scripts/self_test_presets.py ===
+Preset self-test passed
+Exit code: 0
+
+=== scripts/self_test_workspace_preset_bridge.py ===
+Workspace preset bridge self-test passed
+Exit code: 0
+
+=== scripts/self_test_app_wiring.py ===
+App wiring import self-test passed
+Exit code: 0
+
+=== scripts/self_test_ui_offscreen.py ===
+Offscreen UI smoke test passed
+Exit code: 0
+
+=== scripts/generate_visual_proof_package.py ===
+{
+  "path": "D:\\a\\ttg-creative-studio\\ttg-creative-studio\\outputs\\ttg_reference_still.jpg",
+  "width": 1920,
+  "height": 1080,
+  "brightness": 41.142004565329216,
+  "contrast": 50.184779429515004,
+  "neon_ratio": 0.10140625,
+  "dark_ratio": 0.2809548611111111,
+  "detail_score": 10.681660566364862,
+  "checks": {
+    "resolution_ok": true,
+    "contrast_ok": true,
+    "neon_ok": true,
+    "dark_base_ok": true,
+    "detail_ok": true,
+    "not_blank_ok": true
+  },
+  "passed": true
+}
+Saved contact sheet: D:\a\ttg-creative-studio\ttg-creative-studio\outputs\reference_motion_contact_sheet.jpg
+{
+  "frame_count": 72,
+  "motion_score": 43.55759259259259,
+  "settle_score": 17.536018518518517,
+  "final_contrast": 46.411792137145234,
+  "checks": {
+    "enough_frames": true,
+    "motion_visible": true,
+    "final_not_flat": true
+  },
+  "passed": true
+}
+Saved GIF preview: D:\a\ttg-creative-studio\ttg-creative-studio\outputs\reference_motion_preview.gif
+{
+  "proof_stage": "visual-proof",
+  "automated_status": "passed",
+  "human_approval": "pending",
+  "video_export": "blocked_until_human_approval",
+  "release_packaging": "blocked_until_human_approval",
+  "missing": [],
+  "artifacts": [
+    {
+      "name": "ttg_reference_still.jpg",
+      "path": "D:\\a\\ttg-creative-studio\\ttg-creative-studio\\outputs\\ttg_reference_still.jpg",
+      "size_bytes": 768632,
+      "sha256": "82071be7d36b186fd3ff79301c00f642154a4368809fcec358a01df49441f358"
+    },
+    {
+      "name": "ttg_reference_still_score.json",
+      "path": "D:\\a\\ttg-creative-studio\\ttg-creative-studio\\outputs\\ttg_reference_still_score.json",
+      "size_bytes": 506,
+      "sha256": "45c33da39afe9a1500217d301c6b47692310bb97a65aea4a667aac6b1c181b90"
+    },
+    {
+      "name": "reference_motion_score.json",
+      "path": "D:\\a\\ttg-creative-studio\\ttg-creative-studio\\outputs\\reference_motion_score.json",
+      "size_bytes": 268,
+      "sha256": "393375c81a3ad8f788994bb8cea7f60682ba3e422f4b43f26f7395945147acd1"
+    },
+    {
+      "name": "reference_motion_contact_sheet.jpg",
+      "path": "D:\\a\\ttg-creative-studio\\ttg-creative-studio\\outputs\\reference_motion_contact_sheet.jpg",
+      "size_bytes": 344100,
+      "sha256": "e23295827701a230f26be9c13c01113d2b902d8d0df644444d2dc389151fb852"
+    },
+    {
+      "name": "reference_motion_preview.gif",
+      "path": "D:\\a\\ttg-creative-studio\\ttg-creative-studio\\outputs\\reference_motion_preview.gif",
+      "size_bytes": 5750128,
+      "sha256": "31acc7040e7bdc434d355811e7f39064faa72bf4d3dad1554aeb4d8d27a09ff7"
+    }
+  ]
+}
+Saved review summary: D:\a\ttg-creative-studio\ttg-creative-studio\outputs\VISUAL_PROOF_REVIEW.md
+Saved preset report: D:\a\ttg-creative-studio\ttg-creative-studio\outputs\ADVANCED_PRESET_REPORT.md
+Saved artifact index: D:\a\ttg-creative-studio\ttg-creative-studio\outputs\index.html
+Visual proof package generated and guardrails passed.
+Exit code: 0
+
+=== scripts/build_benchmark_gap_report.py ===
+Benchmark gap report written: D:\a\ttg-creative-studio\ttg-creative-studio\outputs\BENCHMARK_GAP_REPORT.md
+Exit code: 0
+
+=== scripts/build_release_decision.py ===
+Release decision written: D:\a\ttg-creative-studio\ttg-creative-studio\outputs\RELEASE_DECISION.md
+Release candidate: PASS
+Exit code: 0
+
+Review gate passed

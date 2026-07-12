@@ -1,0 +1,19 @@
+{
+  "path": "D:\\a\\ttg-creative-studio\\ttg-creative-studio\\outputs\\ttg_reference_still.jpg",
+  "width": 1920,
+  "height": 1080,
+  "brightness": 41.142004565329216,
+  "contrast": 50.184779429515004,
+  "neon_ratio": 0.10140625,
+  "dark_ratio": 0.2809548611111111,
+  "detail_score": 10.681660566364862,
+  "checks": {
+    "resolution_ok": true,
+    "contrast_ok": true,
+    "neon_ok": true,
+    "dark_base_ok": true,
+    "detail_ok": true,
+    "not_blank_ok": true
+  },
+  "passed": true
+}

@@ -1,0 +1,12 @@
+{
+  "frame_count": 72,
+  "motion_score": 43.55759259259259,
+  "settle_score": 17.536018518518517,
+  "final_contrast": 46.411792137145234,
+  "checks": {
+    "enough_frames": true,
+    "motion_visible": true,
+    "final_not_flat": true
+  },
+  "passed": true
+}
