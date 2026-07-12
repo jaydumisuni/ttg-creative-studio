@@ -50,6 +50,7 @@ jobs:
             outputs\VISUAL_PROOF_REVIEW.md
             outputs\ADVANCED_PRESET_REPORT.md
             outputs\BENCHMARK_GAP_REPORT.md
+            outputs\RELEASE_DECISION.md
             outputs\ttg_reference_still.jpg
             outputs\ttg_reference_still_score.json
             outputs\reference_motion_preview.gif
