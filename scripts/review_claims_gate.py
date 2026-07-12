@@ -78,6 +78,12 @@ CLAIMS = [
         "phrases": ["VISUAL_PROOF_REVIEW", "contact_sheet", "gif", "ttg_reference_still"],
     },
     {
+        "claim": "Benchmark targets and gap reports guide next implementation work",
+        "docs": ["docs/BENCHMARK_TARGETS.md"],
+        "code": ["scripts/benchmark_targets_report.py", "scripts/build_benchmark_gap_report.py", "scripts/review_gate_all.py", ".github/workflows/reference-preview.yml"],
+        "phrases": ["Benchmark", "BENCHMARK_GAP_REPORT", "Next implementation target", "Visual proof artifact"],
+    },
+    {
         "claim": "Banana Level is deterministic first",
         "docs": ["docs/BANANA_LEVEL.md"],
         "code": ["src/ttg_banana_level.py", "src/ttg_banana_actions.py", "scripts/self_test_banana_level.py"],
