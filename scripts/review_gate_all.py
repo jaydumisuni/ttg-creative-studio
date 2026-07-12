@@ -36,6 +36,7 @@ COMMANDS = [
     ["scripts/self_test_ui_offscreen.py"],
     ["scripts/generate_visual_proof_package.py"],
     ["scripts/build_benchmark_gap_report.py"],
+    ["scripts/build_release_decision.py"],
 ]
 
 
