@@ -30,7 +30,7 @@ def score_image(path: Path) -> dict:
     neon_pixels = 0
     dark_pixels = 0
     for r, g, b in pixels:
-        if max(r, g, b) < 28:
+        if max(r, g, b) < 40:
             dark_pixels += 1
         if (b > 120 and g > 70) or (r > 120 and b > 120):
             neon_pixels += 1
@@ -38,7 +38,6 @@ def score_image(path: Path) -> dict:
     neon_ratio = neon_pixels / total
     dark_ratio = dark_pixels / total
 
-    # Edge/detail proxy using grayscale neighbor differences.
     gray = img.convert("L").resize((320, 180))
     data = list(gray.getdata())
     detail_sum = 0
