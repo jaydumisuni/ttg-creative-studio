@@ -15,6 +15,26 @@ from ttg_reference_still_renderer import render_reference_still
 from ttg_reference_motion_renderer import render_reference_motion_frames
 from score_reference_still import score_image
 
+REQUIRED_VISUAL_PROOF_ARTIFACTS = [
+    ROOT / "outputs" / "ttg_reference_still.jpg",
+    ROOT / "outputs" / "reference_motion_contact_sheet.jpg",
+    ROOT / "outputs" / "reference_motion_preview.gif",
+    ROOT / "outputs" / "ttg_visual_proof_manifest.json",
+    ROOT / "outputs" / "VISUAL_PROOF_REVIEW.md",
+    ROOT / "outputs" / "ADVANCED_PRESET_REPORT.md",
+    ROOT / "outputs" / "index.html",
+]
+
+
+def verify_visual_artifacts() -> bool:
+    missing = [path for path in REQUIRED_VISUAL_PROOF_ARTIFACTS if not path.exists() or path.stat().st_size <= 0]
+    if missing:
+        print("Missing visual proof artifacts:")
+        for path in missing:
+            print(f"- {path}")
+        return False
+    return True
+
 
 def main() -> int:
     still = ROOT / "outputs" / "ttg_reference_still.jpg"
@@ -48,6 +68,8 @@ def main() -> int:
     build_summary()
     build_presets()
     build_index()
+    if not verify_visual_artifacts():
+        return 1
     print("Visual proof package generated for review.")
     return 0
 
