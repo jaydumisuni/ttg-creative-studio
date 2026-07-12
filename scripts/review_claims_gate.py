@@ -84,6 +84,12 @@ CLAIMS = [
         "phrases": ["Benchmark", "BENCHMARK_GAP_REPORT", "Next implementation target", "Visual proof artifact"],
     },
     {
+        "claim": "Final release decision is generated from source and visual proof requirements",
+        "docs": ["README.md", "docs/PRODUCT_STANDARD.md"],
+        "code": ["scripts/build_release_decision.py", "scripts/review_gate_all.py", ".github/workflows/reference-preview.yml"],
+        "phrases": ["Release-candidate decision", "RELEASE_DECISION", "clean-clone", "target-machine"],
+    },
+    {
         "claim": "Banana Level is deterministic first",
         "docs": ["docs/BANANA_LEVEL.md"],
         "code": ["src/ttg_banana_level.py", "src/ttg_banana_actions.py", "scripts/self_test_banana_level.py"],
