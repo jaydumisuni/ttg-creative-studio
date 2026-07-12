@@ -13,6 +13,7 @@ REQUIRED = [
     "src/ttg_preset_actions.py",
     "src/ttg_workspace_preset_bridge.py",
     "src/ttg_property_schema.py",
+    "src/ttg_property_engine.py",
     "src/ttg_canvas_tools.py",
     "src/ttg_canvas_interaction.py",
     "src/ttg_interactive_canvas.py",
@@ -28,6 +29,8 @@ REQUIRED = [
     "scripts/build_ad_project_from_assets.py",
     "scripts/run_ad_workflow.py",
     "scripts/building_standard_report.py",
+    "scripts/benchmark_targets_report.py",
+    "scripts/build_benchmark_gap_report.py",
     "scripts/review_compile_gate.py",
     "scripts/review_claims_gate.py",
     "scripts/review_gate_all.py",
@@ -57,6 +60,7 @@ REQUIRED = [
     "docs/PRODUCT_STANDARD.md",
     "docs/UI_LAST_RULE.md",
     "docs/BANANA_LEVEL.md",
+    "docs/BENCHMARK_TARGETS.md",
     "docs/IMAGE_INTELLIGENCE_WORKER.md",
     "docs/VISUAL_APPROVAL_GATE.md",
     "docs/VIDEO_PROOF_STAGE.md",
@@ -77,7 +81,7 @@ def main() -> int:
             print(f"  - {path}")
         return 1
     print(f"All required files present: {len(REQUIRED)}")
-    print("Target: THETECHGUY Building Standard + engine/workflow/proof first, UI last.")
+    print("Target: THETECHGUY Building Standard + engine/workflow/proof + visual benchmark pressure, UI last.")
     return 0
 
 
