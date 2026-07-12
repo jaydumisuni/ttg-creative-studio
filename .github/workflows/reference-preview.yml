@@ -11,6 +11,9 @@ on:
       - 'resources/**'
       - '.github/workflows/reference-preview.yml'
 
+permissions:
+  contents: write
+
 jobs:
   reference-preview:
     runs-on: windows-latest
@@ -38,6 +41,37 @@ jobs:
       - name: Write workflow summary
         if: always()
         run: python scripts\write_workflow_summary.py
+
+      - name: Publish latest proof snapshot
+        if: success()
+        shell: pwsh
+        run: |
+          $proof = "proof\latest"
+          New-Item -ItemType Directory -Force -Path $proof | Out-Null
+          Copy-Item outputs\index.html $proof\index.html -Force
+          Copy-Item outputs\VISUAL_PROOF_REVIEW.md $proof\VISUAL_PROOF_REVIEW.md -Force
+          Copy-Item outputs\ADVANCED_PRESET_REPORT.md $proof\ADVANCED_PRESET_REPORT.md -Force
+          Copy-Item outputs\BENCHMARK_GAP_REPORT.md $proof\BENCHMARK_GAP_REPORT.md -Force
+          Copy-Item outputs\RELEASE_DECISION.md $proof\RELEASE_DECISION.md -Force
+          Copy-Item outputs\ttg_reference_still.jpg $proof\ttg_reference_still.jpg -Force
+          Copy-Item outputs\ttg_reference_still_score.json $proof\ttg_reference_still_score.json -Force
+          Copy-Item outputs\reference_motion_preview.gif $proof\reference_motion_preview.gif -Force
+          Copy-Item outputs\reference_motion_contact_sheet.jpg $proof\reference_motion_contact_sheet.jpg -Force
+          Copy-Item outputs\reference_motion_score.json $proof\reference_motion_score.json -Force
+          Copy-Item outputs\ttg_visual_proof_manifest.json $proof\ttg_visual_proof_manifest.json -Force
+          New-Item -ItemType Directory -Force -Path "$proof\ad_workflow" | Out-Null
+          Copy-Item outputs\ad_workflow\AD_WORKFLOW_PROOF.md "$proof\ad_workflow\AD_WORKFLOW_PROOF.md" -Force
+          Copy-Item outputs\ad_workflow\ttg_ad_from_folder.ttgstudio.json "$proof\ad_workflow\ttg_ad_from_folder.ttgstudio.json" -Force
+          Copy-Item outputs\ad_workflow\ttg_ad_from_zip.ttgstudio.json "$proof\ad_workflow\ttg_ad_from_zip.ttgstudio.json" -Force
+          Copy-Item outputs\ad_workflow\ttg_ad_contact_sheet.jpg "$proof\ad_workflow\ttg_ad_contact_sheet.jpg" -Force
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add proof/latest
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "Publish latest verified visual proof [skip ci]"
+            git push
+          }
 
       - name: Upload animated preview package
         uses: actions/upload-artifact@v4
