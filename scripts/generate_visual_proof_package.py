@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generate visual proof artifacts without treating quality scores as CI crashes."""
+"""Generate and verify TTG Creative Studio visual proof artifacts."""
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -17,8 +18,10 @@ from score_reference_still import score_image
 
 REQUIRED_VISUAL_PROOF_ARTIFACTS = [
     ROOT / "outputs" / "ttg_reference_still.jpg",
+    ROOT / "outputs" / "ttg_reference_still_score.json",
     ROOT / "outputs" / "reference_motion_contact_sheet.jpg",
     ROOT / "outputs" / "reference_motion_preview.gif",
+    ROOT / "outputs" / "reference_motion_score.json",
     ROOT / "outputs" / "ttg_visual_proof_manifest.json",
     ROOT / "outputs" / "VISUAL_PROOF_REVIEW.md",
     ROOT / "outputs" / "ADVANCED_PRESET_REPORT.md",
@@ -37,12 +40,19 @@ def verify_visual_artifacts() -> bool:
 
 
 def main() -> int:
-    still = ROOT / "outputs" / "ttg_reference_still.jpg"
+    outputs = ROOT / "outputs"
+    outputs.mkdir(parents=True, exist_ok=True)
+    still = outputs / "ttg_reference_still.jpg"
+    still_report = outputs / "ttg_reference_still_score.json"
     render_reference_still(ROOT, still)
     still_score = score_image(still)
-    print("Still score passed:", still_score.get("passed"))
+    still_report.write_text(json.dumps(still_score, indent=2), encoding="utf-8")
+    print(json.dumps(still_score, indent=2))
+    if not still_score.get("passed"):
+        print("ERROR: reference still failed visual guardrails")
+        return 1
 
-    frames_dir = ROOT / "outputs" / "reference_motion_frames"
+    frames_dir = outputs / "reference_motion_frames"
     frames = render_reference_motion_frames(ROOT, frames_dir, frames=72)
     if len(frames) != 72:
         print(f"ERROR: expected 72 frames, got {len(frames)}")
@@ -61,7 +71,8 @@ def main() -> int:
 
     if build_sheet() != 0:
         return 1
-    score_motion()
+    if score_motion() != 0:
+        return 1
     if build_gif() != 0:
         return 1
     build_manifest()
@@ -70,7 +81,7 @@ def main() -> int:
     build_index()
     if not verify_visual_artifacts():
         return 1
-    print("Visual proof package generated for review.")
+    print("Visual proof package generated and guardrails passed.")
     return 0
 
 
