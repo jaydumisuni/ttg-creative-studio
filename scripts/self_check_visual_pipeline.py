@@ -31,6 +31,7 @@ REQUIRED = [
     "scripts/building_standard_report.py",
     "scripts/benchmark_targets_report.py",
     "scripts/build_benchmark_gap_report.py",
+    "scripts/build_release_decision.py",
     "scripts/review_compile_gate.py",
     "scripts/review_claims_gate.py",
     "scripts/review_gate_all.py",
@@ -81,7 +82,7 @@ def main() -> int:
             print(f"  - {path}")
         return 1
     print(f"All required files present: {len(REQUIRED)}")
-    print("Target: THETECHGUY Building Standard + engine/workflow/proof + visual benchmark pressure, UI last.")
+    print("Target: THETECHGUY Building Standard + engine/workflow/proof + visual benchmark pressure + release decision, UI last.")
     return 0
 
 
