@@ -59,6 +59,7 @@ jobs:
           $proof = "proof\latest"
           New-Item -ItemType Directory -Force -Path $proof | Out-Null
           Copy-Item outputs\index.html $proof\index.html -Force
+          Copy-Item outputs\REVIEW_GATE_LOG.txt $proof\REVIEW_GATE_LOG.txt -Force
           Copy-Item outputs\VISUAL_PROOF_REVIEW.md $proof\VISUAL_PROOF_REVIEW.md -Force
           Copy-Item outputs\ADVANCED_PRESET_REPORT.md $proof\ADVANCED_PRESET_REPORT.md -Force
           Copy-Item outputs\BENCHMARK_GAP_REPORT.md $proof\BENCHMARK_GAP_REPORT.md -Force
@@ -91,6 +92,7 @@ jobs:
           path: |
             outputs\index.html
             outputs\FAILURE_REPORT.md
+            outputs\REVIEW_GATE_LOG.txt
             outputs\VISUAL_PROOF_REVIEW.md
             outputs\ADVANCED_PRESET_REPORT.md
             outputs\BENCHMARK_GAP_REPORT.md
