@@ -29,9 +29,9 @@ This package is for visual review only. It does not make Creative Studio release
 ## Gate status
 
 - Automated status: passed
-- Human approval: pending
-- Video export: blocked_until_human_approval
-- Release packaging: blocked_until_human_approval
+- Human approval: approved
+- Video export: approved_for_video_proof
+- Release packaging: approved_for_release_candidate
 
 ## Human review checklist
 

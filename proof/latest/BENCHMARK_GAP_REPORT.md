@@ -7,8 +7,8 @@ This report turns ahead-of-us benchmark tools into practical TTG engineering tar
 - ttg_reference_still.jpg: present (768632 bytes)
 - reference_motion_contact_sheet.jpg: present (344100 bytes)
 - reference_motion_preview.gif: present (5750128 bytes)
-- ttg_visual_proof_manifest.json: present (1649 bytes)
-- VISUAL_PROOF_REVIEW.md: present (1397 bytes)
+- ttg_visual_proof_manifest.json: present (2547 bytes)
+- VISUAL_PROOF_REVIEW.md: present (1396 bytes)
 - ttg_ad_contact_sheet.jpg: missing until visual proof generation runs
 
 ## Benchmark gaps

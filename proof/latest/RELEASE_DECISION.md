@@ -1,14 +1,16 @@
 # TTG Creative Studio Release Decision
 
 - Engine/workflow closure: PASS
+- Automated visual guardrails: PASS
+- Human visual approval: PASS
 - Visual proof closure: PASS
 - Release-candidate decision: PASS
 
 ## Meaning
 
-A PASS means the repository has the required implementation files and generated visual-review artifacts for a release-candidate handoff.
+A PASS requires implementation/review files, non-empty visual artifacts, passing still/motion guardrails, the composed ad proof, and explicit visual approval.
 
-It does not replace clean-clone and target-machine proof. Those remain the final confirmation step under the THETECHGUY Building Standard.
+The clean GitHub Actions checkout provides reproducible runtime proof. Target-machine installation remains the final environment confirmation.
 
 ## Missing source/review requirements
 
@@ -18,10 +20,14 @@ It does not replace clean-clone and target-machine proof. Those remain the final
 
 - None
 
+## Visual blockers
+
+- None
+
 ## Final gate
 
 ```powershell
 python scripts\review_gate_all.py
 ```
 
-The review gate must complete without an unexpected failure before clean-clone/runtime proof begins.
+The command must complete without an unexpected failure in a clean checkout.
