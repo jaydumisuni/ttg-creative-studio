@@ -32,6 +32,10 @@ class PointerState:
     moved: bool = False
     mode: DragMode = DragMode.NONE
     resize_handle: ResizeHandle | None = None
+    origin_x: float = 0
+    origin_y: float = 0
+    origin_width: float = 0
+    origin_height: float = 0
 
 
 class CanvasInteractionController:
@@ -54,6 +58,13 @@ class CanvasInteractionController:
         self.selection.select(layer_id, additive=additive)
         if self.pointer.mode == DragMode.NONE and layer_id:
             self.pointer.mode = DragMode.MOVE
+        if layer_id:
+            layer = get_layer(self.project, layer_id)
+            rect = layer_rect(layer)
+            self.pointer.origin_x = rect.x
+            self.pointer.origin_y = rect.y
+            self.pointer.origin_width = rect.width
+            self.pointer.origin_height = rect.height
         return layer_id
 
     def mouse_move(self, x: float, y: float) -> bool:
@@ -72,11 +83,21 @@ class CanvasInteractionController:
         layer = get_layer(self.project, layer_id)
         if layer.locked:
             return False
+        total_dx = x - self.pointer.start_x
+        total_dy = y - self.pointer.start_y
         if self.pointer.mode in {DragMode.MOVE, DragMode.NONE} and self.selection.tool in {CanvasTool.SELECT, CanvasTool.MOVE}:
-            move_layer(layer, dx, dy, snap_enabled=self.selection.snap_enabled, grid=self.selection.snap_grid)
+            layer.transform.x = self.pointer.origin_x
+            layer.transform.y = self.pointer.origin_y
+            move_layer(layer, total_dx, total_dy, snap_enabled=self.selection.snap_enabled, grid=self.selection.snap_grid)
             return True
         if self.pointer.mode == DragMode.RESIZE and self.pointer.resize_handle is not None:
-            resize_layer(layer, self.pointer.resize_handle, dx, dy, snap_enabled=self.selection.snap_enabled, grid=self.selection.snap_grid)
+            layer.transform.x = self.pointer.origin_x
+            layer.transform.y = self.pointer.origin_y
+            layer.transform.scale_x = 1
+            layer.transform.scale_y = 1
+            layer.properties["width"] = self.pointer.origin_width
+            layer.properties["height"] = self.pointer.origin_height
+            resize_layer(layer, self.pointer.resize_handle, total_dx, total_dy, snap_enabled=self.selection.snap_enabled, grid=self.selection.snap_grid)
             return True
         if self.pointer.mode == DragMode.ROTATE:
             rect = layer_rect(layer)
