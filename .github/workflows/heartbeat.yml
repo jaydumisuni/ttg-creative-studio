@@ -1,0 +1,14 @@
+name: TTG Actions Heartbeat
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm Actions runner
+        run: echo "TTG Creative Studio GitHub Actions runner is active."
