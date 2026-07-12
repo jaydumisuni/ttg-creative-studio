@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+OUTPUTS = ROOT / "outputs"
+LOG_PATH = OUTPUTS / "REVIEW_GATE_LOG.txt"
 COMMANDS = [
     ["scripts/self_check_visual_pipeline.py"],
     ["scripts/review_compile_gate.py"],
@@ -40,29 +42,56 @@ COMMANDS = [
 ]
 
 
-def run_command(script: str) -> int:
-    print("\n===", script, "===")
+def emit(text: str, log: list[str]) -> None:
+    print(text)
+    log.append(text)
+
+
+def run_command(script: str, log: list[str]) -> int:
+    emit(f"\n=== {script} ===", log)
     env = dict(os.environ)
     env.setdefault("QT_QPA_PLATFORM", "offscreen")
-    result = subprocess.run([sys.executable, script], cwd=ROOT, env=env, check=False)
+    result = subprocess.run(
+        [sys.executable, script],
+        cwd=ROOT,
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+        errors="replace",
+    )
+    if result.stdout:
+        emit(result.stdout.rstrip(), log)
+    if result.stderr:
+        emit("--- stderr ---", log)
+        emit(result.stderr.rstrip(), log)
+    emit(f"Exit code: {result.returncode}", log)
     return result.returncode
 
 
+def write_log(log: list[str]) -> None:
+    OUTPUTS.mkdir(parents=True, exist_ok=True)
+    LOG_PATH.write_text("\n".join(log) + "\n", encoding="utf-8")
+
+
 def main() -> int:
-    print("THETECHGUY Creative Studio review gate")
-    print("======================================")
+    log: list[str] = []
+    emit("THETECHGUY Creative Studio review gate", log)
+    emit("======================================", log)
     failed: list[str] = []
     for command in COMMANDS:
-        code = run_command(command[0])
+        code = run_command(command[0], log)
         if code != 0:
             failed.append(command[0])
             break
     if failed:
-        print("\nReview gate failed:")
+        emit("\nReview gate failed:", log)
         for script in failed:
-            print(f"- {script}")
+            emit(f"- {script}", log)
+        write_log(log)
         return 1
-    print("\nReview gate passed")
+    emit("\nReview gate passed", log)
+    write_log(log)
     return 0
 
 
