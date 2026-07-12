@@ -10,6 +10,16 @@ on:
       - 'packs/**'
       - 'resources/**'
       - '.github/workflows/reference-preview.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'scripts/**'
+      - 'docs/**'
+      - 'packs/**'
+      - 'resources/**'
+      - '.github/workflows/reference-preview.yml'
 
 permissions:
   contents: write
@@ -43,7 +53,7 @@ jobs:
         run: python scripts\write_workflow_summary.py
 
       - name: Publish latest proof snapshot
-        if: success()
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: pwsh
         run: |
           $proof = "proof\latest"
