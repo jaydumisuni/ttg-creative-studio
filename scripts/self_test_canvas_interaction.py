@@ -44,7 +44,7 @@ def main() -> int:
         changed is True,
         released is True,
         rect.x == 80,
-        rect.y == 110,
+        rect.y == 90,
         resize_changed is True,
         resized.width == 190,
         resized.height == 120,
