@@ -18,6 +18,7 @@ COMMANDS = [
     ["scripts/self_check_visual_pipeline.py"],
     ["scripts/review_compile_gate.py"],
     ["scripts/building_standard_report.py"],
+    ["scripts/benchmark_targets_report.py"],
     ["scripts/review_claims_gate.py"],
     ["scripts/product_direction_report.py"],
     ["scripts/check_property_schema.py"],
