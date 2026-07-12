@@ -49,6 +49,7 @@ jobs:
             outputs\FAILURE_REPORT.md
             outputs\VISUAL_PROOF_REVIEW.md
             outputs\ADVANCED_PRESET_REPORT.md
+            outputs\BENCHMARK_GAP_REPORT.md
             outputs\ttg_reference_still.jpg
             outputs\ttg_reference_still_score.json
             outputs\reference_motion_preview.gif
