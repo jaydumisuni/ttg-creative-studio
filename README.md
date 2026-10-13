@@ -63,3 +63,15 @@ The repository must not claim more than the code and proof artifacts support.
 ## Architecture rule
 
 AI is not the foundation. The editor works manually and deterministically first. Hunter and the TTG Native Image Brain coordinate or enhance specialist workflows later without replacing the core editor.
+
+
+## Ptah direct specialist integration (development)
+
+Creative Studio can run as an independent specialist application using Ptah's
+A04/A05/A06/A07 Activity, native-process, Workspace, receipt and Artifact
+mechanics. The embedded Linux adapter and 21-check qualification harness
+are documented in [integrations/ptah/README.md](integrations/ptah/README.md).
+
+The adapter is **not** yet a production-enrolled Ptah service/Node, and does
+not establish AI image generation or subjective visual acceptance. Hunter is
+not required for specialist operation.
