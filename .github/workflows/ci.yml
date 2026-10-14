@@ -2,19 +2,23 @@ name: Creative Studio Ptah Integration Proof
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, 'integration/ptah-creative-studio-kratos']
     paths:
       - 'integrations/ptah/**'
       - 'scripts/test_ptah_adapter.py'
+      - 'scripts/test_ptah_resident.py'
+      - 'scripts/ptah_production_admission_preflight.py'
       - 'scripts/render_ad_project_contact_sheet.py'
       - '.github/workflows/ci.yml'
   push:
     branches:
-      - 'integration/ptah-creative-studio-kratos'
+      - 'integration/ptah-*'
       - main
     paths:
       - 'integrations/ptah/**'
       - 'scripts/test_ptah_adapter.py'
+      - 'scripts/test_ptah_resident.py'
+      - 'scripts/ptah_production_admission_preflight.py'
       - 'scripts/render_ad_project_contact_sheet.py'
       - '.github/workflows/ci.yml'
   workflow_dispatch:
@@ -68,10 +72,21 @@ jobs:
         env:
           TTG_CREATIVE_PYTHON: python
         run: python -B scripts/test_ptah_adapter.py
+      - name: Resident Ptah A05 process and fenced terminal control
+        working-directory: TTG-Creative-Studio
+        env:
+          TTG_CREATIVE_PYTHON: python
+        run: python -B scripts/test_ptah_resident.py
+      - name: Read-only production-admission preflight (expected blocked until authority)
+        working-directory: TTG-Creative-Studio
+        run: python -B scripts/ptah_production_admission_preflight.py --report .workspace/scratch/production-admission-preflight-ci.json
       - name: Upload sanitized qualification report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: creative-ptah-qualification
           if-no-files-found: warn
-          path: TTG-Creative-Studio/.workspace/scratch/ptah-regression-*/qualification_report.json
+          path: |
+            TTG-Creative-Studio/.workspace/scratch/ptah-regression-*/qualification_report.json
+            TTG-Creative-Studio/.workspace/scratch/ptah-resident-*/qualification_report.json
+            TTG-Creative-Studio/.workspace/scratch/production-admission-preflight-ci.json

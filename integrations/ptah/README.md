@@ -79,3 +79,7 @@ No production Node enrollment, renewed provider lease, intermittent E06 synchron
 Use `scripts/test_ptah_adapter.py` on KRATOS for real positive, replay and adversarial tests. All evidence and generated inputs remain in the Creative Studio-owned `.workspace`. No Ptah repository changes or system services are needed.
 
 The D04 embedded service key is `ttg.creative.studio.embedded`. It is an exact non-authoritative observation, not an externally exposed endpoint.
+
+## Ptah-owned resident execution proof
+
+`python3 -B scripts/test_ptah_resident.py` runs two actual A05 PTY-managed resident worker lifetimes (four jobs, duplicate and stale lease rejection). This is **not** production E01/E02 enrollment. Use `python3 -B scripts/ptah_production_admission_preflight.py` for the separate read-only host gate. See [production admission status](../../docs/PTAH_PRODUCTION_ADMISSION_RESIDENT_GATE_2026-10-14.md).
