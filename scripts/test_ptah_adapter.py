@@ -149,6 +149,17 @@ def main() -> int:
               inventory.returncode != 0 and "inventory changed" in inventory.stderr)
     finally:
         added.unlink()
+    # A malicious output symlink must not redirect Studio's Ptah worker writes.
+    redirect = runs / "output_redirect"
+    redirect.mkdir()
+    hidden = runs / "output_redirect_target"
+    hidden.mkdir()
+    (redirect / "output").symlink_to(hidden, target_is_directory=True)
+    redirected = execute([str(binary), "--request", str(inputs / "scene.json"),
+                          "--run-dir", str(redirect)])
+    check(checks, "output_symlink_rejected",
+          redirected.returncode != 0 and "output symlink" in redirected.stderr)
+    check(checks, "output_redirect_target_unmodified", not any(hidden.iterdir()))
     # Partial run receipt cannot be mistaken for success or auto-rerun.
     incomplete = runs / "incomplete"
     incomplete.mkdir()

@@ -26,7 +26,7 @@ python3 -B scripts/test_ptah_adapter.py
 cargo check --offline --locked --manifest-path integrations/ptah/Cargo.toml
 ```
 
-**21/21 direct positive/adversarial regression checks PASS.** No Hunter was used.
+**23/23 direct positive/adversarial regression checks PASS** after the follow-up filesystem and CI hardening. No Hunter was used.
 
 Retained latest proof:
 
@@ -47,6 +47,14 @@ Retained latest proof:
 2. Current demo is **embedded**, with development Provider identity; it is not a production-authenticated enrolled Ptah Node, an always-on daemon, or a deployed multi-host service.
 3. Resume proves intact prior completion, not automatic repair/continuation of a partially executed or externally side-effecting workflow. E06 offline synchronization is not claimed.
 4. Neither visual beauty, text OCR, logo correctness beyond declared exact text, AI image generation, live model inference, desktop UI, Windows installer, nor client-delivery approval is established.
-5. Independent Sergeant review, clean-target build matrix, and acceptance/promotion remain separate gates. Rustfmt is not installed on the current KRATOS toolchain; a `cargo fmt` attempt could not run.
+5. Independent Sergeant review, clean-target build matrix, and acceptance/promotion remain separate gates. Rustfmt was installed on KRATOS; `cargo fmt --check` now passes. The new scoped `.github/workflows/ci.yml` still requires remote exact-head CI confirmation.
 
 **Next owner-managed implementation frontier:** qualify Ptah's supported resident dispatch/application registry with authenticated Node authority. Then attach this independently working adapter under that actual contract; test process interruption, lease expiry, restart and artifact recovery with physical proof before production enrollment. No Ptah source changes should be made from Creative Studio.
+
+## Follow-up engineering hardening — 2026-10-14
+
+- Separate Linux CI now checks out a **pinned Ptah dependency**, builds the actual adapter, checks formatting and executes the real positive/negative proof suite.
+- The embedded A05 worker and verifier can consume an explicit `TTG_CREATIVE_PYTHON` runtime so clean target environments use their installed Pillow rather than an unrelated system interpreter.
+- Prior to opening the ledger or executing any workload, the adapter rejects output-directory symlinks and verifies the canonical output remains inside Creative Studio's registered workspace.
+- Added two regression checks proving an output symlink cannot redirect writes.
+- Initial model-free Sergeant verdict was `REQUEST_CHANGES`, primarily for the missing `ci.yml` proof path; re-review is required on the updated exact head.

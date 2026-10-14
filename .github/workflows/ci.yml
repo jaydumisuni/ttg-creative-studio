@@ -1,0 +1,77 @@
+name: Creative Studio Ptah Integration Proof
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'integrations/ptah/**'
+      - 'scripts/test_ptah_adapter.py'
+      - 'scripts/render_ad_project_contact_sheet.py'
+      - '.github/workflows/ci.yml'
+  push:
+    branches:
+      - 'integration/ptah-creative-studio-kratos'
+      - main
+    paths:
+      - 'integrations/ptah/**'
+      - 'scripts/test_ptah_adapter.py'
+      - 'scripts/render_ad_project_contact_sheet.py'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ptah-specialist-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - name: Checkout Creative Studio (candidate)
+        uses: actions/checkout@v4
+        with:
+          path: TTG-Creative-Studio
+          persist-credentials: false
+      - name: Checkout frozen Ptah source dependency
+        uses: actions/checkout@v4
+        with:
+          repository: jaydumisuni/Ptah-space
+          ref: 5119d40b0b0cde25117c56640422bfd81f263f6b
+          path: Ptah-space
+          persist-credentials: false
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: TTG-Creative-Studio/requirements.txt
+      - name: Setup Rust 1.98.1 with rustfmt
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.98.1'
+          components: rustfmt
+      - name: Install minimal creative dependencies
+        working-directory: TTG-Creative-Studio
+        run: python -m pip install Pillow==11.3.0
+      - name: Verify frozen Ptah dependency identity
+        shell: bash
+        run: |
+          test "$(git -C Ptah-space rev-parse HEAD)" = "5119d40b0b0cde25117c56640422bfd81f263f6b"
+      - name: Rust formatting
+        working-directory: TTG-Creative-Studio
+        run: cargo fmt --check --manifest-path integrations/ptah/Cargo.toml
+      - name: Locked Rust build
+        working-directory: TTG-Creative-Studio
+        run: cargo check --locked --manifest-path integrations/ptah/Cargo.toml
+      - name: Bounded positive and hostile Ptah/Creative workflows
+        working-directory: TTG-Creative-Studio
+        env:
+          TTG_CREATIVE_PYTHON: python
+        run: python -B scripts/test_ptah_adapter.py
+      - name: Upload sanitized qualification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: creative-ptah-qualification
+          if-no-files-found: warn
+          path: TTG-Creative-Studio/.workspace/scratch/ptah-regression-*/qualification_report.json
