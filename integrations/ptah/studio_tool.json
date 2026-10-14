@@ -17,8 +17,10 @@
     "Development-mode embedded Ptah consumer; no resident production service",
     "No external delivery or model-based aesthetic acceptance"
   ],
-  "status": "development_qualified_embedded_23_checks",
+  "status": "development_qualified_embedded_25_checks",
   "production_node_admitted": false,
   "ptah_registry_enrolled": false,
-  "qualification_command": "python3 -B scripts/test_ptah_adapter.py"
+  "qualification_command": "python3 -B scripts/test_ptah_adapter.py",
+  "ptah_d04_embedded_service_key": "ttg.creative.studio.embedded",
+  "ptah_d04_service_registration_type": "in_memory_non_authoritative"
 }

@@ -54,6 +54,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
 
 [[package]]
+name = "container-oci"
+version = "0.0.0-phase0c"
+dependencies = [
+ "ptah-activity-runtime",
+ "ptah-identifiers",
+ "ptah-provider-api",
+ "serde",
+ "sha2",
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -406,6 +418,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "ptah-recipe-registry"
+version = "0.0.0-phase0c"
+dependencies = [
+ "container-oci",
+ "ptah-activity-runtime",
+ "ptah-contracts",
+ "ptah-identifiers",
+ "ptah-ledger",
+ "ptah-provider-api",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "ptah-workspace"
 version = "0.0.0-phase0c"
 dependencies = [
@@ -669,6 +697,7 @@ dependencies = [
  "ptah-object-store",
  "ptah-provider-api",
  "ptah-receipts",
+ "ptah-recipe-registry",
  "ptah-workspace",
  "serde_json",
 ]

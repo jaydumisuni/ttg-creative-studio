@@ -10,6 +10,7 @@ This is a Creative Studio-owned consumer of **existing, unchanged Ptah APIs**, n
 - Ptah A04 — Activity / Operation / Attempt state and evidence receipts.
 - Ptah A05 — launches the actual Creative Studio Python worker and an independent verifier as separate native processes; a spawn acknowledgment is not accepted as completion.
 - Ptah A07 — registers each independently checked result in local content-addressed storage, verifies a read-back hash and requires a separate promoted Artifact operation.
+- Ptah D04 — locally observes and resolves the exact in-memory service key with Provider generation fencing; **this is not persistent service registration or production admission**.
 - Creative Studio — owns request semantics, editable project format, actual rendering, assets, contact sheet and request-vs-result checks.
 
 ## Local prerequisites
@@ -76,3 +77,5 @@ No production Node enrollment, renewed provider lease, intermittent E06 synchron
 ## Qualification
 
 Use `scripts/test_ptah_adapter.py` on KRATOS for real positive, replay and adversarial tests. All evidence and generated inputs remain in the Creative Studio-owned `.workspace`. No Ptah repository changes or system services are needed.
+
+The D04 embedded service key is `ttg.creative.studio.embedded`. It is an exact non-authoritative observation, not an externally exposed endpoint.

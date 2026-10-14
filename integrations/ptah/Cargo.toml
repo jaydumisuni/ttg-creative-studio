@@ -13,3 +13,4 @@ ptah-provider-api = {path = "../../../Ptah-space/crates/ptah-provider-api"}
 ptah-workspace = {path = "../../../Ptah-space/crates/ptah-workspace"}
 native-process = {path = "../../../Ptah-space/adapters/native-process"}
 serde_json = "1"
+ptah-recipe-registry = {path = "../../../Ptah-space/crates/ptah-recipe-registry"}

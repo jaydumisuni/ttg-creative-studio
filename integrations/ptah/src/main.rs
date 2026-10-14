@@ -328,6 +328,48 @@ fn resume_verified(
     Ok(())
 }
 
+fn observe_creative_service(provider: &NativeProcessProvider) -> Res<()> {
+    let ctx = provider.context()?;
+    let mut registry = ptah_recipe_registry::ServiceRegistry::default();
+    let generation = ctx.provider_generation.value();
+    let entry = ptah_recipe_registry::ServiceRegistration {
+        registration_ref: reference("runtime.service_registration"),
+        service_key: "ttg.creative.studio.embedded".into(),
+        provider_revision_ref: ctx.provider_revision_ref.clone(),
+        provider_instance_ref: ctx.provider_instance_ref.clone(),
+        provider_generation: generation,
+        freshness_token: format!("generation-{generation}"),
+        endpoint_alias: "embedded://ttg-creative-studio".into(),
+        observed_at: NOW.into(),
+        expires_at: None,
+        capability_refs: vec![reference("core.capability")],
+        limitations: vec!["development only; no production enrollment".into()],
+    };
+    registry.register(entry, generation)?;
+    let accepted = registry.resolve(
+        "ttg.creative.studio.embedded",
+        &ctx.provider_instance_ref,
+        generation,
+        NOW,
+    )?;
+    if accepted.candidates().len() != 1 || accepted.is_ambiguous() {
+        return Err("D04 registry did not resolve uniquely".into());
+    }
+    if registry
+        .resolve(
+            "ttg.creative.studio.embedded",
+            &ctx.provider_instance_ref,
+            generation + 1,
+            NOW,
+        )
+        .is_ok()
+    {
+        return Err("D04 accepted stale provider generation".into());
+    }
+    println!("PTAH_D04_LOCAL_SERVICE_RESOLVED development_only=true");
+    Ok(())
+}
+
 fn main() -> Res<()> {
     let studio = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -426,6 +468,7 @@ fn main() -> Res<()> {
         policy_refs: Vec::new(),
     })?;
     let process_provider = provider()?;
+    observe_creative_service(&process_provider)?;
     let runtime = ActivityRuntime::new(8, Arc::new(LedgerJournal::open(&ledger)?), clock())?;
     let ids0 = begin(
         &runtime,

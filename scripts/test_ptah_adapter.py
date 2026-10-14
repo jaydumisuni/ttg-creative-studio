@@ -95,6 +95,8 @@ def main() -> int:
         command = [str(binary), "--request", str(request), "--run-dir", str(run)]
         first = execute(command, timeout=90)
         check(checks, label + "_ptah_execution", first.returncode == 0 and "PTAH_DIRECT_E2E_PASS" in first.stdout)
+        check(checks, label + "_d04_generation_gated_discovery",
+              first.returncode == 0 and "PTAH_D04_LOCAL_SERVICE_RESOLVED" in first.stdout)
         proof_json = json.loads((run / "ptah_proof_manifest.json").read_text())
         check(checks, label + "_artifact_count", proof_json.get("artifact_count") == 3 and
               all(e["readback"] == "verified" for e in proof_json["artifacts"]))

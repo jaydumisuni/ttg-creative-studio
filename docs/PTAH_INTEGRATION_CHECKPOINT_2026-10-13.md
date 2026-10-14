@@ -26,7 +26,7 @@ python3 -B scripts/test_ptah_adapter.py
 cargo check --offline --locked --manifest-path integrations/ptah/Cargo.toml
 ```
 
-**23/23 direct positive/adversarial regression checks PASS** after the follow-up filesystem and CI hardening. No Hunter was used.
+**25/25 direct positive/adversarial regression checks PASS** after the follow-up filesystem and CI hardening. No Hunter was used.
 
 Retained latest proof:
 
@@ -58,3 +58,7 @@ Retained latest proof:
 - Prior to opening the ledger or executing any workload, the adapter rejects output-directory symlinks and verifies the canonical output remains inside Creative Studio's registered workspace.
 - Added two regression checks proving an output symlink cannot redirect writes.
 - Initial model-free Sergeant verdict was `REQUEST_CHANGES`, primarily for the missing `ci.yml` proof path; re-review is required on the updated exact head.
+
+## Additional native Ptah D04 qualification — 2026-10-14
+
+The Studio adapter now consumes the released `ptah-recipe-registry` crate to register and resolve a bounded in-memory D04 service observation using exact current Provider Revision, Instance and generation. A stale-generation lookup fails closed, and both jobs verify the D04 resolution path. This does **not** implement D04 persistent recipe execution, an enrolled production service, external network exposure or Ptah daemon discovery.
