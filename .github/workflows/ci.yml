@@ -2,7 +2,7 @@ name: Creative Studio Ptah Integration Proof
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, 'integration/ptah-creative-studio-kratos']
     paths:
       - 'integrations/ptah/**'
       - 'scripts/test_ptah_adapter.py'
@@ -12,7 +12,7 @@ on:
       - '.github/workflows/ci.yml'
   push:
     branches:
-      - 'integration/ptah-creative-studio-kratos'
+      - 'integration/ptah-*'
       - main
     paths:
       - 'integrations/ptah/**'
