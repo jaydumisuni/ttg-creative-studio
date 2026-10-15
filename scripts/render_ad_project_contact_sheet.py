@@ -118,7 +118,23 @@ def render_scene(project: TTGProject, layer, index: int, size: tuple[int, int]) 
 
 
 def render_contact_sheet(project_path: Path, output: Path, max_scenes: int = 6) -> Path:
+    project_path = Path(project_path)
     project = TTGProject.load(project_path)
+    # Keep portable .ttgstudio.json asset references relative on disk, but
+    # resolve them beside the project when producing a contact-sheet view.
+    project_root = project_path.resolve().parent
+    for layer in project.layers:
+        if layer.type != "image":
+            continue
+        supplied = layer.properties.get("path")
+        if not isinstance(supplied, str) or not supplied:
+            continue
+        path = Path(supplied)
+        if not path.is_absolute():
+            resolved = (project_root / path).resolve()
+            if not resolved.is_relative_to(project_root):
+                raise ValueError(f"image asset escapes project root: {supplied}")
+            layer.properties["path"] = str(resolved)
     image_layers = [layer for layer in project.layers if layer.type == "image"][:max_scenes]
     if not image_layers:
         raise SystemExit("No image scene layers found")

@@ -1,0 +1,16 @@
+[package]
+name = "ttg-creative-ptah-adapter"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+ptah-activity-runtime = {path = "../../../Ptah-space/crates/ptah-activity-runtime"}
+ptah-identifiers = {path = "../../../Ptah-space/crates/ptah-identifiers"}
+ptah-object-store = {path = "../../../Ptah-space/crates/ptah-object-store"}
+ptah-receipts = {path = "../../../Ptah-space/crates/ptah-receipts"}
+ptah-provider-api = {path = "../../../Ptah-space/crates/ptah-provider-api"}
+ptah-workspace = {path = "../../../Ptah-space/crates/ptah-workspace"}
+native-process = {path = "../../../Ptah-space/adapters/native-process"}
+serde_json = "1"
+ptah-recipe-registry = {path = "../../../Ptah-space/crates/ptah-recipe-registry"}
