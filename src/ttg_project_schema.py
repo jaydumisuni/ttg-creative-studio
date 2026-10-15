@@ -13,6 +13,8 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Any, Literal
 import json
+import os
+import tempfile
 import uuid
 
 LayerType = Literal[
@@ -137,7 +139,36 @@ class TTGProject:
         return asdict(self)
 
     def save(self, path: str | Path) -> None:
-        Path(path).write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
+        """Publish a complete project JSON without truncating a previous save.
+
+        Serialize before touching the destination. The temporary file lives
+        beside the final project so os.replace stays on the same filesystem.
+        A failed serialization, write, fsync or replace preserves the old
+        project and removes the staged file.
+        """
+        destination = Path(path)
+        payload = json.dumps(self.to_dict(), indent=2)
+        fd, temporary_name = tempfile.mkstemp(
+            prefix=f".{destination.name}-", suffix=".tmp",
+            dir=destination.parent,
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(payload)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary_name, destination)
+            # Flush the directory entry on POSIX to make the committed name
+            # durable across an unexpected power loss. Windows os.replace
+            # provides atomic publication on the same volume.
+            if os.name == "posix":
+                directory_fd = os.open(destination.parent, os.O_RDONLY)
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
+        finally:
+            Path(temporary_name).unlink(missing_ok=True)
 
     @staticmethod
     def load(path: str | Path) -> "TTGProject":

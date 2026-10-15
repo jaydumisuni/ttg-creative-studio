@@ -44,6 +44,7 @@ jobs:
           python -B scripts/test_studio_release_manifest.py
           python -B scripts/test_studio_g4_stress.py
           python -B scripts/test_studio_atomic_mp4.py
+          python -B scripts/test_studio_atomic_project_save.py
           python -B scripts/test_studio_audio_duration.py
           python -B scripts/test_frozen_gui_probe.py
           python -B scripts/verify_campaign_showcase.py
