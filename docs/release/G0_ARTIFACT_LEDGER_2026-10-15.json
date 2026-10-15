@@ -1,0 +1,74 @@
+{
+  "schema": "ttg.creative.studio.g0.artifact-audit.v1",
+  "workflow_run": 38721211493,
+  "windows": {
+    "status": "PASS",
+    "bytes": 51126236,
+    "sha256": "c82fee6eddf8fa03a93a0bf76e92e06ff9f76ec97b7924f73c9a6201700effc6",
+    "authenticode_present": false,
+    "gui_proof": {
+      "status": "PASS",
+      "checks": 9,
+      "files": [
+        "gui-editable.ttgstudio.json",
+        "gui-export.png",
+        "gui-window.png"
+      ]
+    }
+  },
+  "linux": {
+    "status": "PASS",
+    "sha256": "13bbee4c2e3822fffde3de4f1dcb7d4124fae02f4c1b918570f9458e5420fd75",
+    "bytes": 96212767,
+    "entry_count": 385,
+    "gui_proof": {
+      "status": "PASS",
+      "checks": 9,
+      "files": [
+        "gui-editable.ttgstudio.json",
+        "gui-export.png",
+        "gui-window.png"
+      ]
+    }
+  },
+  "built_from": "f6992bbcf7c3d8e7d58faae3b144af587469bdb5",
+  "verified_main": "6f1fa428e1480fb3fa34f44630c1d19f9375fe1d",
+  "main_diff_after_build": [
+    "proof/latest/REVIEW_GATE_LOG.txt",
+    "proof/latest/ad_workflow/ttg_ad_from_folder.ttgstudio.json",
+    "proof/latest/ad_workflow/ttg_ad_from_zip.ttgstudio.json"
+  ],
+  "artifact_zip_sha256_from_github_api": {
+    "TTG-Creative-Studio-Windows-unsigned": "b0ad6d0e8ac2532957f8804e6d95263d053ca7dc47c6a0296ed6000480f859de",
+    "TTG-Creative-Studio-Windows-Installed-GUI-proof": "a0f4bb2fa5adafe41fc69aa52511515d78baa6d2ae1139bcf68556b2dd37db95",
+    "TTG-Creative-Studio-Linux-portable": "72860bfe17df904117114a0ef80361394436785c4a80cd9400ca67dc466742bb",
+    "TTG-Creative-Studio-Linux-GUI-proof": "e91cee849bf07f47f6ebff8bc0928e7d6f42923d42b6a818aa1573bde481fc15"
+  },
+  "host_qualification": {
+    "ATHENA": {
+      "current_project_access": "BLOCKED_PATH_OUTSIDE_ALLOWED_ROOTS",
+      "comfyui_runtime": "NOT_RUNNING",
+      "diffusion_checkpoint": "NOT_PRESENT",
+      "approved_signing_identity": "NOT_PRESENT",
+      "D_free_GiB_last_read": 25.6
+    },
+    "KRATOS": {
+      "patrol_for_evidence_workspace": "ALLOW",
+      "source_root": "PRESENT",
+      "ptah_runtime_enrollment": "UNPROVEN",
+      "rea_cli": "NOT_INSTALLED",
+      "optional_rea_upstream_commit": "e9a71efa31d6c3675b67938b8a79fa4ddf01604c",
+      "rea_upstream_license": "MIT"
+    }
+  },
+  "gates": {
+    "G0": "PASS_WITH_BLOCKERS_DOCUMENTED",
+    "G1": "BLOCKED_WORKSTATION_ROOT",
+    "G2": "BLOCKED_LOCAL_CHECKPOINT_AND_RUNTIME",
+    "G3": "BLOCKED_LEGITIMATE_SIGNING_IDENTITY",
+    "G4": "PARTIAL_CI_GUI_PROOF_ONLY",
+    "G5": "NOT_AUTHORIZED_NO_SIGNED_RELEASE"
+  },
+  "build_commit": "f6992bbcf7c3d8e7d58faae3b144af587469bdb5",
+  "observed_main": "6f1fa428e1480fb3fa34f44630c1d19f9375fe1d"
+}
