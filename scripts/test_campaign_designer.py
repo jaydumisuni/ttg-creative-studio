@@ -180,12 +180,25 @@ def run() -> dict:
               workspace.campaign_button.toolTip().startswith("Generate"), checks)
         workspace.resize(1024, 640)
         workspace.show()
+        # Force a known compact toolbar viewport, independently of each host's
+        # Qt platform theme, window manager and splitter minimum-size hints.
+        toolbar_area = workspace.toolbar_scroll
+        toolbar_area.setFixedWidth(580)
         app.processEvents()
+        from PyQt6.QtWidgets import QToolButton
+        menus = toolbar_area.widget().findChildren(QToolButton)
+        scrollbar = toolbar_area.horizontalScrollBar()
         check("compact_toolbar_scrolls_instead_of_crushing_menus",
-              workspace.toolbar_scroll.horizontalScrollBar().maximum() > 0 and
-              all(menu.width() >= menu.minimumWidth()
-                  for menu in workspace.toolbar_scroll.widget().findChildren(
-                      __import__("PyQt6.QtWidgets", fromlist=["QToolButton"]).QToolButton)), checks)
+              scrollbar.maximum() > 0 and
+              all(menu.width() >= menu.minimumWidth() for menu in menus), checks)
+        scrollbar.setValue(scrollbar.maximum())
+        app.processEvents()
+        check("compact_toolbar_reaches_export_menu",
+              menus[-1].text() == "Export" and
+              menus[-1].mapTo(toolbar_area.viewport(), menus[-1].rect().center()).x()
+              >= 0 and
+              menus[-1].mapTo(toolbar_area.viewport(), menus[-1].rect().center()).x()
+              < toolbar_area.viewport().width(), checks)
         gui_png=root/"from_gui.png"
         workspace.export_service.export_png(workspace.project, gui_png)
         with Image.open(gui_png) as img:
