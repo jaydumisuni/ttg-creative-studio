@@ -15,10 +15,12 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT/"src"))
+sys.path.insert(0, str(ROOT/"scripts"))
 from ttg_campaign_composer import CampaignBrief, FORMATS, compose_campaign
 from ttg_canvas_engine import CanvasRenderer, RenderContext
 from ttg_project_schema import TTGProject
 from ttg_validation import ProjectValidator
+from verify_campaign_showcase import check_visual_replay
 
 def check(name: str, condition: bool, checks: list[str]) -> None:
     if not condition:
@@ -113,6 +115,36 @@ def run() -> dict:
                 continue
             raise AssertionError("invalid brief accepted")
         checks.append("invalid_briefs_rejected")
+
+        # Cross-OS committed examples are allowed only small font substitutions.
+        reference = Image.new("RGBA", (32,32), (12,34,56,255))
+        near = reference.copy()
+        near.putpixel((0,0), (15,34,56,255))
+        check_visual_replay(reference, reference, "Linux")
+        checks.append("reference_platform_exact_replay_accepts_identical")
+        try:
+            check_visual_replay(near, reference, "Linux")
+        except ValueError:
+            checks.append("reference_platform_rejects_single_pixel_drift")
+        else:
+            raise AssertionError("Linux exact replay policy allowed drift")
+        check_visual_replay(near, reference, "Windows")
+        checks.append("cross_platform_small_font_difference_allowed")
+        far = Image.new("RGBA", (32,32), (250,34,56,255))
+        try:
+            check_visual_replay(far, reference, "Windows")
+        except ValueError:
+            checks.append("cross_platform_material_visual_difference_rejected")
+        else:
+            raise AssertionError("cross-platform check accepted material changes")
+        for name in FORMATS:
+            path = f"examples/campaigns/{name}/campaign.ttgstudio.json"
+            attr = subprocess.run(
+                ["git","check-attr","eol","--",path],
+                cwd=ROOT,capture_output=True,text=True,timeout=7,
+            )
+            check(name+"_lf_manifest_checkout_rule",
+                  attr.returncode==0 and attr.stdout.strip().endswith("eol: lf"), checks)
 
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         from PyQt6.QtWidgets import QApplication

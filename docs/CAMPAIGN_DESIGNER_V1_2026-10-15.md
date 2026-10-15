@@ -64,7 +64,11 @@ This is a functioning offline design vertical slice, not completed Photoshop/Can
 Filmora parity or a general-purpose AI prompt-to-image engine. The generic smartphone
 is a raster asset independently movable and replaceable, not a parametric 3D model.
 The sample project uses system-available fonts with fallback, so typography may
-vary across different operating systems; pixel replay is tested within each host.
+vary across different operating systems. The committed Linux example previews are
+checked pixel-exactly on Linux and against a bounded pixel-difference budget on
+Windows; newly generated projects are verified pixel-exactly on their own host.
+Tracked example project JSON is checked out as LF on Windows so SHA-256 source
+integrity is not defeated by Git's platform newline conversion.
 
 Broader photo retouching, generative-image provider quality, advanced real-time motion,
 final accessibility review, Windows installer signing and subjective art-direction
