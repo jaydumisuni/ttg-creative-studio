@@ -40,6 +40,7 @@ jobs:
           python -B scripts/test_campaign_designer.py
           python -B scripts/test_release_packaging.py
           python -B scripts/test_production_preflight.py
+          python -B scripts/test_studio_g0_artifacts.py
           python -B scripts/test_frozen_gui_probe.py
           python -B scripts/verify_campaign_showcase.py
       - name: Build independent one-folder desktop executable
