@@ -29,11 +29,18 @@ def main() -> int:
     canvas.resize(640, 420)
     canvas.set_project(project, layer.id)
     app.processEvents()
+    # The editor now allows a compact 390 × 310 canvas instead of forcing
+    # 640 pixels and making the rest of the workspace unreachable.
+    canvas.resize(390, 310)
+    canvas.render_preview()
+    app.processEvents()
     checks = [
         canvas.project is project,
         canvas.selected_layer_id == layer.id,
         canvas.interaction.active_layer_id() == layer.id,
-        canvas.minimumWidth() >= 640,
+        canvas.minimumWidth() == 390 and canvas.minimumHeight() == 310,
+        canvas.width() >= 390 and canvas.height() >= 310,
+        canvas.pixmap() is not None and not canvas.pixmap().isNull(),
         canvas.hasMouseTracking(),
     ]
     if not all(checks):
