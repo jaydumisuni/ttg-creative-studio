@@ -115,9 +115,14 @@ class MotionExporter:
                 *audio_args,
             ]
             if filters:
+                # Audio is permitted to end before the animation. -shortest
+                # silently truncated the entire video to the shortest audio
+                # clip. Keep the animation at its authored frame duration;
+                # -t caps long audio, while -frames:v caps visual frames.
                 cmd += ["-filter_complex", ";".join(filters), "-map", "0:v",
                         "-map", audio_label or "[aout]", "-c:a", "aac",
-                        "-b:a", "160k", "-shortest"]
+                        "-b:a", "160k",
+                        "-t", f"{total/project.canvas.fps:.6f}"]
             # Encode into a *different* filename on the destination volume.
             # An interrupted FFmpeg job must never corrupt the prior export.
             fd, temporary_name = tempfile.mkstemp(
