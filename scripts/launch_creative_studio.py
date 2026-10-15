@@ -32,6 +32,15 @@ def main() -> int:
             "qt": bool(app),
         }))
         return 0
+    if "--qualify-gui" in sys.argv:
+        import json
+        position = sys.argv.index("--qualify-gui")
+        if len(sys.argv) != position + 2:
+            raise ValueError("--qualify-gui requires one empty proof directory")
+        from ttg_frozen_gui_probe import qualify_gui
+        report = qualify_gui(Path(sys.argv[position + 1]))
+        print(json.dumps({"result": report["result"], "checks": len(report["checks"])}))
+        return 0
     return run()
 
 

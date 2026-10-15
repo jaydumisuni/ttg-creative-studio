@@ -40,6 +40,7 @@ jobs:
           python -B scripts/test_campaign_designer.py
           python -B scripts/test_release_packaging.py
           python -B scripts/test_production_preflight.py
+          python -B scripts/test_frozen_gui_probe.py
           python -B scripts/verify_campaign_showcase.py
       - name: Build independent one-folder desktop executable
         run: python -m PyInstaller --noconfirm --clean "TTG Creative Studio.spec"
@@ -54,8 +55,14 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           "dist/TTG Creative Studio/TTG Creative Studio" --self-check
+          mkdir -p "$RUNNER_TEMP/studio-gui-proof-linux"
+          "dist/TTG Creative Studio/TTG Creative Studio" --qualify-gui "$RUNNER_TEMP/studio-gui-proof-linux"
+          python -B scripts/verify_frozen_gui_proof.py "$RUNNER_TEMP/studio-gui-proof-linux"
           python -B scripts/install_linux_portable.py "dist/TTG Creative Studio" --prefix "$RUNNER_TEMP/studio-prefix"
           "$RUNNER_TEMP/studio-prefix/bin/ttg-creative-studio" --self-check
+          mkdir -p "$RUNNER_TEMP/studio-gui-installed-linux"
+          "$RUNNER_TEMP/studio-prefix/bin/ttg-creative-studio" --qualify-gui "$RUNNER_TEMP/studio-gui-installed-linux"
+          python -B scripts/verify_frozen_gui_proof.py "$RUNNER_TEMP/studio-gui-installed-linux"
           tar -C dist -czf "$RUNNER_TEMP/TTG-Creative-Studio-Linux-x64.tar.gz" "TTG Creative Studio"
       - name: Build Windows Inno Setup installation package
         if: runner.os == 'Windows'
@@ -75,6 +82,20 @@ jobs:
         with:
           name: TTG-Creative-Studio-Windows-unsigned
           path: dist/installer/TTG-Creative-Studio-Core-Setup.exe
+          if-no-files-found: error
+      - name: Upload Linux frozen and installed GUI proof
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: TTG-Creative-Studio-Linux-GUI-proof
+          path: ${{ runner.temp }}/studio-gui-installed-linux/
+          if-no-files-found: error
+      - name: Upload Windows real installed GUI proof
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: TTG-Creative-Studio-Windows-Installed-GUI-proof
+          path: ${{ runner.temp }}/studio-installed-gui-proof-windows/
           if-no-files-found: error
       - name: Publish portable Linux candidate
         if: runner.os == 'Linux'

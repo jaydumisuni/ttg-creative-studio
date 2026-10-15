@@ -15,6 +15,18 @@ if (!(Test-Path -LiteralPath $app)) { throw "Actual installed executable missing
 if (!(Test-Path -LiteralPath $uninstaller)) { throw "Uninstaller missing" }
 $run = Start-Process -FilePath $app -ArgumentList "--self-check" -Wait -PassThru
 if ($run.ExitCode -ne 0) { throw "Installed Creative Studio smoke failed: $($run.ExitCode)" }
+# The installed GUI must actually open, edit a native layer, save, export
+# a nonblank image and capture its window. Evidence is kept outside the
+# installed app directory so uninstallation cannot erase the proof.
+$proof = Join-Path $env:RUNNER_TEMP "studio-installed-gui-proof-windows"
+if (Test-Path -LiteralPath $proof) { throw "Existing GUI proof path; will not overwrite" }
+New-Item -ItemType Directory -Path $proof -ErrorAction Stop | Out-Null
+$guiArg = '--qualify-gui "' + $proof + '"'
+$ui = Start-Process -FilePath $app -ArgumentList $guiArg -Wait -PassThru
+if ($ui.ExitCode -ne 0) { throw "Installed Creative Studio GUI qualification failed: $($ui.ExitCode)" }
+& python -B (Join-Path $projectRoot "scripts\verify_frozen_gui_proof.py") $proof
+if ($LASTEXITCODE -ne 0) { throw "Installed GUI proof has invalid artifacts or hashes" }
+
 $uninstall = Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" -Wait -PassThru
 if ($uninstall.ExitCode -ne 0) { throw "Installer rollback/uninstall failed: $($uninstall.ExitCode)" }
 if (Test-Path -LiteralPath $app) { throw "Installer left application executable after uninstall" }
