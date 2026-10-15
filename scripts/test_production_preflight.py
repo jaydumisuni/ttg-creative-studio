@@ -115,6 +115,9 @@ def main():
     workflow = (ROOT / ".github/workflows/studio-release-candidate.yml").read_text()
     windows_script = (ROOT / "scripts/test_installer_windows.ps1").read_text()
     assert 'test_installer_windows.ps1' in workflow
+    # YAML ampersands are anchors unless the PowerShell invocation is in a
+    # literal block. Require the actual block scalar.
+    assert '        run: |\n          & ".\\scripts\\test_installer_windows.ps1"' in workflow
     assert "native-desktop" in workflow
     for token in ("unins000.exe", "TTG Creative Studio.exe", "--self-check",
                   "/VERYSILENT", "Start-Process"):
