@@ -152,6 +152,17 @@ def run() -> dict:
         from ttg_campaign_dialog import CampaignDesignerDialog
         app = QApplication.instance() or QApplication([])
         dialog = CampaignDesignerDialog()
+        dialog.show()
+        app.processEvents()
+        from PyQt6.QtWidgets import QLabel
+        heading = next(
+            label for label in dialog.findChildren(QLabel)
+            if label.text() == "CREATE SOMETHING EXTRAORDINARY"
+        )
+        bg = dialog.grab().toImage().pixelColor(dialog.width() - 22, 27)
+        check("gui_dialog_heading_legible_on_dark_background",
+              bg.red() < 80 and bg.green() < 80 and bg.blue() < 100 and
+              "#f6fcff" in heading.styleSheet().lower(), checks)
         check("gui_campaign_designer_presets",
               dialog.layout_choice.count() == len(FORMATS), checks)
         check("gui_campaign_designer_editable_fields",
@@ -204,6 +215,31 @@ def run() -> dict:
         with Image.open(gui_png) as img:
             with Image.open(destination/"campaign.png") as orig:
                 check("gui_export_exact_same_pixels", img.tobytes()==orig.tobytes(),checks)
+        # Product acceptance: an actual Properties edit must survive Save/Open,
+        # change the exported pixels and remain reversible through Undo/Redo.
+        selected_id = workspace.selected_layer_id
+        original_text = workspace.selected_layer().properties["text"]
+        revised_text = "A NEW VISION. MADE REAL."
+        workspace.apply_property_change("text", revised_text)
+        check("gui_properties_edits_selected_text",
+              workspace.selected_layer().properties["text"] == revised_text, checks)
+        workspace.save_project()
+        reopened = TTGProject.load(path)
+        check("gui_save_reopen_keeps_real_edits",
+              next(l for l in reopened.layers if l.id == selected_id)
+              .properties["text"] == revised_text, checks)
+        revised_png = root/"edited_from_gui.png"
+        workspace.export_service.export_png(workspace.project, revised_png)
+        with Image.open(revised_png) as revised, Image.open(gui_png) as original:
+            check("gui_edit_changes_rendered_pixels",
+                  revised.convert("RGBA").tobytes()
+                  != original.convert("RGBA").tobytes(), checks)
+        workspace.undo()
+        check("gui_undo_restores_original_headline",
+              workspace.selected_layer().properties["text"] == original_text, checks)
+        workspace.redo()
+        check("gui_redo_restores_edited_headline",
+              workspace.selected_layer().properties["text"] == revised_text, checks)
         workspace.reset_project(workspace.action.new_project())
         check("new_project_resets_asset_root",
               workspace.export_service.project_root==ROOT, checks)

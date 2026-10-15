@@ -58,6 +58,13 @@ python scripts/creative_cli.py design-campaign ./my-campaign --layout flagship \
 
 For headless Qt tests on Linux use `QT_QPA_PLATFORM=offscreen`.
 
+## Visual and product review evidence
+
+The [running application screenshots, campaign exports, contrast correction
+and product acceptance checklist](review/campaign-designer-v1/REVIEW.md)
+are retained with this feature. This is an internal engineering review;
+the owner still controls final art direction and PR merge.
+
 ## Limits and next acceptance
 
 This is a functioning offline design vertical slice, not completed Photoshop/Canva/

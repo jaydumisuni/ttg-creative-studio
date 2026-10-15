@@ -22,6 +22,35 @@ class CampaignDesignerDialog(QDialog):
         self.setWindowTitle("Design a Campaign · TTG Creative Studio")
         self.resize(850, 750)
         self.setMinimumSize(570, 520)
+        # Keep the brief legible in both light and dark desktop Qt themes.
+        # Without an explicit dialog background the white hero heading is
+        # nearly invisible under Windows' default light QDialog palette.
+        self.setStyleSheet("""
+            QDialog {background-color:#101a2b;color:#ecf4fa;}
+            QLabel {color:#d2e1ec;}
+            QLineEdit, QComboBox {
+                background-color:#19293c;color:#f6fbff;
+                border:1px solid #456079;border-radius:6px;
+                padding:5px 9px;min-height:23px;
+            }
+            QLineEdit:focus, QComboBox:focus {border:1px solid #66e8d8;}
+            QComboBox QAbstractItemView {
+                background:#19293c;color:#f6fbff;
+                selection-background-color:#28636a;
+            }
+            QPushButton {
+                background-color:#243c54;color:#eefbff;
+                border:1px solid #50758d;border-radius:6px;
+                padding:6px 12px;min-height:22px;
+            }
+            QPushButton:hover {background-color:#305671;border-color:#81dacf;}
+            QPushButton#createCampaign {
+                background-color:#146f69;color:#ffffff;
+                border:1px solid #73e6d8;font-weight:700;
+            }
+            QPushButton#createCampaign:hover {background-color:#1c8981;}
+            QPushButton:disabled {color:#839aa8;background-color:#263447;}
+        """)
         self._temp = tempfile.TemporaryDirectory(prefix="ttg-campaign-preview-")
         self._preview_version = 0
         base = QVBoxLayout(self)
