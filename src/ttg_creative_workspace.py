@@ -6,13 +6,15 @@ from __future__ import annotations
 import sys
 import tempfile
 import uuid
+import shutil
 from pathlib import Path
 from typing import Callable
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QFileDialog,
+    QInputDialog,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -32,6 +34,9 @@ from PyQt6.QtWidgets import (
 from ttg_action_engine import ActionEngine
 from ttg_campaign_composer import CampaignBrief, compose_campaign
 from ttg_campaign_dialog import CampaignDesignerDialog
+from ttg_image_lab_dialog import ImageLabDialog
+from ttg_mask_painter import MaskPainterDialog
+from ttg_recovery import RecoveryStore
 from ttg_advanced_panel import AdvancedModePanel
 from ttg_asset_browser import AssetTemplateBrowser
 from ttg_background_tool import BackgroundRemovalTool
@@ -78,9 +83,17 @@ class CreativeWorkspace(QWidget):
         self.project_path: Path | None = None
         self.selected_layer_id: str | None = None
         self.still_preview_approved = False
+        self.recovery_store = RecoveryStore()
+        self._unsaved_identity = uuid.uuid4().hex
+        self._image_lab_dialog = None
+        self._autosave_last = None
         self._build_ui()
         self._apply_theme()
         self.show_pack_status()
+        self._recovery_timer = QTimer(self)
+        self._recovery_timer.setInterval(45_000)
+        self._recovery_timer.timeout.connect(self.autosave_snapshot)
+        self._recovery_timer.start()
 
     def _menu_button(self, title: str, actions: list[tuple[str, Callable[[], None]]]) -> QToolButton:
         button = QToolButton()
@@ -116,6 +129,8 @@ class CreativeWorkspace(QWidget):
             ("New Project", self.new_project),
             ("Open Project", self.open_project),
             ("Save Project", self.save_project),
+            ("Recover Autosave", self.recover_autosave),
+            ("Check Updates", self.check_updates),
             ("Import Ad ZIP", self.import_ad_zip),
             ("Import Ad Folder", self.import_ad_folder),
         ]))
@@ -144,16 +159,26 @@ class CreativeWorkspace(QWidget):
             ("Bevel + Extrude", lambda: self.apply_effect("bevel_extrude")),
             ("Reflection", lambda: self.apply_effect("reflection")),
             ("Gradient Chrome", lambda: self.apply_effect("gradient")),
+            ("Increase Contrast", lambda: self.adjust_selected_image("contrast", 1.35)),
+            ("Increase Saturation", lambda: self.adjust_selected_image("saturation", 1.4)),
+            ("Sharpen Image", lambda: self.adjust_selected_image("sharpen", 1.8)),
+            ("Grayscale", lambda: self.adjust_selected_image("grayscale", 1.0)),
             ("Premium Text Stack", lambda: self.apply_effect("premium_text")),
         ]))
         toolbar.addWidget(self._menu_button("Animate", [
             ("Fly In", lambda: self.apply_animation("fly")),
             ("Fade In", lambda: self.apply_animation("fade")),
             ("Pulse", lambda: self.apply_animation("pulse")),
+            ("Fade Out", lambda: self.apply_animation("fade_out")),
+            ("Slide Up", lambda: self.apply_animation("slide_up")),
             ("Clear Animation", lambda: self.apply_animation("clear")),
             ("Playback Preview", self.try_playback_preview),
         ]))
         toolbar.addWidget(self._menu_button("Tools", [
+            ("Image Lab · Generate / Enhance", self.open_image_lab),
+            ("Brush Mask Selected Image", self.brush_mask_selected_image),
+            ("Add Audio Track", self.add_audio_track),
+            ("Recover Autosave", self.recover_autosave),
             ("Remove Background", self.remove_background_into_project),
             ("Show Packs", self.show_pack_status),
             ("Install Selected Pack", self.install_selected_pack),
@@ -254,6 +279,186 @@ class CreativeWorkspace(QWidget):
             """
         )
 
+    def check_updates(self) -> None:
+        import os
+        import webbrowser
+        from ttg_update_checker import CURRENT_VERSION, fetch_update, is_newer
+        manifest_url = os.environ.get("TTG_STUDIO_UPDATE_URL", "").strip()
+        if not manifest_url:
+            QMessageBox.information(
+                self, "Creative Studio Updates",
+                "No approved update feed is configured. "
+                "The current build is " + CURRENT_VERSION +
+                ". Updates must be published through the official signed-release process."
+            )
+            return
+        try:
+            notice = fetch_update(manifest_url)
+            if not is_newer(notice):
+                QMessageBox.information(self,"Creative Studio Updates","No newer official build was advertised.")
+                return
+            approval = QMessageBox.question(
+                self,"Creative Studio Update Available",
+                f"Version {notice.version} is available.\n\n"
+                +notice.notes+"\n\nOpen the official release page?\n"
+                "The app will not download or install executable code automatically."
+            )
+            if approval == QMessageBox.StandardButton.Yes:
+                webbrowser.open(notice.installer_url)
+        except Exception as exc:
+            QMessageBox.warning(self,"Creative Studio Updates",str(exc))
+
+    def autosave_snapshot(self) -> Path | None:
+        if self.project is None:
+            return None
+        import hashlib
+        import json
+        current = hashlib.sha256(
+            json.dumps(self.project.to_dict(), sort_keys=True).encode()
+        ).hexdigest()
+        if self._autosave_last == current:
+            return None
+        saved = self.recovery_store.snapshot(
+            self.project, self.project_path, self._unsaved_identity
+        )
+        self._autosave_last = current
+        return saved
+
+    def recover_autosave(self) -> None:
+        from PyQt6.QtWidgets import QInputDialog
+        entries = self.recovery_store.pending()
+        if not entries:
+            QMessageBox.information(self, "Project Recovery", "No autosaves available.")
+            return
+        choices = [f"{q.stat().st_mtime:.0f} | {q.name}" for q in entries]
+        chosen, ok = QInputDialog.getItem(
+            self, "Recover Project", "Select retained recovery:", choices,
+            0, False
+        )
+        if not ok:
+            return
+        selected = entries[choices.index(chosen)]
+        try:
+            project, original = self.recovery_store.load(selected)
+            # Do not rewrite the original file merely by opening recovery.
+            self.reset_project(project)
+            if original and original.exists():
+                self._set_asset_root(original.parent)
+            self.status.setText("Recovered in memory. Use Save to keep your changes.")
+        except Exception as exc:
+            QMessageBox.warning(self, "Project Recovery", str(exc))
+
+    def adjust_selected_image(self, effect: str, amount: float) -> None:
+        layer = self.selected_layer()
+        if layer is None or layer.type != "image":
+            QMessageBox.information(self,"Image Effects","Select an image layer first.")
+            return
+        self.remember(f"image effect {effect}")
+        layer.effects.append({"type":effect,"amount":amount})
+        self.refresh_all()
+
+    def brush_mask_selected_image(self) -> None:
+        layer = self.selected_layer()
+        if layer is None or layer.type != "image":
+            QMessageBox.information(self,"Image Mask","Select an image layer first.")
+            return
+        if self.project_path is None:
+            self.save_project()
+        if self.project_path is None:
+            return
+        from ttg_canvas_engine import RenderContext
+        raw = layer.properties.get("path") or layer.properties.get("asset_path")
+        path = RenderContext(self.project_path.parent).resolve_asset(str(raw))
+        if not path.is_file():
+            QMessageBox.warning(self,"Image Mask","The selected image is missing.")
+            return
+        dialog = MaskPainterDialog(path,self)
+        if dialog.exec() != dialog.DialogCode.Accepted:
+            return
+        if not dialog.surface.points:
+            QMessageBox.information(self,"Image Mask","No painted selection was made.")
+            return
+        folder = self.project_path.parent/"assets"/"masks"
+        folder.mkdir(parents=True,exist_ok=True)
+        target = folder/(uuid.uuid4().hex+".png")
+        dialog.mask().save(target)
+        self.remember("brush mask")
+        layer.properties["mask_path"] = target.relative_to(self.project_path.parent).as_posix()
+        layer.properties["mask_feather"] = 1.0
+        self.refresh_all()
+        self.autosave_snapshot()
+
+    def add_audio_track(self) -> None:
+        if self.project is None:
+            self.new_project()
+        if self.project_path is None:
+            self.save_project()
+        if self.project_path is None:
+            return
+        source, _ = QFileDialog.getOpenFileName(
+            self,"Import Audio", "", "Audio (*.wav *.mp3 *.flac *.ogg *.m4a)"
+        )
+        if not source:
+            return
+        start, ok = QInputDialog.getDouble(
+            self,"Track Start","Start time (seconds):",0,0,
+            float(self.project.canvas.duration),2
+        )
+        if not ok:
+            return
+        origin = Path(source)
+        if origin.stat().st_size > 80*1024*1024:
+            QMessageBox.warning(self,"Audio","Audio exceeds the 80 MiB track limit")
+            return
+        asset_dir = self.project_path.parent/"assets"/"audio"
+        asset_dir.mkdir(parents=True,exist_ok=True)
+        destination = asset_dir/(uuid.uuid4().hex+origin.suffix.lower())
+        shutil.copyfile(origin,destination)
+        self.remember("add audio track")
+        self.project.audio_markers.append({
+            "path":destination.relative_to(self.project_path.parent).as_posix(),
+            "start":start,"volume":1.0,
+        })
+        self.refresh_all()
+        self.autosave_snapshot()
+        self.status.setText("Audio track added to project timeline")
+
+    def open_image_lab(self) -> None:
+        if self.project is None:
+            self.new_project()
+        if self.project_path is None:
+            self.save_project()
+        if self.project_path is None:
+            return  # User cancelled native Save dialog.
+        image_source = ""
+        layer = self.selected_layer()
+        if layer and layer.type == "image":
+            from ttg_canvas_engine import RenderContext
+            raw = layer.properties.get("path") or layer.properties.get("asset_path")
+            if raw:
+                candidate = RenderContext(self.project_path.parent).resolve_asset(str(raw))
+                if candidate.is_file():
+                    image_source = str(candidate)
+        target = self.project_path.parent / "assets" / "image-lab"
+        dialog = ImageLabDialog(target, self, source=image_source)
+        dialog.completed.connect(self.import_image_lab_result)
+        dialog.show()
+        self._image_lab_dialog = dialog
+
+    def import_image_lab_result(self, filename: str) -> None:
+        if self.project is None or self.project_path is None:
+            return
+        path = Path(filename).resolve()
+        if not path.is_file() or not path.is_relative_to(self.project_path.parent.resolve()):
+            raise ValueError("Generated image must be inside the saved project")
+        self.remember("Import Image Lab result")
+        relative = path.relative_to(self.project_path.parent.resolve()).as_posix()
+        layer = self.action.add_image(self.project, relative, 80, 80, "Image Lab result")
+        self.selected_layer_id = layer.id
+        self.refresh_all()
+        self.autosave_snapshot()
+        self.status.setText(f"Imported editable Image Lab layer: {relative}")
+
     def remember(self, label: str) -> None:
         if self.project is not None:
             self.history.remember(label, self.project)
@@ -266,6 +471,8 @@ class CreativeWorkspace(QWidget):
         self.playback.project_root = root
 
     def reset_project(self, project: TTGProject) -> None:
+        self._autosave_last = None
+        self._unsaved_identity = uuid.uuid4().hex
         self._set_asset_root(self.project_root)
         self.project = project
         self.project_path = None
@@ -438,6 +645,8 @@ class CreativeWorkspace(QWidget):
                 return
             self.project_path = Path(path)
         self.project.save(self.project_path)
+        self.recovery_store.clear(self.project_path)
+        self._autosave_last = None
         self.status.setText(f"Saved {self.project_path}")
 
     def undo(self) -> None:
@@ -557,6 +766,10 @@ class CreativeWorkspace(QWidget):
             self.timeline_actions.add_fade_in(self.project, self.selected_layer_id)
         elif preset == "pulse":
             self.timeline_actions.add_pulse(self.project, self.selected_layer_id)
+        elif preset == "fade_out":
+            self.timeline_actions.add_fade_out(self.project, self.selected_layer_id)
+        elif preset == "slide_up":
+            self.timeline_actions.add_slide_up(self.project, self.selected_layer_id)
         elif preset == "clear":
             self.timeline_actions.clear_animation(self.project, self.selected_layer_id)
         self.refresh_all()

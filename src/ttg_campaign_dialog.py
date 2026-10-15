@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
     QScrollArea, QVBoxLayout, QWidget,
 )
 
-from ttg_campaign_composer import CampaignBrief, FORMATS, compose_campaign
+from ttg_campaign_composer import CampaignBrief, FORMATS, CAMPAIGN_PRESETS, compose_campaign
 
 
 class CampaignDesignerDialog(QDialog):
@@ -61,6 +61,11 @@ class CampaignDesignerDialog(QDialog):
         hint.setWordWrap(True)
         base.addWidget(hint)
 
+        self.preset = QComboBox()
+        self.preset.addItem("Custom brief (start fresh)", "")
+        for key, option in CAMPAIGN_PRESETS.items():
+            self.preset.addItem(option["name"], key)
+        self.preset.currentIndexChanged.connect(self._apply_preset)
         self.layout_choice = QComboBox()
         for key, (name, w, h) in FORMATS.items():
             self.layout_choice.addItem(f"{name}    {w} × {h}", key)
@@ -85,6 +90,7 @@ class CampaignDesignerDialog(QDialog):
         image_layout.addWidget(picker)
         form = QFormLayout()
         for label, widget in [
+            ("Quick start", self.preset),
             ("Canvas", self.layout_choice), ("Brand", self.brand),
             ("Headline", self.headline), ("Supporting copy", self.subhead),
             ("Product label", self.product), ("Action button", self.cta),
@@ -114,6 +120,21 @@ class CampaignDesignerDialog(QDialog):
         controls.addButton(self.create_button, QDialogButtonBox.ButtonRole.AcceptRole)
         controls.rejected.connect(self.reject)
         base.addWidget(controls)
+
+    def _apply_preset(self, unused: int) -> None:
+        key = self.preset.currentData()
+        if not key:
+            return
+        info = CAMPAIGN_PRESETS[str(key)]
+        ix = self.layout_choice.findData(info["layout"])
+        self.layout_choice.setCurrentIndex(ix)
+        color_ix = self.accent.findData(info["accent"])
+        self.accent.setCurrentIndex(color_ix)
+        for name,widget in [
+            ("headline",self.headline),("subhead",self.subhead),
+            ("product_name",self.product),("cta",self.cta),
+        ]:
+            widget.setText(info[name])
 
     def browse_image(self) -> None:
         filename, _ = QFileDialog.getOpenFileName(

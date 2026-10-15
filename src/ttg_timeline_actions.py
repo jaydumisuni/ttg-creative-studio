@@ -38,6 +38,27 @@ class TimelineActions:
             Keyframe(end_time, [1.0, 1.0, 1.0], "ease_in_out"),
         ]
 
+    def add_fade_out(self, project: TTGProject, layer_id: str) -> None:
+        layer = self._layer(project, layer_id)
+        duration = project.canvas.duration
+        layer.keyframes["opacity"] = [
+            Keyframe(0, 1, "linear"),
+            Keyframe(max(0.0, duration-1.0), 1, "linear"),
+            Keyframe(duration, 0, "ease_in_out"),
+        ]
+
+    def add_slide_up(self, project: TTGProject, layer_id: str) -> None:
+        layer = self._layer(project, layer_id)
+        x, y, z = layer.transform.x, layer.transform.y, layer.transform.z
+        layer.keyframes["position"] = [
+            Keyframe(0, [x, y+project.canvas.height*.2, z], "ease_in_out"),
+            Keyframe(1, [x, y, z], "ease_in_out"),
+        ]
+        layer.keyframes["opacity"] = [
+            Keyframe(0, 0, "linear"),
+            Keyframe(1, 1, "ease_in_out"),
+        ]
+
     def clear_animation(self, project: TTGProject, layer_id: str) -> None:
         self._layer(project, layer_id).keyframes.clear()
 
