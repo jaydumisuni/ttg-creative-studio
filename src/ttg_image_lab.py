@@ -99,6 +99,13 @@ def apply_layer_mask(image: Image.Image, mask: Image.Image,
     return image
 
 
+class _NoRemoteRedirect(urllib.request.HTTPRedirectHandler):
+    """ComfyUI must not redirect private image payloads off the loopback host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise ValueError("ComfyUI redirect blocked: expected direct loopback response")
+
+
 class ComfyUIBackend:
     """Loopback ComfyUI server; checkpoint selection is explicit, never fabricated."""
 
@@ -121,7 +128,8 @@ class ComfyUIBackend:
             headers={"Content-Type": mime, "Accept": "application/json, image/png"},
             method="POST" if data is not None else "GET",
         )
-        with urllib.request.urlopen(req, timeout=10) as response:
+        # Do not follow 30x to an untrusted host and leak prompts or images.
+        with urllib.request.build_opener(_NoRemoteRedirect).open(req, timeout=10) as response:
             size = response.headers.get("Content-Length")
             if size is not None and int(size) > MAX_BYTES:
                 raise ValueError("ComfyUI response exceeds 32 MiB")
