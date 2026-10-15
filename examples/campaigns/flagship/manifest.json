@@ -1,0 +1,27 @@
+{
+  "schema": "ttg.creative.campaign.v1",
+  "generator": "offline_manual_procedural_not_ai",
+  "layout": "flagship",
+  "canvas": [
+    1080,
+    1350
+  ],
+  "layer_count": 18,
+  "brief": {
+    "layout": "flagship",
+    "brand": "THETECHGUY",
+    "headline": "REWRITE THE\nPOSSIBLE.",
+    "subhead": "Premium technology. Endless possibilities.",
+    "product_name": "FLAGSHIP EXPERIENCE",
+    "cta": "EXPLORE WHAT'S NEXT",
+    "website": "thetechguyds.com",
+    "accent": "aqua"
+  },
+  "sha256": {
+    "campaign.ttgstudio.json": "24df4f39a4facd7c0cf7f0f7f9d30166ae7635fd6a2fa886902c7d765acbcf38",
+    "campaign.png": "0af326fbc9bd0fe9a0029843562fb4883af692564ab46564608733adddffe38b",
+    "assets/backdrop.png": "0ef8974bb444f14b9310fffa1b29af85f3e5515f676411180783b0ff55367f68",
+    "assets/orbit.png": "bb71446cf7c6e147f85f0f144c5413f96242d99507006c10a60d0b5d43515d86",
+    "assets/product.png": "ba0188e0fe6dda2f4dfc35653e34a19979d11628277d804c287f0b0baf342bfe"
+  }
+}

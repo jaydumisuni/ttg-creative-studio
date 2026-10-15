@@ -31,6 +31,30 @@ Photoshop power + Canva simplicity + Filmora motion + TTG worker intelligence
 python scripts\launch_creative_studio.py
 ```
 
+## Offline Campaign Designer (October 2026 candidate)
+
+Choose **Design Campaign** inside the standalone application to build a layered
+advertisement from your brand, headline, supporting copy, color story and optional
+product image. Three original layouts are available: portrait, square and widescreen.
+The output is a native editable Studio project with its own relative assets, a PNG
+preview, a SHA-256 integrity manifest and a portable ZIP bundle.
+
+The saved project opens directly inside Studio for further editing, without Hunter,
+Ptah, an API key or an Internet connection.
+
+CLI example:
+
+```bash
+python scripts/creative_cli.py design-campaign ./my-campaign --layout flagship --headline "BEYOND THE ORDINARY."
+python -B scripts/test_campaign_designer.py
+python -B scripts/verify_campaign_showcase.py
+```
+
+See the [editable campaign examples](examples/campaigns/README.md) and the
+[feature scope and engineering proof](docs/CAMPAIGN_DESIGNER_V1_2026-10-15.md).
+This is an offline procedural composer, **not yet AI prompt-to-image generation**
+or proof of a final packaged commercial release.
+
 ## Full review gate
 
 ```powershell

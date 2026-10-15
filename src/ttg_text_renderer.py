@@ -8,9 +8,15 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 
 def load_font(font_path: str | None, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    if font_path and Path(font_path).exists():
-        return ImageFont.truetype(font_path, size)
-    for candidate in ["arialbd.ttf", "arial.ttf", "segoeuib.ttf", "segoeui.ttf", "calibri.ttf"]:
+    # Pillow can resolve font family filenames through its platform font loader.
+    # Do not silently fall back to a tiny bitmap font for an editable project.
+    if font_path:
+        try:
+            return ImageFont.truetype(font_path, size)
+        except (OSError, ValueError):
+            pass
+    for candidate in ["DejaVuSans-Bold.ttf", "DejaVuSans.ttf", "arialbd.ttf",
+                      "arial.ttf", "segoeuib.ttf", "segoeui.ttf", "calibri.ttf"]:
         try:
             return ImageFont.truetype(candidate, size)
         except Exception:

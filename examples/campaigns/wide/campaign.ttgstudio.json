@@ -1,0 +1,522 @@
+{
+  "version": "0.1.0",
+  "project_type": "image",
+  "name": "THETECHGUY \u2014 MAKE EVERY\nMOMENT COUNT.",
+  "canvas": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "duration": 8.0,
+    "background": "#070D19"
+  },
+  "brand": {
+    "id": "ttg_default",
+    "name": "THETECHGUY DIGITAL SOLUTIONS",
+    "website": "thetechguyds.com",
+    "slogan": "Fairytale Business \u2014 Make a wish, we sort it.",
+    "pillars": [
+      "SYSTEMS",
+      "TOOLS",
+      "ISP",
+      "WEB"
+    ],
+    "colors": {
+      "black": "#050614",
+      "cyan": "#00E5FF",
+      "purple": "#BC13FE",
+      "white": "#F7FAFF"
+    },
+    "locked_assets": {}
+  },
+  "assets": [
+    {
+      "id": "asset_4255fa419a",
+      "kind": "image",
+      "name": "Atmospheric background",
+      "path": "assets/backdrop.png",
+      "sha256": "ba09138f40adc316b71c6c6526bea24982b1431039c1d279c4dc9d7946985f1f",
+      "pack_id": null,
+      "required": true
+    },
+    {
+      "id": "asset_1b5e667bd0",
+      "kind": "image",
+      "name": "Editable orbit element",
+      "path": "assets/orbit.png",
+      "sha256": "28d06e0d0656c5714dcdadef788b67bc2c20722f459421d9d7da423be18c9811",
+      "pack_id": null,
+      "required": true
+    },
+    {
+      "id": "asset_b9397be0aa",
+      "kind": "image",
+      "name": "Replaceable hero product",
+      "path": "assets/product.png",
+      "sha256": "80590e552c63a15a5b8e3eb13487f55258ecfacb671a07e7da78a82de60d59c4",
+      "pack_id": null,
+      "required": true
+    }
+  ],
+  "layers": [
+    {
+      "id": "image_d4aee5d855",
+      "type": "image",
+      "name": "Atmospheric background",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "path": "assets/backdrop.png"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "image_99c9cecd85",
+      "type": "image",
+      "name": "Editable orbit element",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 925,
+        "y": 45,
+        "z": 0,
+        "scale_x": 0.97,
+        "scale_y": 0.97,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "path": "assets/orbit.png"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "image_eafb7bd5ff",
+      "type": "image",
+      "name": "Replaceable hero product",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 1140,
+        "y": 70,
+        "z": 0,
+        "scale_x": 0.92,
+        "scale_y": 0.92,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "path": "assets/product.png"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "text_911715cf50",
+      "type": "text",
+      "name": "Brand",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 95,
+        "y": 65,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "THETECHGUY",
+        "size": 38,
+        "color": "#FFFFFF",
+        "spacing": 4,
+        "font_path": "DejaVuSans-Bold.ttf"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "text_89b08c1d6d",
+      "type": "text",
+      "name": "Edition",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 1433,
+        "y": 85,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "CREATIVE STUDIO   /   LAUNCH SERIES",
+        "size": 17,
+        "color": "#FFCC82",
+        "spacing": 4,
+        "font_path": "DejaVuSans-Bold.ttf"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "shape_9ce15f8942",
+      "type": "shape",
+      "name": "Header rule",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 96,
+        "y": 145,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "shape": "rectangle",
+        "width": 1725,
+        "height": 2,
+        "fill": "#355168",
+        "radius": 0
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "text_1a60831fab",
+      "type": "text",
+      "name": "Category",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 101,
+        "y": 227,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "ONE BRAND. ALL SOLUTIONS.",
+        "size": 23,
+        "color": "#FFCC82",
+        "spacing": 4,
+        "font_path": "DejaVuSans-Bold.ttf"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "text_5328ea2518",
+      "type": "text",
+      "name": "Hero headline",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 91,
+        "y": 323,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "MAKE EVERY\nMOMENT COUNT.",
+        "size": 78,
+        "color": "#FCFEFF",
+        "spacing": 4,
+        "font_path": "DejaVuSans-Bold.ttf"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "text_e482a3556b",
+      "type": "text",
+      "name": "Hero subhead",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 99,
+        "y": 525,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "Technology meets possibility.",
+        "size": 27,
+        "color": "#C0D6E2",
+        "spacing": 4,
+        "font_path": "DejaVuSans.ttf"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "shape_4f62a65869",
+      "type": "shape",
+      "name": "Accent rule",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 104,
+        "y": 640,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "shape": "rectangle",
+        "width": 105,
+        "height": 5,
+        "fill": "#FFCC82",
+        "radius": 2
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "text_f3dcdd2af9",
+      "type": "text",
+      "name": "Product name",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 101,
+        "y": 681,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "DIGITAL SOLUTIONS",
+        "size": 32,
+        "color": "#FFFFFF",
+        "spacing": 4,
+        "font_path": "DejaVuSans-Bold.ttf"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "shape_1c3a01a227",
+      "type": "shape",
+      "name": "CTA tile",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 99,
+        "y": 776,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "shape": "rectangle",
+        "width": 440,
+        "height": 80,
+        "fill": "#154451",
+        "radius": 22,
+        "outline": "#FFCC82"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "text_d044abfa9c",
+      "type": "text",
+      "name": "Call to action",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 129,
+        "y": 794,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "EXPLORE THE COLLECTION",
+        "size": 25,
+        "color": "#F8FFFF",
+        "spacing": 4,
+        "font_path": "DejaVuSans-Bold.ttf"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "shape_18d7e66e4d",
+      "type": "shape",
+      "name": "Footer rule",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 102,
+        "y": 950,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "shape": "rectangle",
+        "width": 1725,
+        "height": 2,
+        "fill": "#355168",
+        "radius": 0
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "text_2c8e746923",
+      "type": "text",
+      "name": "Website",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 105,
+        "y": 976,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "thetechguyds.com",
+        "size": 27,
+        "color": "#FFFFFF",
+        "spacing": 4,
+        "font_path": "DejaVuSans.ttf"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "text_22b9404bfd",
+      "type": "text",
+      "name": "Series",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 1460,
+        "y": 980,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "THETECHGUY / CREATIVE",
+        "size": 19,
+        "color": "#FFCC82",
+        "spacing": 4,
+        "font_path": "DejaVuSans-Bold.ttf"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    }
+  ],
+  "audio_markers": [],
+  "export": {
+    "format": "png",
+    "resolution": "1920x1080",
+    "quality": "lossless",
+    "generator": "manual_procedural_studio"
+  }
+}
