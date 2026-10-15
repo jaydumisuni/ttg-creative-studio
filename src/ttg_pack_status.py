@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from ttg_studio_paths import creative_studio_data_dir
 import json
 
 
@@ -22,7 +23,7 @@ class PackStatusReader:
     def __init__(self, repo_root: str | Path, app_data_dir: str | Path | None = None) -> None:
         self.repo_root = Path(repo_root)
         self.manifest_dir = self.repo_root / "packs" / "manifests"
-        self.app_data_dir = Path(app_data_dir) if app_data_dir else Path.home() / "AppData" / "Local" / "TheTechGuyCreativeStudio"
+        self.app_data_dir = Path(app_data_dir) if app_data_dir else creative_studio_data_dir()
         self.installed_manifest_dir = self.app_data_dir / "manifests"
 
     def list_statuses(self) -> list[PackStatus]:

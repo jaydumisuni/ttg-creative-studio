@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from ttg_studio_paths import creative_studio_data_dir
 import shutil
 import subprocess
 
@@ -19,7 +20,7 @@ class FFmpegStatus:
 
 class FFmpegManager:
     def __init__(self, app_data_dir: str | Path | None = None) -> None:
-        self.app_data_dir = Path(app_data_dir) if app_data_dir else Path.home() / "AppData" / "Local" / "TheTechGuyCreativeStudio"
+        self.app_data_dir = Path(app_data_dir) if app_data_dir else creative_studio_data_dir()
         self.bin_dir = self.app_data_dir / "packs" / "video-export" / "bin"
 
     def candidates(self) -> list[str]:
