@@ -36,10 +36,15 @@ class RenderContext:
         return direct
 
 
-@lru_cache(maxsize=8)
-def _cached_small_image(filename: str, mtime_ns: int, size_bytes: int) -> Image.Image:
-    # Cache only small originals; version by file stats to avoid stale assets.
+@lru_cache(maxsize=16)
+def _cached_small_image(filename: str, mtime_ns: int, size_bytes: int) -> Image.Image | None:
+    # Bound *decoded* image memory, not only disk bytes: highly compressible
+    # oversized PNGs can otherwise exhaust RAM even when their files are small.
+    # At most 16 RGBA images of <= 1 million pixels (~64 MiB total) are kept.
     from ttg_image_lab import read_image
+    with Image.open(filename) as header:
+        if header.width * header.height > 1_000_000:
+            return None
     return read_image(filename)
 
 
@@ -113,12 +118,9 @@ class CanvasRenderer:
             return
         from ttg_image_lab import read_image, apply_layer_mask
         stat = path.stat()
-        if stat.st_size < 12_000_000:
-            image = _cached_small_image(
-                str(path.resolve()), stat.st_mtime_ns, stat.st_size
-            ).copy()
-        else:
-            image = read_image(path)
+        cached = (_cached_small_image(str(path.resolve()), stat.st_mtime_ns, stat.st_size)
+                  if stat.st_size < 12_000_000 else None)
+        image = cached.copy() if cached is not None else read_image(path)
         image = self._apply_effects(image, layer.effects)
         if layer.properties.get("mask_path"):
             mask = read_image(self.context.resolve_asset(str(layer.properties["mask_path"])))

@@ -41,6 +41,8 @@ jobs:
           python -B scripts/test_release_packaging.py
           python -B scripts/test_production_preflight.py
           python -B scripts/test_studio_g0_artifacts.py
+          python -B scripts/test_studio_release_manifest.py
+          python -B scripts/test_studio_g4_stress.py
           python -B scripts/test_frozen_gui_probe.py
           python -B scripts/verify_campaign_showcase.py
       - name: Build independent one-folder desktop executable
@@ -65,6 +67,8 @@ jobs:
           "$RUNNER_TEMP/studio-prefix/bin/ttg-creative-studio" --qualify-gui "$RUNNER_TEMP/studio-gui-installed-linux"
           python -B scripts/verify_frozen_gui_proof.py "$RUNNER_TEMP/studio-gui-installed-linux"
           tar -C dist -czf "$RUNNER_TEMP/TTG-Creative-Studio-Linux-x64.tar.gz" "TTG Creative Studio"
+          python -B scripts/studio_release_manifest.py create --kind linux --artifact "$RUNNER_TEMP/TTG-Creative-Studio-Linux-x64.tar.gz" --manifest "$RUNNER_TEMP/studio-linux-custody.json" --source-sha "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID"
+          python -B scripts/studio_release_manifest.py verify --artifact "$RUNNER_TEMP/TTG-Creative-Studio-Linux-x64.tar.gz" --manifest "$RUNNER_TEMP/studio-linux-custody.json" --source-sha "$GITHUB_SHA"
       - name: Build Windows Inno Setup installation package
         if: runner.os == 'Windows'
         shell: pwsh
@@ -77,6 +81,11 @@ jobs:
         shell: pwsh
         run: |
           & ".\scripts\test_installer_windows.ps1"
+          if ($LASTEXITCODE -ne 0) { throw "Installer lifecycle smoke failed" }
+          python -B scripts/studio_release_manifest.py create --kind windows --artifact "dist/installer/TTG-Creative-Studio-Core-Setup.exe" --manifest "$env:RUNNER_TEMP/studio-windows-custody.json" --source-sha "$env:GITHUB_SHA" --run-id "$env:GITHUB_RUN_ID"
+          if ($LASTEXITCODE -ne 0) { throw "Windows release custody manifest failed" }
+          python -B scripts/studio_release_manifest.py verify --artifact "dist/installer/TTG-Creative-Studio-Core-Setup.exe" --manifest "$env:RUNNER_TEMP/studio-windows-custody.json" --source-sha "$env:GITHUB_SHA"
+          if ($LASTEXITCODE -ne 0) { throw "Windows release manifest recheck failed" }
       - name: Publish Windows unsigned installer candidate
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
@@ -97,6 +106,20 @@ jobs:
         with:
           name: TTG-Creative-Studio-Windows-Installed-GUI-proof
           path: ${{ runner.temp }}/studio-installed-gui-proof-windows/
+          if-no-files-found: error
+      - name: Publish Windows release candidate identity (not signed)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: TTG-Creative-Studio-Windows-custody
+          path: ${{ runner.temp }}/studio-windows-custody.json
+          if-no-files-found: error
+      - name: Publish Linux release candidate identity (not signed)
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: TTG-Creative-Studio-Linux-custody
+          path: ${{ runner.temp }}/studio-linux-custody.json
           if-no-files-found: error
       - name: Publish portable Linux candidate
         if: runner.os == 'Linux'
