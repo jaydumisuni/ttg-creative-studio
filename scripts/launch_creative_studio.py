@@ -13,4 +13,27 @@ if str(SRC) not in sys.path:
 
 from ttg_creative_app import run
 
-raise SystemExit(run())
+def main() -> int:
+    # The frozen desktop executable has a bounded, noninteractive smoke path.
+    # This checks its bundled Qt/plugins without claiming user GUI acceptance.
+    if "--self-check" in sys.argv:
+        import json
+        from PyQt6.QtWidgets import QApplication
+        from ttg_action_engine import ActionEngine
+        from ttg_canvas_engine import CanvasRenderer, RenderContext
+        app = QApplication.instance() or QApplication([])
+        project = ActionEngine().new_project("Frozen Creative Studio Smoke", "image")
+        project.canvas.width, project.canvas.height = 48, 48
+        actual = CanvasRenderer(RenderContext(ROOT)).render(project)
+        print(json.dumps({
+            "application": "TTG Creative Studio",
+            "packaged_imports": True,
+            "renderer_size": list(actual.size),
+            "qt": bool(app),
+        }))
+        return 0
+    return run()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

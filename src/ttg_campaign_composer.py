@@ -30,6 +30,45 @@ FORMATS = {
     "wide": ("Launch · Widescreen", 1920, 1080),
 }
 _ACCENTS = {"aqua": "#71F4E6", "violet": "#BE9BFF", "amber": "#FFCC82"}
+CAMPAIGN_PRESETS = {
+    "electronics": {
+        "name":"Flagship Technology", "layout":"flagship", "accent":"aqua",
+        "headline":"ENGINEERED FOR THE EXTRAORDINARY.",
+        "subhead":"Meet the technology changing what comes next.",
+        "product_name":"SIGNATURE SERIES", "cta":"DISCOVER THE COLLECTION",
+    },
+    "luxury": {
+        "name":"Luxury Editorial", "layout":"flagship", "accent":"amber",
+        "headline":"AN ICON. REIMAGINED.",
+        "subhead":"Every detail makes a statement.",
+        "product_name":"THE SIGNATURE EDITION", "cta":"EXPLORE THE DETAILS",
+    },
+    "retail": {
+        "name":"Retail Launch", "layout":"social", "accent":"violet",
+        "headline":"YOUR NEXT MOVE STARTS HERE.",
+        "subhead":"A new standard has arrived.",
+        "product_name":"NEW ARRIVALS", "cta":"SHOP THE RELEASE",
+    },
+    "sport": {
+        "name":"Sports Event", "layout":"wide", "accent":"amber",
+        "headline":"THE STAGE IS YOURS.",
+        "subhead":"Every moment is a new opportunity to rise.",
+        "product_name":"MATCH DAY", "cta":"JOIN THE EXPERIENCE",
+    },
+    "services": {
+        "name":"Service Spotlight", "layout":"wide", "accent":"aqua",
+        "headline":"YOUR VISION. MADE REAL.",
+        "subhead":"One brand. All the solutions you need.",
+        "product_name":"DIGITAL SOLUTIONS", "cta":"GET STARTED",
+    },
+    "creator": {
+        "name":"Creator Announcement", "layout":"social", "accent":"violet",
+        "headline":"CREATE WITHOUT LIMITS.",
+        "subhead":"Your ideas deserve an extraordinary canvas.",
+        "product_name":"CREATIVE STUDIO", "cta":"EXPLORE THE POSSIBILITIES",
+    },
+}
+
 
 @dataclass(frozen=True)
 class CampaignBrief:

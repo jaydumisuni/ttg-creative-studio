@@ -4,13 +4,13 @@
 #define MyAppExeName "TTG Creative Studio.exe"
 
 [Setup]
-AppId={{A4F4D8B6-9D72-4C72-8C4E-TTGCREATIVESTUDIO}}
+AppId={{A4F4D8B6-9D72-4C72-8C4E-2719B6A619AC}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\TTG Creative Studio
 DefaultGroupName={#MyAppName}
-OutputDir=dist\installer
+OutputDir=..\dist\installer
 OutputBaseFilename=TTG-Creative-Studio-Core-Setup
 Compression=lzma
 SolidCompression=yes

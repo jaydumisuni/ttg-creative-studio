@@ -4,10 +4,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Iterable
 
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageOps
 
 from ttg_project_schema import Layer, TTGProject
 from ttg_text_renderer import render_text_layer
@@ -33,6 +34,13 @@ class RenderContext:
         if resources.exists():
             return resources
         return direct
+
+
+@lru_cache(maxsize=8)
+def _cached_small_image(filename: str, mtime_ns: int, size_bytes: int) -> Image.Image:
+    # Cache only small originals; version by file stats to avoid stale assets.
+    from ttg_image_lab import read_image
+    return read_image(filename)
 
 
 class CanvasRenderer:
@@ -70,6 +78,15 @@ class CanvasRenderer:
             elif effect_type == "glow":
                 glow = out.filter(ImageFilter.GaussianBlur(float(effect.get("amount", 6))))
                 out = Image.alpha_composite(glow, out)
+            elif effect_type in {"brightness", "contrast", "saturation", "sharpen"}:
+                # Alpha survives the adjustment; source file remains unchanged.
+                from ttg_image_lab import apply_adjustments
+                key = {"sharpen": "sharpness"}.get(effect_type, effect_type)
+                out = apply_adjustments(out, **{key: float(effect.get("amount", 1.0))})
+            elif effect_type == "grayscale":
+                gray = ImageOps.grayscale(out).convert("RGBA")
+                gray.putalpha(out.getchannel("A"))
+                out = gray
         return out
 
     def _draw_reflection(self, canvas: Image.Image, image: Image.Image, x: int, y: int, strength: float = 0.3) -> None:
@@ -94,8 +111,22 @@ class CanvasRenderer:
         path = self.context.resolve_asset(str(asset_path))
         if not path.exists():
             return
-        image = Image.open(path).convert("RGBA")
+        from ttg_image_lab import read_image, apply_layer_mask
+        stat = path.stat()
+        if stat.st_size < 12_000_000:
+            image = _cached_small_image(
+                str(path.resolve()), stat.st_mtime_ns, stat.st_size
+            ).copy()
+        else:
+            image = read_image(path)
         image = self._apply_effects(image, layer.effects)
+        if layer.properties.get("mask_path"):
+            mask = read_image(self.context.resolve_asset(str(layer.properties["mask_path"])))
+            image = apply_layer_mask(
+                image, mask.getchannel("A") if layer.properties.get("mask_use_alpha") else mask.convert("L"),
+                bool(layer.properties.get("mask_invert", False)),
+                float(layer.properties.get("mask_feather", 0)),
+            )
         w = max(1, int(image.width * layer.transform.scale_x))
         h = max(1, int(image.height * layer.transform.scale_y))
         image = image.resize((w, h), Image.Resampling.LANCZOS)
