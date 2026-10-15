@@ -12,7 +12,10 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # Neither the native editor nor the self-check imports setuptools.
+    # Prevent PyInstaller's pkg_resources runtime hook from pulling an
+    # incomplete setuptools vendor/backports namespace into a frozen bundle.
+    excludes=['setuptools', 'pkg_resources', 'backports'],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,

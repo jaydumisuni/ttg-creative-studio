@@ -46,8 +46,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          & ".\dist\TTG Creative Studio\TTG Creative Studio.exe" --self-check
-          if ($LASTEXITCODE -ne 0) { throw "Frozen Windows Studio self-check failed" }
+          $binary = Resolve-Path ".\dist\TTG Creative Studio\TTG Creative Studio.exe"
+          $process = Start-Process -FilePath $binary.Path -ArgumentList "--self-check" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Frozen Windows Studio self-check failed with exit code $($process.ExitCode)" }
       - name: Linux compiled desktop smoke
         if: runner.os == 'Linux'
         run: |

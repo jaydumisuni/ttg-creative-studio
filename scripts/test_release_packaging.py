@@ -12,6 +12,13 @@ def main():
     spec = (ROOT/"TTG Creative Studio.spec").read_text()
     assert "scripts/launch_creative_studio.py" in spec
     assert "TTG Creative Studio" in spec
+    # The application imports no setuptools at runtime. Freezing it as a
+    # dependency creates a broken pkg_resources hook on Linux.
+    assert "'setuptools', 'pkg_resources', 'backports'" in spec
+    workflow=(ROOT/".github/workflows/studio-release-candidate.yml").read_text()
+    assert "Start-Process" in workflow and "ExitCode" in workflow
+    assert "Build Windows Inno Setup installation package" in workflow
+    assert "Linux compiled desktop smoke" in workflow
     for name in ("build_exe.ps1", "build_installer.ps1", "installer/creative_studio_core.iss"):
         data = (ROOT/name).read_text()
         assert "TTG Creative Studio" in data
