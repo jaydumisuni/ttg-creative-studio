@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -117,10 +118,25 @@ class MotionExporter:
                 cmd += ["-filter_complex", ";".join(filters), "-map", "0:v",
                         "-map", audio_label or "[aout]", "-c:a", "aac",
                         "-b:a", "160k", "-shortest"]
-            cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p",
-                    "-r", str(project.canvas.fps), "-frames:v", str(total),
-                    "-movflags", "+faststart", str(output_path)]
-            subprocess.run(cmd, check=True, timeout=max(120, total*3))
-        if not output_path.is_file() or output_path.stat().st_size == 0:
-            raise RuntimeError("FFmpeg exited without producing an MP4")
+            # Encode into a *different* filename on the destination volume.
+            # An interrupted FFmpeg job must never corrupt the prior export.
+            fd, temporary_name = tempfile.mkstemp(
+                prefix=f".{output_path.stem}-", suffix=".mp4",
+                dir=output_path.parent,
+            )
+            os.close(fd)
+            temporary_path = Path(temporary_name)
+            try:
+                cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p",
+                        "-r", str(project.canvas.fps), "-frames:v", str(total),
+                        "-movflags", "+faststart", str(temporary_path)]
+                subprocess.run(cmd, check=True, timeout=max(120, total*3))
+                if temporary_path.stat().st_size == 0:
+                    raise RuntimeError("FFmpeg exited without producing an MP4")
+                # Flush the encoded file before publishing its name.
+                with temporary_path.open("rb") as handle:
+                    os.fsync(handle.fileno())
+                os.replace(temporary_path, output_path)
+            finally:
+                temporary_path.unlink(missing_ok=True)
         return output_path
