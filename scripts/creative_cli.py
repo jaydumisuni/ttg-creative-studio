@@ -13,6 +13,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from ttg_campaign_composer import CampaignBrief, compose_campaign, FORMATS
 from ttg_export_service import ExportService
 from ttg_intro_builder import IntroBuilder
 from ttg_project_schema import TTGProject
@@ -47,6 +48,24 @@ def export_mp4(args) -> int:
     return 0
 
 
+def design_campaign(args) -> int:
+    brief = CampaignBrief(
+        layout=args.layout,
+        brand=args.brand,
+        headline=args.headline,
+        subhead=args.subhead,
+        product_name=args.product,
+        cta=args.cta,
+        website=args.website,
+        accent=args.accent,
+        image_path=args.product_image or None,
+    )
+    files = compose_campaign(brief, Path(args.output_dir))
+    for label, path in files.items():
+        print(f"{label}: {path}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="TTG Creative Studio CLI")
     sub = parser.add_subparsers(required=True)
@@ -70,6 +89,22 @@ def main() -> int:
     p_mp4.add_argument("output")
     p_mp4.add_argument("--work-dir", default="")
     p_mp4.set_defaults(func=export_mp4)
+
+    p_campaign = sub.add_parser(
+        "design-campaign",
+        help="Create a portable editable campaign with original offline artwork",
+    )
+    p_campaign.add_argument("output_dir")
+    p_campaign.add_argument("--layout", choices=sorted(FORMATS), default="flagship")
+    p_campaign.add_argument("--brand", default="THETECHGUY")
+    p_campaign.add_argument("--headline", default="BEYOND THE ORDINARY.")
+    p_campaign.add_argument("--subhead", default="Designed to make your next move extraordinary.")
+    p_campaign.add_argument("--product", default="NEXT GENERATION")
+    p_campaign.add_argument("--cta", default="DISCOVER MORE")
+    p_campaign.add_argument("--website", default="thetechguyds.com")
+    p_campaign.add_argument("--accent", choices=["aqua", "violet", "amber"], default="aqua")
+    p_campaign.add_argument("--product-image", default="")
+    p_campaign.set_defaults(func=design_campaign)
 
     args = parser.parse_args()
     return args.func(args)

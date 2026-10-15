@@ -27,7 +27,7 @@ class InteractiveCanvas(QLabel):
         self.selected_layer_id: str | None = None
         self.interaction = CanvasInteractionController()
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setMinimumSize(640, 420)
+        self.setMinimumSize(390, 310)
         self.setMouseTracking(True)
 
     def set_project(self, project: TTGProject | None, selected_layer_id: str | None = None) -> None:

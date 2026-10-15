@@ -15,7 +15,7 @@ class CreativeStudioWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("TTG Creative Studio")
-        self.resize(1280, 760)
+        self.resize(1440, 860)
         self.setMinimumSize(1024, 640)
         self.setStatusBar(QStatusBar())
         workspace = CreativeWorkspace()

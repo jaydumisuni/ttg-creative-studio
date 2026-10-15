@@ -5,11 +5,12 @@ from __future__ import annotations
 
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 from typing import Callable
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -18,6 +19,9 @@ from PyQt6.QtWidgets import (
     QMenu,
     QMessageBox,
     QPushButton,
+    QFrame,
+    QScrollArea,
+    QSizePolicy,
     QSplitter,
     QTabWidget,
     QToolButton,
@@ -26,6 +30,8 @@ from PyQt6.QtWidgets import (
 )
 
 from ttg_action_engine import ActionEngine
+from ttg_campaign_composer import CampaignBrief, compose_campaign
+from ttg_campaign_dialog import CampaignDesignerDialog
 from ttg_advanced_panel import AdvancedModePanel
 from ttg_asset_browser import AssetTemplateBrowser
 from ttg_background_tool import BackgroundRemovalTool
@@ -79,6 +85,8 @@ class CreativeWorkspace(QWidget):
     def _menu_button(self, title: str, actions: list[tuple[str, Callable[[], None]]]) -> QToolButton:
         button = QToolButton()
         button.setText(title)
+        button.setMinimumWidth(max(78, 13 * len(title) + 12))
+        button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         menu = QMenu(button)
         for label, callback in actions:
@@ -93,8 +101,17 @@ class CreativeWorkspace(QWidget):
         root.setContentsMargins(10, 8, 10, 8)
         root.setSpacing(8)
 
-        toolbar = QHBoxLayout()
+        toolbar_widget = QWidget(self)
+        toolbar = QHBoxLayout(toolbar_widget)
+        toolbar.setContentsMargins(0, 0, 0, 0)
         toolbar.setSpacing(6)
+        self.campaign_button = QPushButton("✦ Design Campaign")
+        self.campaign_button.setObjectName("campaignDesignerButton")
+        self.campaign_button.setMinimumWidth(170)
+        self.campaign_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.campaign_button.setToolTip("Generate an editable layered composition, entirely offline")
+        self.campaign_button.clicked.connect(self.design_campaign)
+        toolbar.addWidget(self.campaign_button)
         toolbar.addWidget(self._menu_button("File", [
             ("New Project", self.new_project),
             ("Open Project", self.open_project),
@@ -103,6 +120,7 @@ class CreativeWorkspace(QWidget):
             ("Import Ad Folder", self.import_ad_folder),
         ]))
         toolbar.addWidget(self._menu_button("Templates", [
+            ("New Campaign Designer", self.design_campaign),
             ("Basic Intro", lambda: self.reset_project(make_ttg_intro_project())),
             ("THETECHGUY Reference Intro", self.load_reference_intro),
             ("Cinematic TTG Intro", lambda: self.reset_project(IntroBuilder().build_ttg_intro())),
@@ -142,6 +160,8 @@ class CreativeWorkspace(QWidget):
             ("FFmpeg Status", self.show_ffmpeg_status),
         ]))
         self.preview_button = QPushButton("Preview Still")
+        self.preview_button.setMinimumWidth(117)
+        self.preview_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.preview_button.clicked.connect(self.preview_still)
         toolbar.addWidget(self.preview_button)
         toolbar.addWidget(self._menu_button("Export", [
@@ -150,7 +170,15 @@ class CreativeWorkspace(QWidget):
             ("Export MP4", self.export_mp4),
         ]))
         toolbar.addStretch()
-        root.addLayout(toolbar)
+        self.toolbar_scroll = QScrollArea()
+        self.toolbar_scroll.setWidgetResizable(False)
+        self.toolbar_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.toolbar_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.toolbar_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        toolbar_widget.adjustSize()
+        self.toolbar_scroll.setWidget(toolbar_widget)
+        self.toolbar_scroll.setFixedHeight(toolbar_widget.sizeHint().height() + 10)
+        root.addWidget(self.toolbar_scroll)
 
         main = QSplitter(Qt.Orientation.Horizontal)
         left_tabs = QTabWidget()
@@ -195,6 +223,17 @@ class CreativeWorkspace(QWidget):
         self.advanced.previewRequested.connect(self.preview_still)
         self.asset_browser.assetSelected.connect(self.add_asset_from_browser)
         self.asset_browser.templateSelected.connect(self.load_template_by_id)
+        self._shortcuts = []
+        for sequence, callback in [
+            ("Ctrl+S", self.save_project),
+            ("Ctrl+O", self.open_project),
+            ("Ctrl+Z", self.undo),
+            ("Ctrl+Shift+Z", self.redo),
+            ("Ctrl+E", self.export_png),
+        ]:
+            shortcut = QShortcut(QKeySequence(sequence), self)
+            shortcut.activated.connect(callback)
+            self._shortcuts.append(shortcut)
 
     def _apply_theme(self) -> None:
         self.setStyleSheet(
@@ -202,6 +241,8 @@ class CreativeWorkspace(QWidget):
             QWidget{background:#050814;color:#eaf3ff;font-family:Segoe UI;}
             QPushButton,QToolButton{background:#16224d;color:#f1f7ff;border:1px solid #3f72ff;border-radius:7px;padding:6px 10px;}
             QPushButton:hover,QToolButton:hover{background:#25356d;}
+            QPushButton#campaignDesignerButton{background:#1c706c;color:#f6fffe;border:1px solid #58e8d9;font-weight:700;padding:7px 13px;}
+            QPushButton#campaignDesignerButton:hover{background:#288c82;}
             QMenu{background:#0b1220;color:#eaf3ff;border:1px solid #2c4f99;padding:4px;}
             QMenu::item{padding:7px 22px;}
             QMenu::item:selected{background:#25356d;}
@@ -218,7 +259,14 @@ class CreativeWorkspace(QWidget):
             self.history.remember(label, self.project)
             self.still_preview_approved = False
 
+    def _set_asset_root(self, root: Path) -> None:
+        """Resolve image assets beside their saved editable project."""
+        self.canvas.project_root = root
+        self.export_service = ExportService(root)
+        self.playback.project_root = root
+
     def reset_project(self, project: TTGProject) -> None:
+        self._set_asset_root(self.project_root)
         self.project = project
         self.project_path = None
         self.selected_layer_id = project.layers[0].id if project.layers else None
@@ -285,6 +333,40 @@ class CreativeWorkspace(QWidget):
             QMessageBox.warning(self, "Validation", "Fix project errors before export.")
         return not errors
 
+    def create_campaign(self, brief: CampaignBrief, destination: Path) -> Path:
+        """Create actual project assets, open it in Studio, enable layer editing."""
+        result = compose_campaign(brief, destination)
+        project_path = result["project"]
+        project = TTGProject.load(project_path)
+        self._set_asset_root(project_path.parent)
+        self.project = project
+        self.project_path = project_path
+        self.selected_layer_id = next(
+            (layer.id for layer in project.layers if layer.name == "Hero headline"),
+            project.layers[0].id if project.layers else None,
+        )
+        self.still_preview_approved = False
+        self.history.clear()
+        self.refresh_all()
+        self.status.setText(
+            f"Campaign ready: {len(project.layers)} editable layers. Saved to {project_path}"
+        )
+        return project_path
+
+    def design_campaign(self) -> None:
+        dialog = CampaignDesignerDialog(self)
+        try:
+            if dialog.exec() != dialog.DialogCode.Accepted:
+                return
+            brief = dialog.brief()
+            base = Path.home() / "Documents" / "TTG Creative Studio" / "Projects"
+            folder = base / f"{brief.layout}-{uuid.uuid4().hex[:8]}"
+            self.create_campaign(brief, folder)
+        except Exception as exc:
+            QMessageBox.warning(self, "Campaign Designer", str(exc))
+        finally:
+            dialog.close()
+
     def new_project(self) -> None:
         self.reset_project(self.action.new_project("Untitled TTG Project", "image"))
 
@@ -303,6 +385,7 @@ class CreativeWorkspace(QWidget):
             return
         try:
             project = TTGProject.load(path)
+            self._set_asset_root(Path(path).resolve().parent)
             self.project = project
             self.project_path = Path(path)
             self.selected_layer_id = project.layers[0].id if project.layers else None

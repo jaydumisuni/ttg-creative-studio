@@ -1,0 +1,27 @@
+{
+  "schema": "ttg.creative.campaign.v1",
+  "generator": "offline_manual_procedural_not_ai",
+  "layout": "social",
+  "canvas": [
+    1080,
+    1080
+  ],
+  "layer_count": 15,
+  "brief": {
+    "layout": "social",
+    "brand": "THETECHGUY",
+    "headline": "AN ICON\nIN THE MAKING.",
+    "subhead": "Built around your ambitions.",
+    "product_name": "THE NEXT EXPERIENCE",
+    "cta": "DISCOVER MORE",
+    "website": "thetechguyds.com",
+    "accent": "violet"
+  },
+  "sha256": {
+    "campaign.ttgstudio.json": "969e64791f1ba8a1dd9ce96fbf277e10d6ec23035ed17ecd3f86bd64c98061e5",
+    "campaign.png": "0e52d7b343544bc6f5a76fcf596de1f9e047c8fbca713fd65a3912b73579ae80",
+    "assets/backdrop.png": "58346daadc6e847886e9a9ed07cde7fd1eb606f2cb1a4c2dd3b1f15201bc92c1",
+    "assets/orbit.png": "b474b2fa8b61c6f4d9d081920721a37e5c67193147475faa6b7bfeff1c77bc38",
+    "assets/product.png": "64ffdcd6a9f33e3b52e5d07ba2756124b206463a6264bf69f1921860aac0cb85"
+  }
+}

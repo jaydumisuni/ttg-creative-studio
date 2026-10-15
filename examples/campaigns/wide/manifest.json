@@ -1,0 +1,27 @@
+{
+  "schema": "ttg.creative.campaign.v1",
+  "generator": "offline_manual_procedural_not_ai",
+  "layout": "wide",
+  "canvas": [
+    1920,
+    1080
+  ],
+  "layer_count": 16,
+  "brief": {
+    "layout": "wide",
+    "brand": "THETECHGUY",
+    "headline": "MAKE EVERY\nMOMENT COUNT.",
+    "subhead": "Technology meets possibility.",
+    "product_name": "DIGITAL SOLUTIONS",
+    "cta": "EXPLORE THE COLLECTION",
+    "website": "thetechguyds.com",
+    "accent": "amber"
+  },
+  "sha256": {
+    "campaign.ttgstudio.json": "6238836e16f0418398b7b8fa5d6b7371a9c9690036bd34f36776a948d5e00fea",
+    "campaign.png": "7898d5b8966ba967b940848bd4b6658208cf4b063e89dba7454d7a58f779564a",
+    "assets/backdrop.png": "ba09138f40adc316b71c6c6526bea24982b1431039c1d279c4dc9d7946985f1f",
+    "assets/orbit.png": "28d06e0d0656c5714dcdadef788b67bc2c20722f459421d9d7da423be18c9811",
+    "assets/product.png": "80590e552c63a15a5b8e3eb13487f55258ecfacb671a07e7da78a82de60d59c4"
+  }
+}

@@ -1,0 +1,3 @@
+# Preserve byte-identical sample manifests and editable projects on Windows.
+examples/campaigns/**/campaign.ttgstudio.json text eol=lf
+examples/campaigns/**/manifest.json text eol=lf
