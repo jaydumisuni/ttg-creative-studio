@@ -40,6 +40,7 @@ jobs:
           python -B scripts/test_campaign_designer.py
           python -B scripts/test_release_packaging.py
           python -B scripts/test_production_preflight.py
+          python -B scripts/test_signed_release_gate.py
           python -B scripts/test_studio_g0_artifacts.py
           python -B scripts/test_studio_release_manifest.py
           python -B scripts/test_studio_g4_stress.py
@@ -79,6 +80,27 @@ jobs:
           choco install innosetup -y --no-progress
           & ".\build_installer.ps1"
           if ($LASTEXITCODE -ne 0) { throw "Windows installer compilation failed" }
+      - name: Validate signing scripts and reject unsigned release approval
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          foreach ($file in @("sign_release.ps1", "scripts/verify_signed_installer.ps1")) {
+            $tokens = $null; $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $file).Path, [ref]$tokens, [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) { throw "PowerShell parse failure in $file" }
+          }
+          $installer = "dist/installer/TTG-Creative-Studio-Core-Setup.exe"
+          $before = (Get-FileHash -Algorithm SHA256 $installer).Hash
+          Remove-Item Env:TTG_STUDIO_SIGNING_PFX -ErrorAction SilentlyContinue
+          Remove-Item Env:TTG_STUDIO_SIGNING_PASSWORD -ErrorAction SilentlyContinue
+          Remove-Item Env:TTG_STUDIO_EXPECTED_SIGNER_THUMBPRINT -ErrorAction SilentlyContinue
+          $blocked = $false
+          try { & ".\sign_release.ps1" } catch { $blocked = $true }
+          if (!$blocked) { throw "Unsigned package was improperly admitted for signing" }
+          $after = (Get-FileHash -Algorithm SHA256 $installer).Hash
+          if ($before -ne $after) { throw "Denied signing path altered the installer" }
       - name: Install, execute and uninstall actual Windows app candidate
         if: runner.os == 'Windows'
         shell: pwsh

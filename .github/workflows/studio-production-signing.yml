@@ -1,0 +1,98 @@
+name: Creative Studio Approved Signed Windows Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      approved_sha:
+        description: "Exact approved main commit SHA (40 lowercase hex characters)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  signed-windows:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-2022
+    environment: production-signing
+    timeout-minutes: 60
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - name: Verify explicitly approved source identity
+        shell: pwsh
+        env:
+          APPROVED_SHA: ${{ inputs.approved_sha }}
+        run: |
+          if ($env:APPROVED_SHA -cnotmatch '^[a-f0-9]{40}$') { throw "Full lowercase approved source SHA required" }
+          if ($env:APPROVED_SHA -cne $env:GITHUB_SHA) { throw "Source commit changed after release approval" }
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install frozen Windows application toolchain
+        shell: pwsh
+        run: |
+          python -m pip install Pillow==11.3.0 PyQt6==6.10.0 pyinstaller==6.16.0 imageio-ffmpeg==0.6.0
+          if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed" }
+          choco install innosetup -y --no-progress
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup installation failed" }
+      - name: Build and qualify actual Windows application
+        shell: pwsh
+        run: |
+          python -B scripts/test_release_packaging.py
+          if ($LASTEXITCODE -ne 0) { throw "Release-path tests failed" }
+          python -B scripts/test_studio_atomic_project_save.py
+          if ($LASTEXITCODE -ne 0) { throw "Atomic save tests failed" }
+          python -m PyInstaller --noconfirm --clean "TTG Creative Studio.spec"
+          if ($LASTEXITCODE -ne 0) { throw "Build failed" }
+          & ".\build_installer.ps1"
+          if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
+          & ".\scripts\test_installer_windows.ps1"
+          if ($LASTEXITCODE -ne 0) { throw "Installed GUI qualification failed" }
+      - name: Sign approved installer with protected identity
+        shell: pwsh
+        env:
+          TTG_STUDIO_SIGNING_PFX_B64: ${{ secrets.TTG_STUDIO_SIGNING_PFX_B64 }}
+          TTG_STUDIO_SIGNING_PASSWORD: ${{ secrets.TTG_STUDIO_SIGNING_PASSWORD }}
+          TTG_STUDIO_EXPECTED_SIGNER_THUMBPRINT: ${{ secrets.TTG_STUDIO_EXPECTED_SIGNER_THUMBPRINT }}
+        run: |
+          if (!$env:TTG_STUDIO_SIGNING_PFX_B64 -or !$env:TTG_STUDIO_SIGNING_PASSWORD -or !$env:TTG_STUDIO_EXPECTED_SIGNER_THUMBPRINT) {
+            throw "Approved production-signing secrets are not configured"
+          }
+          $pfxPath = Join-Path $env:RUNNER_TEMP "creative-studio-approved-signing.pfx"
+          try {
+            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:TTG_STUDIO_SIGNING_PFX_B64))
+            $env:TTG_STUDIO_SIGNING_PFX = $pfxPath
+            & ".\sign_release.ps1"
+            if ($LASTEXITCODE -ne 0) { throw "Authenticode signing failed" }
+          } finally {
+            Remove-Item Env:TTG_STUDIO_SIGNING_PFX -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $pfxPath -Force -ErrorAction SilentlyContinue
+          }
+      - name: Confirm signer and publish signed custody manifest
+        shell: pwsh
+        env:
+          TTG_STUDIO_EXPECTED_SIGNER_THUMBPRINT: ${{ secrets.TTG_STUDIO_EXPECTED_SIGNER_THUMBPRINT }}
+        run: |
+          $exe = "dist/installer/TTG-Creative-Studio-Core-Setup.exe"
+          & ".\scripts\verify_signed_installer.ps1" -Installer $exe
+          python -B scripts/studio_release_manifest.py create --kind windows --artifact $exe --manifest "$env:RUNNER_TEMP/studio-signed-windows-custody.json" --source-sha "$env:GITHUB_SHA" --run-id "$env:GITHUB_RUN_ID"
+          if ($LASTEXITCODE -ne 0) { throw "Signed installer custody failed" }
+          python -B scripts/studio_release_manifest.py verify --artifact $exe --manifest "$env:RUNNER_TEMP/studio-signed-windows-custody.json" --source-sha "$env:GITHUB_SHA"
+          if ($LASTEXITCODE -ne 0) { throw "Signed installer custody recheck failed" }
+      - name: Upload verified signed installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: TTG-Creative-Studio-Windows-SIGNED-approved
+          path: dist/installer/TTG-Creative-Studio-Core-Setup.exe
+          if-no-files-found: error
+      - name: Upload signed custody metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: TTG-Creative-Studio-Windows-SIGNED-custody
+          path: ${{ runner.temp }}/studio-signed-windows-custody.json
+          if-no-files-found: error

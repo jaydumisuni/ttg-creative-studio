@@ -5,6 +5,9 @@ $installer = Join-Path $projectRoot "dist\installer\TTG-Creative-Studio-Core-Set
 $certificate = $env:TTG_STUDIO_SIGNING_PFX
 $password = $env:TTG_STUDIO_SIGNING_PASSWORD
 if (!(Test-Path $installer)) { throw "Unsigned Creative Studio installer is missing." }
+if (($env:TTG_STUDIO_EXPECTED_SIGNER_THUMBPRINT -replace "\s","") -notmatch "^[0-9a-fA-F]{40}$") {
+    throw "Pinned approved signing thumbprint required before signing"
+}
 if (!$certificate -or !(Test-Path $certificate) -or !$password) {
     throw "Signing blocked: supply an approved signing PFX path and secret through a protected release environment."
 }
@@ -14,4 +17,5 @@ if (!$signtool) { throw "Windows SDK signtool.exe is unavailable." }
 if ($LASTEXITCODE -ne 0) { throw "Authenticode signing failed" }
 & $signtool verify /pa /v $installer
 if ($LASTEXITCODE -ne 0) { throw "Authenticode verification failed" }
+& (Join-Path $projectRoot "scripts\verify_signed_installer.ps1") -Installer $installer
 Write-Host "Signed and verified TTG Creative Studio installer."
