@@ -13,6 +13,7 @@ import io
 import json
 import os
 import socket
+import tempfile
 import sys
 import time
 from pathlib import Path
@@ -69,8 +70,9 @@ def qualify(*, url: str, checkpoint_directory: Path,
         raise RuntimeError("Checkpoint file is too small; refuse to claim real-model proof")
     if source.suffix.lower() not in (".safetensors", ".ckpt"):
         raise RuntimeError("Unsupported checkpoint file extension")
-    if output.exists():
-        raise FileExistsError("Refusing to replace an existing inference proof")
+    proof_path = output.with_suffix(".proof.json")
+    if output.exists() or proof_path.exists():
+        raise FileExistsError("Refusing to replace a previous image or proof receipt")
     if not output.parent.exists():
         raise FileNotFoundError("Create the intended authorized proof directory first")
     receipt["model"] = name
@@ -98,7 +100,6 @@ def qualify(*, url: str, checkpoint_directory: Path,
         raise RuntimeError("Generated image is unexpectedly small")
     with Image.open(io.BytesIO(result)) as check:
         check.verify()
-    output.write_bytes(result)
     receipt.update({
         "status": "REAL_IMAGE_GENERATED",
         "image_path": str(output),
@@ -107,11 +108,30 @@ def qualify(*, url: str, checkpoint_directory: Path,
         "dimensions": [512, 512],
         "elapsed_seconds": round(time.monotonic() - start, 2),
     })
-    manifest = output.with_suffix(".proof.json")
-    if manifest.exists():
-        output.unlink(missing_ok=True)
-        raise FileExistsError("Proof receipt already exists, refusing replacement")
-    manifest.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+    # Stage each file on the output volume, then link into place with an
+    # exclusive create. Existing proof bytes are never overwritten or deleted.
+    files = [(output, result), (
+        proof_path, (json.dumps(receipt, indent=2) + "\n").encode("utf-8")
+    )]
+    published = []
+    try:
+        for target, content in files:
+            fd, staged = tempfile.mkstemp(
+                prefix=".studio-inference-", suffix=".tmp", dir=target.parent
+            )
+            try:
+                with os.fdopen(fd, "wb") as writer:
+                    writer.write(content)
+                    writer.flush()
+                    os.fsync(writer.fileno())
+                os.link(staged, target)
+                published.append(target)
+            finally:
+                Path(staged).unlink(missing_ok=True)
+    except Exception:
+        for created in reversed(published):
+            created.unlink(missing_ok=True)
+        raise
     return receipt
 
 
