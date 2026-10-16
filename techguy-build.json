@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "appName": "TTG Creative Studio",
+  "appVersion": "0.1.0-alpha",
+  "publisher": "THETECHGUY DIGITAL SOLUTIONS",
+  "domain": "thetechguyds.com",
+  "repository": "jaydumisuni/ttg-creative-studio",
+  "githubRelease": {
+    "repository": "jaydumisuni/ttg-creative-studio"
+  },
+  "output": {
+    "dist": "dist",
+    "installer": "installer"
+  },
+  "signing": {
+    "release_signing_required": true
+  },
+  "installer": {
+    "requireCustomGraphicalInstaller": true,
+    "requireRegisteredUninstall": true,
+    "publisher": "THETECHGUY DIGITAL SOLUTIONS",
+    "runAsAdmin": false
+  },
+  "appLifecycle": {
+    "appId": "ttg-creative-studio",
+    "stage": "testing",
+    "public": false
+  },
+  "capabilities": {
+    "platforms": [
+      "windows",
+      "linux"
+    ],
+    "storefront": {
+      "enabled": false,
+      "downloadsMetric": false,
+      "helpfulMetric": false,
+      "feedback": false,
+      "screenshots": false,
+      "changelog": false
+    },
+    "distribution": {
+      "providers": [
+        "github"
+      ]
+    },
+    "browserIntegration": {
+      "enabled": false
+    }
+  },
+  "maintenance": {
+    "tool_id": "ttg-creative-studio",
+    "enabled": false,
+    "check_on_launch": false,
+    "auto_apply": false
+  },
+  "releaseControl": {
+    "enabled": false,
+    "onlineRequired": false,
+    "loginRequired": false,
+    "subscriptionRequired": false,
+    "licenseRequired": false,
+    "updateCheckOnLaunch": false,
+    "offlineTimeoutMinutes": 60
+  }
+}
