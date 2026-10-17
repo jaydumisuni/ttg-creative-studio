@@ -138,8 +138,11 @@ class MotionExporter:
                 subprocess.run(cmd, check=True, timeout=max(120, total*3))
                 if temporary_path.stat().st_size == 0:
                     raise RuntimeError("FFmpeg exited without producing an MP4")
-                # Flush the encoded file before publishing its name.
-                with temporary_path.open("rb") as handle:
+                # Windows CRT's _commit() (used by os.fsync) requires a
+                # writable descriptor. "rb" silently worked on Linux but
+                # raised EBADF on Windows, blocking valid MP4 exports.
+                # Open read/write without modifying any encoded bytes.
+                with temporary_path.open("r+b") as handle:
                     os.fsync(handle.fileno())
                 os.replace(temporary_path, output_path)
             finally:
