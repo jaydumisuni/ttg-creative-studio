@@ -2,7 +2,7 @@ name: Creative Studio Standalone Release Candidate
 
 on:
   push:
-    branches: [main, studio/production-preflight-20261015]
+    branches: [main, studio/production-preflight-20261015, studio/direct-local-vision-20261017]
   pull_request:
     branches: [main]
   workflow_dispatch:

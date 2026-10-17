@@ -18,14 +18,14 @@ The deterministic suggestion engine can propose safe native brightness, contrast
 **Important:** Color histograms and edges do not identify people, objects, logos or textual content. Do not label pixel measurements as semantic vision.
 
 ## Optional real local vision-model interpretation
-The same dialog accepts a user-supplied installed **Ollama image-capable model** and explicit \`http://127.0.0.1:11434\` endpoint. When available, Studio verifies the installed model name, sends an actual JPEG encoded from the selected image to the loopback \`/api/chat\` endpoint, and displays the reply in a clearly marked **review-required interpretation** section. The model is instructed to describe only visible content, say when uncertain, and never claim it edited the image.
+The dialog now accepts an explicitly configured image-capable local model ID and an OpenAI-compatible server endpoint, default http://127.0.0.1:8000. Creative Studio obtains advertised model IDs from /v1/models and sends the real selected image as a typed JPEG image_url data payload to /v1/chat/completions. This direct local interface requires no Hunter, model manager or cloud service. An owned llama.cpp-style vision server and an installed multimodal checkpoint can provide the model. Replies are marked review-required, and no edit is automatically executed.
 
-If the model is absent/offline/invalid, Studio continues with honest pixel measurements and an explicit model-unavailable explanation. No model is downloaded, no image is sent to a remote provider and no model-generated instruction is executed as code. The request refuses redirects and limits response sizes and input images.
+With no local vision checkpoint or a service failure, Studio continues with actual pixel measurements and states that semantic interpretation is unavailable. No model download, remote upload or invisible edit is performed. HTTPS redirects and external endpoints are rejected; image and response sizes are bounded.
 
 The Stable Diffusion 1.5 inference that was physically verified on ATHENA demonstrates image creation, image-to-image and masked inpainting via ComfyUI. It **is not** itself a multimodal image-understanding language model. Install and qualify a separate image-capable model to prove object/scene interpretation.
 
 ## Independent GUI and engineering testing
-\`python -B scripts/test_visual_understanding.py\` verifies real image pixel measurements, the installed-model discovery and base64 image wire contract against an isolated test HTTP server, explicit unreviewed interpretation status, dangerous redirect rejection, GUI results, effect application, undo and malicious effect rejection. The local mock receiver validates protocol; it is **not** proof of real semantic inference on an installed VLM.
+python -B scripts/test_visual_understanding.py validates real pixel statistics, local OpenAI-compatible model discovery, JPEG image-url payloads, model name verification, redirect rejection, user-visible GUI results and undoable reviewed effects against an isolated local HTTP fixture. The fixture tests protocol only, not a genuine vision model.
 
 \`python -B scripts/self_test_image_intelligence.py\` now requires real pixel evidence and never invents exported background-removal files. The Windows/Linux release workflow runs both tests.
 

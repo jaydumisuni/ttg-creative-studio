@@ -105,14 +105,14 @@ class ImageIntelligenceWorker:
 
     def __init__(self, engine_id: str = "ttg_image_intelligence_v1",
                  vision_model: str | None = None,
-                 vision_endpoint: str = "http://127.0.0.1:11434") -> None:
+                 vision_endpoint: str = "http://127.0.0.1:8000") -> None:
         self.engine_id = engine_id
         self.vision_model = vision_model
         self.vision_endpoint = vision_endpoint
 
     def run(self, request: ImageIntelligenceRequest) -> ImageIntelligenceResult:
         from ttg_visual_understanding import (
-            LocalOllamaVision, measure_image, suggest_adjustments,
+            LocalVisionServer, measure_image, suggest_adjustments,
         )
 
         modules = ["vision_encoder", "layout_reasoner", "tool_worker_router"]
@@ -139,7 +139,7 @@ class ImageIntelligenceWorker:
             status = "measured_only"
             if self.vision_model:
                 try:
-                    model = LocalOllamaVision(self.vision_endpoint)
+                    model = LocalVisionServer(self.vision_endpoint)
                     descriptions = [
                         model.describe(item["source"], self.vision_model, request.prompt)
                         for item in measurements
