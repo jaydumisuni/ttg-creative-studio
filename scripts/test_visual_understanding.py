@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from ttg_visual_understanding import measure_image, suggest_adjustments, LocalOllamaVision
+from ttg_visual_understanding import measure_image, suggest_adjustments, LocalVisionServer
 from ttg_image_intelligence import ImageIntelligenceWorker, ImageIntelligenceTask, ImageIntelligenceRequest
 
 checks = []
@@ -37,21 +37,26 @@ class VLMFixture(BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
-        if self.path != "/api/tags":
+        if self.path != "/v1/models":
             self.send_error(404); return
-        value = {"models": [{"name": "fake-vlm:test"}]}
+        value = {"data": [{"id": "creative-vision-test"}]}
         self._send(value)
 
     def do_POST(self):
-        if self.path != "/api/chat":
+        if self.path != "/v1/chat/completions":
             self.send_error(404); return
         n = int(self.headers.get("Content-Length", "0"))
         body = json.loads(self.rfile.read(n))
-        items = body["messages"][0]["images"]
-        with Image.open(io.BytesIO(base64.b64decode(items[0], validate=True))) as im:
+        pieces = body["messages"][0]["content"]
+        image_data = pieces[1]["image_url"]["url"]
+        assert image_data.startswith("data:image/jpeg;base64,")
+        with Image.open(io.BytesIO(base64.b64decode(image_data.split(",", 1)[1], validate=True))) as im:
             self.__class__.seen_image = im.size == (80, 60)
-        self.__class__.seen_question = "Which colors" in body["messages"][0]["content"]
-        self._send({"message": {"content": "The supplied test image is predominantly blue."}})
+        self.__class__.seen_question = ("Which colors" in pieces[0]["text"]
+                                      and body["model"] == "creative-vision-test"
+                                      and body["stream"] is False)
+        self._send({"choices": [{"message": {"content":
+                    "The supplied test image is predominantly blue."}}]})
 
     def _send(self, obj):
         data = json.dumps(obj).encode()
@@ -84,6 +89,22 @@ def execute():
         accept("suggestions are review-required native effects",
                all(item["review_required"] and item["action"] == "image_effect"
                    for item in proposals))
+        from qualify_studio_vision import make_examples, run as qualify_real_vision
+        benchmark_dir = root / "vision-test-images"
+        known_images = make_examples(benchmark_dir)
+        accept("real semantic test fixtures are reproducible",
+               len(known_images) == 3 and
+               all(item.stat().st_size > 500 for item in known_images))
+        try:
+            qualify_real_vision(
+                "http://127.0.0.1:1", "missing-local-model",
+                root / "vision-no-model-proof.json",
+            )
+        except OSError:
+            checks.append("real vision acceptance refuses absent local model")
+        else:
+            raise AssertionError("Absent model falsely certified as local VLM")
+
         no_file = ImageIntelligenceWorker().run(ImageIntelligenceRequest(
             task=ImageIntelligenceTask.UNDERSTAND_IMAGE))
         accept("absent image never fabricates visual interpretation",
@@ -103,20 +124,36 @@ def execute():
         worker = threading.Thread(target=server.serve_forever, daemon=True)
         worker.start()
         try:
-            local = LocalOllamaVision(f"http://127.0.0.1:{server.server_port}")
-            accept("installed local VLM model discovery", local.installed_models() == ["fake-vlm:test"])
-            note = local.describe(image, "fake-vlm:test", "Which colors are visible?")
+            local = LocalVisionServer(f"http://127.0.0.1:{server.server_port}")
+            accept("installed local multimodal model discovery", local.installed_models() == ["creative-vision-test"])
+            note = local.describe(image, "creative-vision-test", "Which colors are visible?")
             accept("real encoded image and question delivered to local model",
                    VLMFixture.seen_image and VLMFixture.seen_question
                    and "blue" in note)
             result = ImageIntelligenceWorker(
-                vision_model="fake-vlm:test", vision_endpoint=local.url
+                vision_model="creative-vision-test", vision_endpoint=local.url
             ).run(ImageIntelligenceRequest(task=ImageIntelligenceTask.UNDERSTAND_IMAGE,
                                            image_paths=[str(image)]))
             accept("vision response is explicitly marked as unreviewed interpretation",
                    result.status == "model_vision_review_required"
                    and bool(result.project_updates.get("visual_descriptions"))
                    and not result.generated_assets)
+            from PyQt6.QtWidgets import QApplication
+            from ttg_visual_inspector_dialog import VisualInspectorDialog
+            app = QApplication.instance() or QApplication([])
+            discover = VisualInspectorDialog(image)
+            discover.endpoint.setText(local.url)
+            discover.discover_models()
+            deadline = time.monotonic() + 8
+            while (discover.model_probe and discover.model_probe.isRunning()
+                   and time.monotonic() < deadline):
+                app.processEvents()
+                time.sleep(.02)
+            app.processEvents()
+            accept("Qt model discovery is asynchronous and sets installed model",
+                   discover.model.text() == "creative-vision-test"
+                   and discover.detect_models_button.isEnabled())
+            discover.close()
             try:
                 local.describe(image, "not-installed", "question")
             except ValueError:
@@ -128,10 +165,23 @@ def execute():
             server.server_close()
             worker.join(3)
 
-        for url in ("https://evil.invalid:11434", "http://10.0.0.5:11434",
-                    "file:///tmp/steal", "http://127.0.0.1:11434@evil.invalid:11434"):
+        fail = ImageIntelligenceWorker(
+            vision_model="creative-vision-test",
+            vision_endpoint=f"http://127.0.0.1:{server.server_port}"
+        ).run(ImageIntelligenceRequest(
+            task=ImageIntelligenceTask.UNDERSTAND_IMAGE,
+            image_paths=[str(image)]
+        ))
+        accept("missing inference service returns measured pixels only",
+               fail.status == "measured_only"
+               and bool(fail.project_updates.get("model_unavailable"))
+               and bool(fail.project_updates.get("pixel_evidence"))
+               and not fail.project_updates.get("visual_descriptions"))
+
+        for url in ("https://evil.invalid:8000", "http://10.0.0.5:8000",
+                    "file:///tmp/steal", "http://127.0.0.1:8000@evil.invalid:11434"):
             try:
-                LocalOllamaVision(url)
+                LocalVisionServer(url)
             except ValueError:
                 continue
             raise AssertionError("Untrusted vision endpoint accepted")
@@ -142,7 +192,7 @@ def execute():
         running.start()
         try:
             try:
-                LocalOllamaVision(f"http://127.0.0.1:{redirect.server_port}").installed_models()
+                LocalVisionServer(f"http://127.0.0.1:{redirect.server_port}").installed_models()
             except ValueError:
                 checks.append("block external redirects for image content")
             else:

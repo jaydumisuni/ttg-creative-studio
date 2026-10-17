@@ -1,8 +1,8 @@
 """Evidence-based local image understanding for Creative Studio.
 
 Pillow measurements are actual pixel observations, not object recognition.
-Optional vision-language interpretation uses an already-installed Ollama
-vision model on loopback. No remote upload, silent model download, or
+Optional vision-language interpretation uses an owner-hosted OpenAI-compatible
+multimodal server on loopback. No remote upload, silent model download, or
 unreviewed model-generated editing commands.
 """
 from __future__ import annotations
@@ -94,20 +94,31 @@ def suggest_adjustments(metrics: dict[str, Any]) -> list[dict[str, Any]]:
     return suggestions
 
 
-class LocalOllamaVision:
-    """Visible content description from user-installed Ollama VLM only."""
+class LocalVisionServer:
+    """Direct local OpenAI-compatible multimodal inference, with no model manager.
 
-    def __init__(self, url: str = "http://127.0.0.1:11434", timeout: int = 180):
+    Studio speaks directly to an image-capable llama.cpp/vLLM-style HTTP
+    server the owner controls. The server/model are optional; measured pixels
+    remain available if no model is installed. No dependency on Hunter or an external model manager.
+    """
+
+    def __init__(self, url: str = "http://127.0.0.1:8000",
+                 timeout: int = 180):
         parsed = urllib.parse.urlsplit(url)
         if (parsed.scheme != "http" or parsed.hostname not in
-                ("127.0.0.1", "localhost", "::1") or parsed.username or parsed.password or
-                parsed.path not in ("", "/") or parsed.query or parsed.fragment or
+                ("127.0.0.1", "localhost", "::1") or parsed.username or
+                parsed.password or parsed.path not in ("", "/") or
+                parsed.query or parsed.fragment or
                 parsed.port is None or not 1 <= parsed.port <= 65535):
-            raise ValueError("Only an explicit local Ollama HTTP endpoint is accepted")
+            raise ValueError("Only an explicit local multimodal HTTP endpoint is accepted")
         if not 10 <= timeout <= 600:
             raise ValueError("Local vision timeout outside safe bounds")
         self.url = url.rstrip("/")
         self.timeout = timeout
+        # Do not allow proxy environment variables to redirect local images.
+        self._opener = urllib.request.build_opener(
+            urllib.request.ProxyHandler({}), _NoRedirect
+        )
 
     def _fetch(self, endpoint: str, payload: dict | None = None) -> dict:
         data = json.dumps(payload).encode("utf-8") if payload is not None else None
@@ -116,7 +127,7 @@ class LocalOllamaVision:
             headers={"Content-Type": "application/json", "Accept": "application/json"},
             method="POST" if data is not None else "GET",
         )
-        with urllib.request.build_opener(_NoRedirect).open(req, timeout=self.timeout) as response:
+        with self._opener.open(req, timeout=self.timeout) as response:
             body = response.read(MAX_RESPONSE_BYTES + 1)
         if len(body) > MAX_RESPONSE_BYTES:
             raise ValueError("Local vision response exceeds limit")
@@ -126,17 +137,19 @@ class LocalOllamaVision:
         return value
 
     def installed_models(self) -> list[str]:
-        data = self._fetch("/api/tags")
-        models = data.get("models", [])
+        data = self._fetch("/v1/models")
+        models = data.get("data", [])
         if not isinstance(models, list):
-            raise ValueError("Unexpected local model list")
-        return [m["name"] for m in models
-                if isinstance(m, dict) and isinstance(m.get("name"), str)
-                and 0 < len(m["name"]) <= 160][:100]
+            raise ValueError("Unexpected local vision model list")
+        return [m["id"] for m in models
+                if isinstance(m, dict) and isinstance(m.get("id"), str)
+                and 0 < len(m["id"]) <= 160][:100]
 
     def describe(self, image_path: str | Path, model: str, question: str = "") -> str:
-        if not model or len(model) > 160 or model not in self.installed_models():
-            raise ValueError("Select a locally installed vision-capable Ollama model")
+        if not isinstance(model, str) or not model or len(model) > 160:
+            raise ValueError("Select an installed image-capable vision model")
+        if model not in self.installed_models():
+            raise ValueError("Model is not advertised by the local vision server")
         if len(question) > 2000:
             raise ValueError("Question exceeds 2000 characters")
         image = read_image(image_path)
@@ -146,21 +159,38 @@ class LocalOllamaVision:
         if data.tell() > MAX_MODEL_IMAGE_BYTES:
             raise ValueError("Model image is too large")
         prompt = (
-            "Analyze only visual evidence in the attached image. Describe visible objects, "
-            "layout, colors and any clearly legible text. Do not guess hidden details, "
-            "brands, personal identities, or tiny illegible text. Separate uncertainty "
-            "from observations. Suggest how to improve the composition but do not "
-            "claim an edit has been executed. User question: " +
+            "Analyze only visible evidence in the supplied image. Describe visible "
+            "objects, object count and relative positions, composition, colors and "
+            "any clearly legible text. Do not guess unseen content, identities, "
+            "brands or illegible text. State uncertainties. Suggestions are "
+            "advisory; no edit has been made. User question: " +
             (question.strip() or "Describe and critique this image.")
         )
-        response = self._fetch("/api/chat", {
-            "model": model, "stream": False,
-            "messages": [{"role": "user", "content": prompt,
-                          "images": [base64.b64encode(data.getvalue()).decode("ascii")]}],
-            "options": {"temperature": 0.1, "num_predict": 640},
+        response = self._fetch("/v1/chat/completions", {
+            "model": model, "stream": False, "temperature": 0.1,
+            "max_tokens": 640,
+            "messages": [{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {
+                        "url": "data:image/jpeg;base64," +
+                               base64.b64encode(data.getvalue()).decode("ascii")
+                    }},
+                ],
+            }],
         })
-        message = response.get("message", {})
+        choices = response.get("choices")
+        if not isinstance(choices, list) or not choices:
+            raise ValueError("No model reply from local vision service")
+        message = choices[0].get("message") if isinstance(choices[0], dict) else None
         content = message.get("content") if isinstance(message, dict) else None
+        if isinstance(content, list):
+            # Some local OpenAI-compatible servers return typed text sections.
+            if any(not isinstance(item, dict) or item.get("type") != "text"
+                   for item in content):
+                raise ValueError("Unrecognized local vision output sections")
+            content = "\n".join(str(part.get("text", "")) for part in content)
         if not isinstance(content, str) or not content.strip() or len(content) > 12000:
             raise ValueError("No meaningful vision-model description received")
         return content.strip()

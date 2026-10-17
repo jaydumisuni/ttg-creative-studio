@@ -38,6 +38,23 @@ class AnalysisJob(QThread):
             self.failed.emit(str(exc))
 
 
+class ModelDiscoveryJob(QThread):
+    succeeded = pyqtSignal(list)
+    failed = pyqtSignal(str)
+
+    def __init__(self, endpoint: str, parent=None):
+        super().__init__(parent)
+        self.endpoint = endpoint
+
+    def run(self) -> None:
+        try:
+            from ttg_visual_understanding import LocalVisionServer
+            found = LocalVisionServer(self.endpoint, timeout=12).installed_models()
+            self.succeeded.emit(found)
+        except Exception as exc:
+            self.failed.emit(str(exc))
+
+
 class VisualInspectorDialog(QDialog):
     applySuggestion = pyqtSignal(object)
 
@@ -58,6 +75,7 @@ class VisualInspectorDialog(QDialog):
             QPushButton:hover {background:#277178;}
         """)
         self.job: AnalysisJob | None = None
+        self.model_probe: ModelDiscoveryJob | None = None
         self.result = None
         self.can_apply = can_apply
         layout = QVBoxLayout(self)
@@ -67,12 +85,15 @@ class VisualInspectorDialog(QDialog):
         form = QFormLayout()
         self.prompt = QLineEdit("Describe visible objects, layout, and possible improvements.")
         self.model = QLineEdit()
-        self.model.setPlaceholderText("Optional installed local Ollama vision model")
-        self.endpoint = QLineEdit("http://127.0.0.1:11434")
+        self.model.setPlaceholderText("Installed local image-capable model ID (optional)")
+        self.endpoint = QLineEdit("http://127.0.0.1:8000")
         form.addRow("Question", self.prompt)
         form.addRow("Vision model", self.model)
         form.addRow("Local inference", self.endpoint)
         layout.addLayout(form)
+        self.detect_models_button = QPushButton("Discover Installed Vision Models")
+        self.detect_models_button.clicked.connect(self.discover_models)
+        layout.addWidget(self.detect_models_button)
         layout.addWidget(QLabel(
             "Pixel measurements work offline. Semantic understanding requires a real "
             "installed vision model. Analysis does not change the source image."
@@ -96,6 +117,34 @@ class VisualInspectorDialog(QDialog):
         actions.addWidget(self.apply_button)
         actions.addWidget(close)
         layout.addLayout(actions)
+
+    def discover_models(self) -> None:
+        if self.model_probe is not None and self.model_probe.isRunning():
+            return
+        self.detect_models_button.setEnabled(False)
+        self.report.setPlainText("Checking the direct local multimodal service…")
+        self.model_probe = ModelDiscoveryJob(self.endpoint.text(), self)
+        self.model_probe.succeeded.connect(self._models_found)
+        self.model_probe.failed.connect(self._model_probe_failed)
+        self.model_probe.start()
+
+    def _models_found(self, models: list) -> None:
+        self.detect_models_button.setEnabled(True)
+        if models:
+            self.model.setText(str(models[0]))
+            self.report.setPlainText(
+                "Local models advertised: " + ", ".join(models) +
+                "\nConfirm this model supports image input before trusting its interpretation."
+            )
+        else:
+            self.report.setPlainText("Local vision server is reachable but has no installed model.")
+
+    def _model_probe_failed(self, message: str) -> None:
+        self.detect_models_button.setEnabled(True)
+        self.report.setPlainText(
+            "No local vision model is available: " + message +
+            "\nMeasured image analysis still works without it."
+        )
 
     def start_analysis(self) -> None:
         if self.job is not None and self.job.isRunning():
@@ -158,7 +207,8 @@ class VisualInspectorDialog(QDialog):
         self.applySuggestion.emit(proposal)
 
     def closeEvent(self, event) -> None:
-        if self.job is not None and self.job.isRunning():
+        if ((self.job is not None and self.job.isRunning()) or
+                (self.model_probe is not None and self.model_probe.isRunning())):
             QMessageBox.information(
                 self, "Visual Inspector", "Wait for image analysis to complete."
             )
