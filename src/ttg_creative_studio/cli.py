@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import argparse
 import json
@@ -10,6 +10,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from ttg_creative_studio.engine import run_image_job
+from ttg_creative_studio.engine.video_jobs import VIDEO_TASKS, run_video_job, tool_catalog
 from ttg_creative_studio.engine.image_jobs import CreativeJobError
 
 
@@ -27,16 +28,22 @@ def _write_json(path: Path, data: Dict[str, Any]) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="TTG Creative Studio Hunter CLI")
-    parser.add_argument("--job", required=True, help="Path to Hunter creative job JSON")
+    parser.add_argument("--job", help="Path to an AI-authored Creative Studio job JSON")
+    parser.add_argument("--catalog", action="store_true", help="Print shared agent tool contract")
     parser.add_argument("--result", default="", help="Optional result JSON path")
     args = parser.parse_args(argv)
 
+    if args.catalog:
+        print(json.dumps(tool_catalog(), indent=2))
+        return 0
+    if not args.job:
+        parser.error("--job is required unless --catalog is selected")
     job_path = Path(args.job).expanduser().resolve()
     result_path = Path(args.result).expanduser().resolve() if args.result else None
 
     try:
         job = _read_json(job_path)
-        result = run_image_job(job)
+        result = run_video_job(job) if job.get("task") in VIDEO_TASKS else run_image_job(job)
         result["jobPath"] = str(job_path)
         if result_path:
             _write_json(result_path, result)
