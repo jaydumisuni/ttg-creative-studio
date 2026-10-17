@@ -144,7 +144,9 @@ def main():
             },"render")
             check(r.returncode==0 and render["ok"] and dest.is_file()
                   and dest.stat().st_size>200,
-                  "AI can invoke same native Studio timeline real MP4 renderer")
+                  "AI can invoke same native Studio timeline real MP4 renderer: "
+                  + json.dumps({"response":render,"stdout":r.stdout[-1500:],
+                                "stderr":r.stderr[-2000:]},default=str))
         else:
             missing,report=job_cli(directory,{
                 "task":"video_info","input":str(pic),
