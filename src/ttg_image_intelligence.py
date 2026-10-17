@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-"""TTG Native Image Brain architecture for Creative Studio and Hunter.
+"""Evidence-grounded visual analysis for standalone TTG Creative Studio.
 
-This is not a set of reserved external provider slots. TTG builds its own native
-multimodal image engine and borrows the best architectural ideas: image
-understanding, generation planning, image editing, scene-to-layer conversion,
-layout critique and tool-worker execution.
-
-The editor must still work without the brain. The brain becomes Hunter's image
-worker and Creative Studio's Banana Level intelligence layer later.
+Native pixel measurements work offline. Optional semantic image interpretation
+requires an actually installed local vision-language model. Render planning and
+generation remain separate: this module never claims to render an asset, infer
+hidden visual details, or perform an edit without an approved tool invocation.
 """
 
 from __future__ import annotations
@@ -44,7 +41,7 @@ NATIVE_MODULES = (
     NativeImageBrainModule(
         "vision_encoder",
         "Vision Encoder",
-        "Understands image content, composition, objects, text regions, colors and style.",
+        "Measures observed pixels; optional installed VLM interprets visible content.",
     ),
     NativeImageBrainModule(
         "layout_reasoner",
@@ -59,7 +56,8 @@ NATIVE_MODULES = (
     NativeImageBrainModule(
         "image_generator_core",
         "Image Generator Core",
-        "Creates native assets, backgrounds, concepts and variants when generation is needed.",
+        "Generation is implemented separately by the qualified ComfyUI editing interface.",
+        required=False,
     ),
     NativeImageBrainModule(
         "edit_planner",
@@ -103,50 +101,88 @@ class ImageIntelligenceResult:
 
 
 class ImageIntelligenceWorker:
-    """TTG-native worker facade used by Hunter and Banana Level later."""
+    """Measured image evidence, optional installed local VLM, review-only edits."""
 
-    def __init__(self, engine_id: str = "ttg_native_image_brain_stub") -> None:
+    def __init__(self, engine_id: str = "ttg_image_intelligence_v1",
+                 vision_model: str | None = None,
+                 vision_endpoint: str = "http://127.0.0.1:11434") -> None:
         self.engine_id = engine_id
+        self.vision_model = vision_model
+        self.vision_endpoint = vision_endpoint
 
     def run(self, request: ImageIntelligenceRequest) -> ImageIntelligenceResult:
-        actions: list[dict[str, Any]] = []
-        modules = ["vision_encoder", "layout_reasoner", "scene_planner", "tool_worker_router"]
-        generated_assets: list[str] = []
+        from ttg_visual_understanding import (
+            LocalOllamaVision, measure_image, suggest_adjustments,
+        )
+
+        modules = ["vision_encoder", "layout_reasoner", "tool_worker_router"]
         project_updates: dict[str, Any] = {}
-        if request.task == ImageIntelligenceTask.SUGGEST_EDITS:
-            actions.extend([
-                {"action": "apply_banana_workflow", "workflow": "make_it_pop"},
-                {"action": "check_alignment", "target": "all_layers"},
-                {"action": "suggest_export", "preset": "youtube_intro_1080p"},
-            ])
-        elif request.task == ImageIntelligenceTask.BANANA_WORKFLOW_PLAN:
-            actions.extend([
-                {"action": "apply_banana_workflow", "workflow": "brand_everything"},
-                {"action": "apply_banana_workflow", "workflow": "make_it_pop"},
-            ])
-        elif request.task == ImageIntelligenceTask.UNDERSTAND_IMAGE:
-            actions.append({"action": "describe_layers", "confidence": "stub"})
+        actions: list[dict[str, Any]] = []
+        messages: list[str] = []
+        status = "review_only"
+
+        if request.task in {ImageIntelligenceTask.UNDERSTAND_IMAGE,
+                            ImageIntelligenceTask.SUGGEST_EDITS}:
+            if not request.image_paths:
+                return ImageIntelligenceResult(
+                    request.task, self.engine_id, "missing_image",
+                    "Select a real image for visual analysis.", native_modules_used=modules
+                )
+            measurements = [measure_image(path) for path in request.image_paths[:4]]
+            project_updates["pixel_evidence"] = measurements
+            if request.task == ImageIntelligenceTask.SUGGEST_EDITS:
+                modules.append("edit_planner")
+                for metrics in measurements:
+                    for item in suggest_adjustments(metrics):
+                        actions.append({**item, "source_sha256": metrics["source_sha256"]})
+            messages.append("Measured actual image pixels and colors; object recognition requires an installed vision-language model.")
+            status = "measured_only"
+            if self.vision_model:
+                try:
+                    model = LocalOllamaVision(self.vision_endpoint)
+                    descriptions = [
+                        model.describe(item["source"], self.vision_model, request.prompt)
+                        for item in measurements
+                    ]
+                    project_updates["visual_descriptions"] = descriptions
+                    project_updates["vision_model"] = self.vision_model
+                    modules.append("semantic_vision_model")
+                    status = "model_vision_review_required"
+                    messages.append("Actual locally installed vision model returned a visual interpretation; human review required.")
+                except (OSError, ValueError, TimeoutError) as exc:
+                    project_updates["model_unavailable"] = str(exc)
+                    messages.append("Vision-model interpretation unavailable; only measured pixels are reported.")
+
         elif request.task == ImageIntelligenceTask.REMOVE_BACKGROUND:
-            modules.extend(["edit_planner", "background_remover_adapter"])
-            actions.append({"action": "remove_background", "mode": "editable_mask", "review_required": True})
-            for image_path in request.image_paths:
-                generated_assets.append(str(Path(image_path).with_suffix(".bg_removed.png")))
-            project_updates["background_removal"] = {
-                "mode": "adapter",
+            actions.append({
+                "action": "open_background_removal_tool",
+                "review_required": True,
                 "source_images": list(request.image_paths),
-                "output_assets": generated_assets,
-                "editable_mask": True,
-            }
-        elif request.task in {ImageIntelligenceTask.RENDER_PLAN, ImageIntelligenceTask.EDIT_PLAN, ImageIntelligenceTask.SCENE_TO_LAYERS}:
-            modules.extend(["image_generator_core", "edit_planner"])
-            actions.append({"action": "create_editable_scene_plan", "format": "ttg_project_layers"})
+            })
+            modules.append("background_remover_adapter")
+            messages.append("Background removal requires executing the existing editor tool. No output file has been generated.")
+
+        elif request.task == ImageIntelligenceTask.BANANA_WORKFLOW_PLAN:
+            modules.append("edit_planner")
+            actions.append({"action": "review_layout_and_effects", "review_required": True})
+            messages.append("Workflow planning only; project unchanged.")
+
+        else:
+            modules.extend(["scene_planner", "edit_planner"])
+            actions.append({
+                "action": "review_scene_plan",
+                "prompt": request.prompt[:2000],
+                "review_required": True,
+            })
+            messages.append("Scene generation needs a separate qualified image model and explicit editor execution.")
+
         return ImageIntelligenceResult(
             task=request.task,
             engine_id=self.engine_id,
-            status="stubbed_native_architecture",
-            message="TTG Native Image Brain architecture is wired. External slots removed; this is our own engine path.",
+            status=status,
+            message=" ".join(messages),
             suggested_actions=actions,
-            generated_assets=generated_assets,
+            generated_assets=[],
             project_updates=project_updates,
             native_modules_used=modules,
         )

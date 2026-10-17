@@ -35,6 +35,7 @@ from ttg_action_engine import ActionEngine
 from ttg_campaign_composer import CampaignBrief, compose_campaign
 from ttg_campaign_dialog import CampaignDesignerDialog
 from ttg_image_lab_dialog import ImageLabDialog
+from ttg_visual_inspector_dialog import VisualInspectorDialog
 from ttg_mask_painter import MaskPainterDialog
 from ttg_recovery import RecoveryStore
 from ttg_advanced_panel import AdvancedModePanel
@@ -176,6 +177,7 @@ class CreativeWorkspace(QWidget):
         ]))
         toolbar.addWidget(self._menu_button("Tools", [
             ("Image Lab · Generate / Enhance", self.open_image_lab),
+            ("Visual Inspector · Analyze Image", self.open_visual_inspector),
             ("Brush Mask Selected Image", self.brush_mask_selected_image),
             ("Add Audio Track", self.add_audio_track),
             ("Recover Autosave", self.recover_autosave),
@@ -356,6 +358,70 @@ class CreativeWorkspace(QWidget):
         self.remember(f"image effect {effect}")
         layer.effects.append({"type":effect,"amount":amount})
         self.refresh_all()
+
+    def open_visual_inspector(self) -> None:
+        """Preview pixel evidence; nothing mutates until the user approves."""
+        if self.project is None:
+            QMessageBox.information(self, "Visual Inspector", "Open a project first.")
+            return
+        from ttg_canvas_engine import CanvasRenderer, RenderContext
+        from ttg_visual_understanding import measure_image
+        base = self.project_path.parent if self.project_path else self.project_root
+        layer = self.selected_layer()
+        source = None
+        editable = False
+        temp_snapshot = None
+        if layer is not None and layer.type == "image":
+            raw = layer.properties.get("path") or layer.properties.get("asset_path")
+            if raw:
+                source = RenderContext(base).resolve_asset(str(raw))
+                editable = source.is_file() and not layer.locked
+        if not source or not source.is_file():
+            temp_snapshot = tempfile.TemporaryDirectory(prefix="ttg-visual-")
+            source = Path(temp_snapshot.name)/"canvas.png"
+            CanvasRenderer(RenderContext(base)).render(self.project).save(source)
+            editable = False
+        inspector = VisualInspectorDialog(source, self, can_apply=editable)
+        if temp_snapshot is not None:
+            inspector._owned_snapshot = temp_snapshot
+            inspector.finished.connect(lambda code, snapshot=temp_snapshot: snapshot.cleanup())
+        if editable:
+            target_id = layer.id
+            source_sha = measure_image(source)["source_sha256"]
+            inspector.applySuggestion.connect(
+                lambda proposal: self.apply_inspector_edit(
+                    proposal, target_id, source, source_sha
+                )
+            )
+        self._visual_inspector_dialog = inspector
+        inspector.show()
+
+    def apply_inspector_edit(self, suggestion: dict, target_id: str,
+                             image_path: Path, initial_sha: str) -> None:
+        """Only explicit user-approved numeric native effects, never model commands."""
+        import hashlib
+        import math
+        from ttg_visual_understanding import ALLOWED_EFFECTS
+        layer = self.selected_layer()
+        if not (layer is not None and layer.id == target_id and
+                layer.type == "image" and not layer.locked):
+            raise ValueError("Selected image layer has changed or is locked")
+        if hashlib.sha256(image_path.read_bytes()).hexdigest() != initial_sha:
+            raise ValueError("Image changed since inspection; analyze it again")
+        if suggestion.get("source_sha256") != initial_sha:
+            raise ValueError("Review evidence does not match the selected image")
+        effect = suggestion.get("effect")
+        amount = suggestion.get("amount")
+        if not (suggestion.get("action") == "image_effect" and
+                suggestion.get("review_required") is True and
+                effect in ALLOWED_EFFECTS and
+                isinstance(amount, (int, float)) and not isinstance(amount, bool)
+                and math.isfinite(amount) and 0 <= amount <= 4):
+            raise ValueError("Inspector may only apply approved numeric effects")
+        self.remember("visual inspector approved " + effect)
+        layer.effects.append({"type": effect, "amount": float(amount)})
+        self.refresh_all()
+        self.status.setText("Applied reviewed " + effect + " to editable image layer. Undo is available.")
 
     def brush_mask_selected_image(self) -> None:
         layer = self.selected_layer()

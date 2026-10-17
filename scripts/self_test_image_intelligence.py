@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 from pathlib import Path
+
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -18,7 +21,11 @@ from ttg_image_intelligence import ImageIntelligenceRequest, ImageIntelligenceTa
 def main() -> int:
     worker = ImageIntelligenceWorker()
     bridge = HunterImageBridge(worker)
-    result = worker.run(ImageIntelligenceRequest(task=ImageIntelligenceTask.SUGGEST_EDITS, image_paths=["example.png"]))
+    with tempfile.TemporaryDirectory(prefix="ttg-native-image-intel-") as temporary:
+        source = Path(temporary) / "real-image.png"
+        Image.new("RGBA", (80, 40), (34, 52, 65, 255)).save(source)
+        result = worker.run(ImageIntelligenceRequest(
+            task=ImageIntelligenceTask.SUGGEST_EDITS, image_paths=[str(source)]))
     hunter_result = bridge.plan_banana_workflow(prompt="make this premium")
     render_plan = worker.run(ImageIntelligenceRequest(task=ImageIntelligenceTask.SCENE_TO_LAYERS, prompt="build editable intro"))
     adapter_task = getattr(ImageIntelligenceTask, "REMOVE_" + "BACKGROUND")
@@ -32,14 +39,17 @@ def main() -> int:
         "edit_planner" in modules,
         "background_" + "remover_adapter" in modules,
         "tool_worker_router" in modules,
-        result.status == "stubbed_native_architecture",
+        result.status == "measured_only",
+        bool(result.project_updates.get("pixel_evidence")),
+        all(a.get("review_required") for a in result.suggested_actions),
         len(result.suggested_actions) >= 1,
         hunter_result.task == ImageIntelligenceTask.BANANA_WORKFLOW_PLAN,
         len(hunter_result.suggested_actions) >= 1,
         len(render_plan.suggested_actions) >= 1,
         adapter_plan.task == adapter_task,
-        bool(adapter_plan.generated_assets),
-        bool(adapter_plan.project_updates),
+        not adapter_plan.generated_assets,
+        any(a["action"] == "open_background_removal_tool"
+            for a in adapter_plan.suggested_actions),
     ]
     if not all(checks):
         print("TTG Native Image Brain self-test failed")
