@@ -57,3 +57,12 @@ Hunter should not run heavy image/video work inside Cloudflare Workers.
 - `render_gif_or_intro`
 - `prepare_social_ad`
 - video timeline/keyframe renderer
+
+## Shared video tools (18 October 2026)
+
+Hunter now uses the **same versioned video job CLI contract as any approved AI**.
+See [VIDEO_AGENT_CONTRACT_V1.md](VIDEO_AGENT_CONTRACT_V1.md) for discovered
+operations, GPU-free metadata/frame understanding, optional local VLM,
+reviewable storyboards and actual native motion-project MP4 export.
+Generation backends such as FreeVideo remain independently gated.
+Discover the contract with `python -B src/ttg_creative_studio/cli.py --catalog`.
