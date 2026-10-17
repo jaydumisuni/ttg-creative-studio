@@ -37,6 +37,8 @@ jobs:
       - name: Run core and new capability regressions
         run: |
           python -B scripts/test_studio_completion.py
+          python -B scripts/test_visual_understanding.py
+          python -B scripts/self_test_image_intelligence.py
           python -B scripts/test_campaign_designer.py
           python -B scripts/test_release_packaging.py
           python -B scripts/test_builder_manifest.py
