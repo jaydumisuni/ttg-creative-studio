@@ -6,6 +6,8 @@ as actual decoded pixels before becoming editable Studio assets.
 """
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import io
 import json
@@ -26,9 +28,71 @@ APPROVAL = "APPROVE_PAID_IMAGE_GENERATION"
 IMAGE_MODELS = {
     "generate": "black-forest-labs/flux-schnell",
     "edit": "black-forest-labs/flux-kontext-pro",
+    "inpaint": "black-forest-labs/flux-fill-pro",
 }
 MAX_IMAGE_BYTES = 32 * 1024 * 1024
 MAX_IMAGE_PIXELS = 28_000_000
+# Replicate recommends inline data URI for small assets; larger ones must be
+# hosted by a user-approved public HTTPS source instead.
+MAX_INLINE_BYTES = 235_000
+MAX_INLINE_PIXELS = 16_000_000
+
+
+def inline_image_url(path: str | Path) -> str:
+    """Explicit user-selected image for provider upload, without persistent copies."""
+    source = Path(path).expanduser()
+    if source.is_symlink() or not source.is_file():
+        raise VideoProviderError("Inline image must be a regular selected local file")
+    if source.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp"):
+        raise VideoProviderError("Use a PNG, JPEG or WEBP local input image")
+    if source.stat().st_size > MAX_INLINE_BYTES:
+        raise VideoProviderError("Local image exceeds 235 KB: use an approved HTTPS URL instead")
+    raw = source.read_bytes()
+    if not 1 <= len(raw) <= MAX_INLINE_BYTES:
+        raise VideoProviderError("Local image must be nonempty and at most 235 KB")
+    try:
+        with Image.open(io.BytesIO(raw)) as pic:
+            if pic.format not in ("PNG", "JPEG", "WEBP") or pic.width * pic.height > MAX_INLINE_PIXELS:
+                raise VideoProviderError("Invalid local image format or decoded dimensions")
+            pic.verify()
+    except (ValueError,OSError,Image.DecompressionBombError):
+        raise VideoProviderError("Selected local image is not a valid bounded image") from None
+    mime = "image/png" if source.suffix.lower()==".png" else (
+        "image/webp" if source.suffix.lower()==".webp" else "image/jpeg"
+    )
+    return "data:" + mime + ";base64," + base64.b64encode(raw).decode("ascii")
+
+
+def image_input_uri(reference: str) -> str:
+    """Accept only safe HTTPS references or bounded decoded, validated data URIs."""
+    if not isinstance(reference, str) or not reference:
+        raise VideoProviderError("Inpainting requires a valid image and a separate mask")
+    if not reference.startswith("data:"):
+        return validate_public_https(reference)
+    try:
+        header, encoded = reference.split(",", 1)
+        if header not in ("data:image/png;base64", "data:image/jpeg;base64",
+                          "data:image/webp;base64") or len(encoded)>MAX_INLINE_BYTES*2:
+            raise ValueError("Invalid inline media declaration")
+        raw = base64.b64decode(encoded,validate=True)
+        if not raw or len(raw)>MAX_INLINE_BYTES:
+            raise ValueError("Inline media exceeds safe bound")
+        with Image.open(io.BytesIO(raw)) as pic:
+            if pic.format not in ("PNG","WEBP","JPEG") or pic.width*pic.height>MAX_INLINE_PIXELS:
+                raise ValueError("Invalid inline image")
+            pic.verify()
+    except (ValueError,OSError,Image.DecompressionBombError,binascii.Error):
+        raise VideoProviderError("Inline image must be a bounded valid PNG, JPEG or WebP") from None
+    return reference
+
+
+
+def _inline_dimensions(uri: str) -> tuple[int,int] | None:
+    if not uri.startswith("data:"):
+        return None
+    binary=base64.b64decode(uri.split(",",1)[1],validate=True)
+    with Image.open(io.BytesIO(binary)) as pic:
+        return pic.width,pic.height
 
 
 def readiness() -> dict:
@@ -44,6 +108,7 @@ def readiness() -> dict:
         "pricing": {
             "generate": "https://replicate.com/black-forest-labs/flux-schnell",
             "edit": "https://replicate.com/black-forest-labs/flux-kontext-pro",
+            "inpaint": "https://replicate.com/black-forest-labs/flux-fill-pro",
         },
     }
 
@@ -90,12 +155,29 @@ def submit_image(options:dict) -> dict:
         if ratio not in ("1:1","16:9","9:16","4:3","3:4","3:2","2:3"):
             raise VideoProviderError("Unsupported image aspect ratio")
         data.update({"aspect_ratio":ratio,"num_outputs":1,"num_inference_steps":4})
-    else:
+    elif operation=="edit":
         image=options.get("input_image")
         if not image:
-            raise VideoProviderError("Online image editing requires a public HTTPS reference image")
-        data["input_image"]=validate_public_https(image)
+            raise VideoProviderError("Online image editing requires an HTTPS or selected local reference image")
+        data["input_image"]=image_input_uri(image)
         data["aspect_ratio"]="match_input_image"
+    else:
+        image=options.get("input_image")
+        mask=options.get("mask_image")
+        if not image or not mask:
+            raise VideoProviderError("Masked inpainting requires both a source image and white/black mask")
+        image_ref=image_input_uri(image)
+        mask_ref=image_input_uri(mask)
+        dimensions=_inline_dimensions(image_ref)
+        mask_dimensions=_inline_dimensions(mask_ref)
+        if dimensions is not None and mask_dimensions is not None and dimensions!=mask_dimensions:
+            raise VideoProviderError("Source and mask must have matching pixel dimensions")
+        data["image"]=image_ref
+        data["mask"]=mask_ref
+        data["steps"]=30
+        # FLUX Fill respects white=edit, black=preserve. Never silently
+        # substitute an unmasked semantic edit for a masking request.
+        data["outpaint"]="None"
     reply=_image_record(_json_request(
         "POST","/v1/models/"+IMAGE_MODELS[operation]+"/predictions",{"input":data},
     ))

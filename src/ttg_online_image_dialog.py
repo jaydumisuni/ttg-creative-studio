@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
 )
 from ttg_online_image_provider import (
     APPROVAL, readiness,submit_image,image_status,image_cancel,download_image,
+    inline_image_url,
 )
 
 
@@ -53,6 +54,8 @@ class OnlineImageDialog(QDialog):
         self.import_callback=import_callback
         self._worker=None
         self._latest=None
+        self._local_source=None
+        self._local_mask=None
         root=QVBoxLayout(self)
         root.addWidget(QLabel(
             "Online AI image generation/editing · no model download on KRATOS. "
@@ -62,6 +65,7 @@ class OnlineImageDialog(QDialog):
         self.operation=QComboBox()
         self.operation.addItem("Generate image · FLUX Schnell","generate")
         self.operation.addItem("Edit image · FLUX Kontext Pro","edit")
+        self.operation.addItem("Inpaint with mask · FLUX Fill Pro","inpaint")
         form.addRow("Operation",self.operation)
         self.prompt=QPlainTextEdit()
         self.prompt.setPlaceholderText("Describe the product image or editing instructions")
@@ -72,8 +76,27 @@ class OnlineImageDialog(QDialog):
             self.ratio.addItem(ratio)
         form.addRow("Generation ratio",self.ratio)
         self.image_url=QLineEdit()
-        self.image_url.setPlaceholderText("Public HTTPS image URL required for online edits")
-        form.addRow("Image reference",self.image_url)
+        self.image_url.setPlaceholderText("Public HTTPS image URL, or select a small local file")
+        self.image_url.textEdited.connect(lambda _: self._clear_inline("image"))
+        source_row=QHBoxLayout()
+        source_row.addWidget(self.image_url,1)
+        source_button=QPushButton("Local Image")
+        source_button.clicked.connect(self.select_local_source)
+        source_row.addWidget(source_button)
+        form.addRow("Source image",source_row)
+
+        self.mask_url=QLineEdit()
+        self.mask_url.setPlaceholderText("HTTPS mask URL or local black/white PNG (white = edit)")
+        self.mask_url.textEdited.connect(lambda _: self._clear_inline("mask"))
+        mask_row=QHBoxLayout()
+        mask_row.addWidget(self.mask_url,1)
+        mask_button=QPushButton("Local Mask")
+        mask_button.clicked.connect(self.select_local_mask)
+        mask_row.addWidget(mask_button)
+        form.addRow("Inpainting mask",mask_row)
+        self.local_info=QLabel("Optional local files are sent to the external provider only after paid confirmation.")
+        self.local_info.setWordWrap(True)
+        form.addRow("Input privacy",self.local_info)
         root.addLayout(form)
         self.consent=QCheckBox("I authorize ONE paid image generation/edit request.")
         root.addWidget(self.consent)
@@ -107,6 +130,43 @@ class OnlineImageDialog(QDialog):
         close.clicked.connect(self.close)
         root.addWidget(close)
 
+    def _clear_inline(self, which: str) -> None:
+        if which=="image":
+            self._local_source=None
+        else:
+            self._local_mask=None
+
+    def _choose_inline(self, which: str) -> None:
+        filename,_=QFileDialog.getOpenFileName(
+            self, "Select a small local source/mask", "",
+            "Images (*.png *.jpg *.jpeg *.webp)"
+        )
+        if not filename:
+            return
+        try:
+            uri=inline_image_url(filename)
+        except Exception as exc:
+            QMessageBox.warning(self,"Image size/privacy",str(exc))
+            return
+        if which=="image":
+            self._local_source=uri
+            self.image_url.setText("")
+            self.image_url.setPlaceholderText("Local source selected: "+Path(filename).name)
+        else:
+            self._local_mask=uri
+            self.mask_url.setText("")
+            self.mask_url.setPlaceholderText("Local mask selected: "+Path(filename).name)
+        self.local_info.setText(
+            "Selected local image bytes will be transmitted to Replicate only "
+            "if you approve the specific paid operation."
+        )
+
+    def select_local_source(self):
+        self._choose_inline("image")
+
+    def select_local_mask(self):
+        self._choose_inline("mask")
+
     def refresh_ready(self):
         state=readiness()["state"]
         self.ready.setText({
@@ -137,14 +197,15 @@ class OnlineImageDialog(QDialog):
             return
         if QMessageBox.question(
             self,"Confirm paid image generation",
-            "Submit this prompt and any reference-image URL to Replicate? "
+            "Submit this prompt and the selected source/mask image data to Replicate? "
             "Review the current model price first; Studio cannot guarantee a spend ceiling."
         )!=QMessageBox.StandardButton.Yes:
             return
         settings={"operation":self.operation.currentData(),
             "prompt":self.prompt.toPlainText(),
             "aspect_ratio":self.ratio.currentText(),
-            "input_image":self.image_url.text().strip(),
+            "input_image":self._local_source or self.image_url.text().strip(),
+            "mask_image":self._local_mask or self.mask_url.text().strip(),
             "paid_approval":APPROVAL}
         self.consent.setChecked(False)
         self._start("submit",settings=settings)
