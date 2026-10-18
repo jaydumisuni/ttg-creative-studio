@@ -139,6 +139,10 @@ def main():
     reject(lambda:set_extended_physics(obj,kind="ARBITRARY_SCRIPT"),"Unsupported")
     reject(lambda:set_extended_physics(obj,kind="CLOTH",resolution=900),
            "resolution")
+    bridge_source=(ROOT/"integrations/blender/gpl_scene_runner.py").read_text()
+    check('node.inputs.get("Mesh")' in bridge_source and
+          'node.outputs.get("Mesh")' in bridge_source,
+          "Blender graph bridge resolves actual Subdivide Mesh sockets")
     scene=build_scene()
     check(validate_scene(scene)==scene,"All professional fields pass scene schema")
     invalid=deepcopy(scene);invalid["objects"][1]["geometry_nodes"]["steps"][0]["type"]="python"
