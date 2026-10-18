@@ -49,9 +49,10 @@ scene.frame_end=int(spec["frames"])
 scene.render.fps=int(spec["fps"])
 scene.render.threads_mode="FIXED"
 scene.render.threads=2
-scene.view_settings.view_transform="AgX" if "AgX" in (
-    t.name for t in bpy.types.ColorManagedViewSettings.bl_rna.properties['view_transform'].enum_items
-) else "Standard"
+try:
+    scene.view_settings.view_transform="AgX"
+except TypeError:
+    scene.view_settings.view_transform="Standard"
 world=bpy.data.worlds.new("TTG Physical Studio World")
 scene.world=world
 world.use_nodes=True
