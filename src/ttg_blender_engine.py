@@ -21,7 +21,20 @@ SCHEMA = "ttg.studio.blender.scene.v1"
 MAX_OBJECTS = 96
 MAX_LIGHTS = 12
 ALLOWED = {"cube", "cylinder", "uv_sphere", "torus", "text"}
-BLENDER_BRIDGE = Path(__file__).resolve().parent.parent / "integrations/blender/gpl_scene_runner.py"
+def bridge_path() -> Path:
+    """Find standalone GPL bridge in source or PyInstaller onedir/onefile."""
+    roots = [
+        Path(__file__).resolve().parent.parent,
+        Path(__file__).resolve().parent,
+        Path(getattr(sys, "_MEIPASS", "")) if getattr(sys, "frozen", False) else None,
+    ]
+    for root in roots:
+        if root is None:
+            continue
+        candidate = root / "integrations" / "blender" / "gpl_scene_runner.py"
+        if candidate.is_file():
+            return candidate
+    raise RuntimeError("Blender GPL bridge not packaged; release is incomplete")
 
 
 class BlenderUnavailable(RuntimeError):
@@ -186,8 +199,7 @@ def render_scene(spec: dict, destination: str|Path, *, timeout=1200):
         raise FileExistsError("3D render never overwrites existing project folders")
     if not target.parent.is_dir() or target.is_symlink():
         raise ValueError("Choose a new folder inside an existing authorized workspace")
-    if not BLENDER_BRIDGE.is_file():
-        raise RuntimeError("Blender GPL rendering bridge is missing")
+    bridge = bridge_path()
     if type(timeout) is not int or not 30<=timeout<=3600:
         raise ValueError("Invalid time budget")
     staging=target.parent/(".ttg3d-"+uuid.uuid4().hex)
@@ -196,7 +208,7 @@ def render_scene(spec: dict, destination: str|Path, *, timeout=1200):
         (staging/"scene.ttg3d.json").write_text(json.dumps(spec,indent=2),encoding="utf-8")
         command=[found["executable"],"--background","--factory-startup",
                  "--disable-autoexec","--python-exit-code","21",
-                 "--threads","2","--python",str(BLENDER_BRIDGE),
+                 "--threads","2","--python",str(bridge),
                  "--",str(staging/"scene.ttg3d.json"),str(staging)]
         try:
             job=subprocess.run(command,capture_output=True,text=True,timeout=timeout)

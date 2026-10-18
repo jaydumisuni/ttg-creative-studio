@@ -64,7 +64,9 @@ Your Blender fork's modified \`COPYING\` text does **not** override upstream
 Blender source licenses. Blender is GPL-3.0 and source derived from it remains
 subject to GPL. The contained standalone
 \`integrations/blender/gpl_scene_runner.py\` bridge uses \`bpy\` and is
-explicitly **GPL-3.0-or-later**, with source supplied. It executes only inside
+explicitly **GPL-3.0-or-later**, with source supplied and the full
+GPLv3 license at `integrations/blender/GPL-3.0.txt`. The frozen
+Windows/Linux distribution includes this independent GPL bridge and license. It executes only inside
 Blender and never imports into the main Studio process. The main Studio
 application passes JSON data across a CLI process boundary without using
 Blender code or the Blender Python API itself, consistent with Blender's

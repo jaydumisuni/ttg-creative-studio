@@ -43,6 +43,14 @@ def rejected(data, match):
 
 
 def main():
+    from ttg_blender_engine import bridge_path
+    check(bridge_path().is_file(),"Blender bridge resolves in source checkout")
+    spec=(ROOT/"TTG Creative Studio.spec").read_text()
+    check("('integrations/blender', 'integrations/blender')" in spec,
+          "Windows and Linux frozen installer include GPL bridge and license")
+    license=(ROOT/"integrations/blender/GPL-3.0.txt").read_text()
+    check("Version 3, 29 June 2007" in license,
+          "Full GPLv3 license retained beside Blender API bridge")
     script=(ROOT/"integrations/blender/gpl_scene_runner.py").read_text()
     check("layer.cycles.use_denoising=False" in script and
           "scene.cycles.use_denoising=False" in script,
