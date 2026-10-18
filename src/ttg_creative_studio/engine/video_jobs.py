@@ -24,6 +24,10 @@ from ttg_motion_exporter import MotionExporter
 from ttg_canvas_engine import RenderContext
 from ttg_project_schema import TTGProject
 from ttg_visual_understanding import LocalVisionServer
+from ttg_online_video_provider import (
+    availability as cloud_video_availability,
+    submit_video, status_video, cancel_video, download_video,
+)
 
 MAX_VIDEO_SIZE = 2 * 1024**3
 MAX_JSON_BYTES = 200_000
@@ -31,6 +35,8 @@ SCHEMA = "ttg.creative.video-agent.v1"
 VIDEO_TASKS = frozenset({
     "video_capabilities", "video_info", "video_understand",
     "video_plan", "video_render", "video_generate",
+    "video_generation_status", "video_generation_download",
+    "video_generation_cancel",
 })
 
 
@@ -63,8 +69,28 @@ def tool_catalog() -> dict[str, Any]:
                 "description": "Render an actual .ttgstudio project with Studio timeline and FFmpeg",
             },
             "video_generate": {
-                "state": "not_admitted", "side_effects": "none",
-                "description": "FreeVideo or another licensed local provider requires separate admission",
+                "state": "online_opt_in", "side_effects": "billable cloud generation",
+                "requires": ["options.prompt", "options.paid_approval"],
+                "description": "Replicate-hosted Seedance; requires API token and explicit paid approval",
+            },
+            "video_generation_status": {
+                "state": "online", "side_effects": "none",
+                "requires": ["options.prediction_id"],
+                "description": "Read actual external generation status, without downloading anything",
+            },
+            "video_generation_cancel": {
+                "state": "online", "side_effects": "cancel provider job",
+                "requires": ["options.prediction_id", "options.cancel_approval"],
+                "description": "Explicitly cancel the exact provider job",
+            },
+            "video_generation_download": {
+                "state": "online", "side_effects": "bounded new MP4",
+                "requires": ["options.prediction_id", "output"],
+                "description": "Download a successful real MP4; never overwrite files",
+            },
+            "video_local_install": {
+                "state": "future_GT502_Spark", "side_effects": "none",
+                "description": "User-choice 92GiB-class FreeVideo model install, disabled on KRATOS",
             },
         },
         "safety": {
@@ -72,7 +98,9 @@ def tool_catalog() -> dict[str, Any]:
                 "external_video_generation", "publishing", "exporting_to_untrusted_destinations"
             ],
             "no_implicit_model_download": True,
-            "no_cloud_upload": True,
+            "cloud_inference": "optional, explicitly approved paid request",
+            "local_inference": "disabled_pending_GT502_Spark",
+            "no_local_model_download": True,
             "no_source_overwrite": True,
         },
     }
@@ -253,20 +281,36 @@ def run_video_job(job: dict[str, Any]) -> dict[str, Any]:
     job_id = str(job.get("jobId") or job.get("job_id") or "video_job")
     if len(job_id) > 120:
         raise CreativeJobError("Invalid job id")
-    if task == "video_generate":
-        raise CreativeJobError(
-            "Video generation is not admitted: install and qualify an approved "
-            "provider (such as FreeVideo) before requesting actual inference"
-        )
     options = job.get("options") or {}
     if not isinstance(options, dict):
         raise CreativeJobError("options must be an object")
     if task == "video_capabilities":
         ffmpeg = FFmpegManager().status().available
+        provider_state = cloud_video_availability()
         return {"ok": True, "jobId": job_id, "task": task, "status": "done",
                 "meta": {"catalog": tool_catalog(), "ffmpeg": ffmpeg,
                          "ffprobe": bool(shutil.which("ffprobe")),
-                         "local_video_generation": "not_admitted"}}
+                         "generation": provider_state,
+                         "local_video_generation": "awaiting_GT502_or_Spark"}}
+    if task == "video_generate":
+        reply = submit_video(options)
+        return JobResult(True, job_id, task, "", "", "submitted",
+                         "Actual billable online prediction submitted", reply).to_dict()
+    if task == "video_generation_status":
+        reply = status_video(options.get("prediction_id"))
+        return JobResult(True, job_id, task, "", "", reply["status"],
+                         "External provider prediction status", reply).to_dict()
+    if task == "video_generation_cancel":
+        if options.get("cancel_approval") != "CANCEL_THIS_PREDICTION":
+            raise CreativeJobError("Cancellation requires explicit approval")
+        reply = cancel_video(options.get("prediction_id"))
+        return JobResult(True, job_id, task, "", "", reply["status"],
+                         "Sent cancellation request to provider", reply).to_dict()
+    if task == "video_generation_download":
+        out = _output(job.get("output") or job.get("outputPath"), ".mp4")
+        reply = download_video(options.get("prediction_id"), out)
+        return JobResult(True, job_id, task, "", str(out), "downloaded",
+                         "Downloaded external MP4; import via Video Lab to edit", reply).to_dict()
     out = _output(job.get("output") or job.get("outputPath"),
                   ".mp4" if task == "video_render" else ".json")
     if task == "video_plan":
