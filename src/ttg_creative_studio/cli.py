@@ -11,6 +11,7 @@ if __package__ in (None, ""):
 
 from ttg_creative_studio.engine import run_image_job
 from ttg_creative_studio.engine.video_jobs import VIDEO_TASKS, run_video_job, tool_catalog
+from ttg_creative_studio.engine.online_image_jobs import ONLINE_IMAGE_TASKS, run_online_image_job
 from ttg_creative_studio.engine.image_jobs import CreativeJobError
 
 
@@ -34,7 +35,21 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.catalog:
-        print(json.dumps(tool_catalog(), indent=2))
+        schema=tool_catalog()
+        schema["operations"].update({
+            "image_generate_online": {"state":"online_opt_in",
+                "requires":["options.prompt","options.paid_approval"],
+                "side_effects":"paid online image prediction"},
+            "image_status_online": {"state":"online",
+                "requires":["options.prediction_id"],"side_effects":"none"},
+            "image_cancel_online": {"state":"online",
+                "requires":["options.prediction_id","options.cancel_approval"],
+                "side_effects":"cancel remote prediction"},
+            "image_download_online": {"state":"online",
+                "requires":["options.prediction_id","output"],
+                "side_effects":"verified PNG download"},
+        })
+        print(json.dumps(schema, indent=2))
         return 0
     if not args.job:
         parser.error("--job is required unless --catalog is selected")
@@ -43,7 +58,12 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         job = _read_json(job_path)
-        result = run_video_job(job) if job.get("task") in VIDEO_TASKS else run_image_job(job)
+        if job.get("task") in VIDEO_TASKS:
+            result=run_video_job(job)
+        elif job.get("task") in ONLINE_IMAGE_TASKS:
+            result=run_online_image_job(job)
+        else:
+            result=run_image_job(job)
         result["jobPath"] = str(job_path)
         if result_path:
             _write_json(result_path, result)
