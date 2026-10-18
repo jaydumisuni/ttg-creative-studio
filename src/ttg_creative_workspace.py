@@ -40,6 +40,7 @@ from ttg_mask_painter import MaskPainterDialog
 from ttg_video_lab_dialog import VideoLabDialog, VideoExportThread, VideoTrimDialog
 from ttg_online_video_dialog import OnlineVideoDialog
 from ttg_online_image_dialog import OnlineImageDialog
+from ttg_blender_dialog import Studio3DLab
 from ttg_recovery import RecoveryStore
 from ttg_advanced_panel import AdvancedModePanel
 from ttg_asset_browser import AssetTemplateBrowser
@@ -186,6 +187,7 @@ class CreativeWorkspace(QWidget):
             ("Brush Mask Selected Image", self.brush_mask_selected_image),
             ("Add Audio Track", self.add_audio_track),
             ("Video Lab · Inspect / Import", self.open_video_lab),
+            ("3D Lab · Model / Light / Render", self.open_3d_lab),
             ("Generate Online Image · Optional Paid", self.open_online_image),
             ("Generate Online Video · Optional Paid", self.open_online_video),
             ("Edit Selected Video Timing", self.edit_selected_video_timing),
@@ -792,6 +794,35 @@ class CreativeWorkspace(QWidget):
         self.import_video_clip(path, info, include_audio=bool(info["audio_streams"]),
                                copy_into_project=False)
         self.status.setText("Cloud-generated video imported as a normal editable clip")
+
+    def open_3d_lab(self) -> None:
+        """Independent Blender-based 3D scene editor and render importer."""
+        dialog = Studio3DLab(
+            import_image=self.import_blender_image,
+            import_video=self.import_online_video,
+            parent=self,
+        )
+        dialog.exec()
+
+    def import_blender_image(self, path: Path) -> None:
+        """Import real PBR Blender PNG as a normal editable Studio layer."""
+        from PIL import Image
+        path = Path(path).expanduser().resolve(strict=True)
+        with Image.open(path) as image:
+            if image.format != "PNG" or image.width * image.height > 8_300_000:
+                raise ValueError("Blender import requires a bounded real PNG")
+            image.verify()
+        if self.project is None:
+            self.new_project()
+        if self.project is None:
+            return
+        self.remember("Import Blender 3D render")
+        layer = self.action.add_image(self.project, str(path), 80, 80)
+        self.selected_layer_id = layer.id
+        self.still_preview_approved = False
+        self.refresh_all()
+        self.autosave_snapshot()
+        self.status.setText("Blender PBR render imported as an editable Studio image layer")
 
     def open_video_lab(self) -> None:
         """Standalone, model-free video inspection and editable timeline import."""

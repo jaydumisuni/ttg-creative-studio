@@ -7,7 +7,7 @@ a = Analysis(
     ['scripts/launch_creative_studio.py'],
     pathex=['src'],
     binaries=[],
-    datas=[('resources', 'resources'), ('templates', 'templates'), ('packs/manifests', 'packs/manifests')],
+    datas=[('resources', 'resources'), ('templates', 'templates'), ('packs/manifests', 'packs/manifests'), ('integrations/blender', 'integrations/blender')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
