@@ -1,0 +1,66 @@
+name: Creative Studio Blender 3D Engine
+
+on:
+  push:
+    branches:
+      - studio/blender-3d-20261018
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/ttg_blender_*'
+      - 'src/ttg_creative_workspace.py'
+      - 'integrations/blender/**'
+      - 'scripts/test_blender_3d.py'
+      - '.github/workflows/studio-blender-3d.yml'
+      - 'docs/BLENDER_3D_BACKEND_V1.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  blender-3d:
+    name: 3D engine / \${{ matrix.os }}
+    runs-on: \${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - name: Checkout Studio only; no Blender donor source checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Blender binary and FFmpeg only on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends blender ffmpeg libegl1 libgl1 libopengl0 libxkbcommon-x11-0 libxcb-cursor0 libdbus-1-3
+          blender --version | head -1
+          ffprobe -version | head -1
+      - name: Install minimal Studio QA libraries (no large AI checkpoints)
+        run: python -m pip install PyQt6==6.10.0 Pillow==11.3.0
+      - name: Validate scene edit and real Blender PBR render when available
+        run: python -B scripts/test_blender_3d.py
+      - name: Check core Campaign Designer regression
+        run: python -B scripts/test_campaign_designer.py
+      - name: Verify Blender GPL bridge stays a separate process
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          app=Path("src/ttg_blender_engine.py").read_text()
+          runner=Path("integrations/blender/gpl_scene_runner.py").read_text()
+          assert "import bpy" not in app
+          assert "import bpy" in runner
+          assert "SPDX-License-Identifier: GPL-3.0-or-later" in runner
+          assert "subprocess.run" in app
+          assert "https://github.com/jaydumisuni/blender" in Path("docs/BLENDER_3D_BACKEND_V1.md").read_text()
+          print("External Blender/GPL boundary validated")
+          PY
