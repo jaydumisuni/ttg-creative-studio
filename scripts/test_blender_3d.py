@@ -43,6 +43,10 @@ def rejected(data, match):
 
 
 def main():
+    script=(ROOT/"integrations/blender/gpl_scene_runner.py").read_text()
+    check("layer.cycles.use_denoising=False" in script and
+          "scene.cycles.use_denoising=False" in script,
+          "Blender CPU render disables unavailable optional denoisers")
     scene=isp_box_scene(width=192,height=112,frames=3,samples=4,engine="CYCLES")
     check(validate_scene(scene)==scene,"editable parametric product 3D scene accepted")
     check(scene["schema"]==SCHEMA and len(scene["objects"])>=10,"genuine multi-part PBR product scene")

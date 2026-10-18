@@ -34,6 +34,13 @@ except TypeError:
     scene.render.engine="BLENDER_EEVEE"
 if scene.render.engine=="CYCLES":
     scene.cycles.samples=int(spec.get("samples",32))
+    # Ubuntu's distro Blender sometimes lacks OpenImageDenoise entirely.
+    # The render must not depend on an optional CPU/GPU denoiser.
+    if hasattr(scene.cycles, "use_denoising"):
+        scene.cycles.use_denoising=False
+    for layer in scene.view_layers:
+        if hasattr(layer, "cycles") and hasattr(layer.cycles, "use_denoising"):
+            layer.cycles.use_denoising=False
 else:
     if hasattr(scene,"eevee") and hasattr(scene.eevee,"taa_render_samples"):
         scene.eevee.taa_render_samples=int(spec.get("samples",32))
