@@ -151,6 +151,10 @@ def apply_uv(obj_spec, target):
     mappings = obj_spec.get("uv")
     if mappings is None:
         return
+    if obj_spec.get("uv_seams"):
+        seams={tuple(sorted(edge)) for edge in obj_spec["uv_seams"]}
+        for edge in target.data.edges:
+            edge.use_seam=tuple(sorted(edge.vertices)) in seams
     layer = target.data.uv_layers.new(name="TTG Editable UV")
     for polygon, face_uv in zip(target.data.polygons, mappings):
         if len(polygon.loop_indices) != len(face_uv):
@@ -159,10 +163,68 @@ def apply_uv(obj_spec, target):
             layer.data[index].uv = coords
 
 
+def apply_custom_geometry_graph(obj_spec,target):
+    """Execute a bounded editable sequence of actual GeometryNodes modifiers."""
+    steps=obj_spec["geometry_nodes"]["steps"]
+    tree=bpy.data.node_groups.new("Studio Node Graph " + obj_spec["id"],"GeometryNodeTree")
+    if hasattr(tree,"interface"):
+        tree.interface.new_socket(name="Geometry",in_out="INPUT",socket_type="NodeSocketGeometry")
+        tree.interface.new_socket(name="Geometry",in_out="OUTPUT",socket_type="NodeSocketGeometry")
+    else:
+        tree.inputs.new("NodeSocketGeometry","Geometry")
+        tree.outputs.new("NodeSocketGeometry","Geometry")
+    source=tree.nodes.new("NodeGroupInput").outputs["Geometry"]
+    for index,step in enumerate(steps):
+        typ=step["type"]
+        if typ=="transform":
+            node=tree.nodes.new("GeometryNodeTransform")
+            node.inputs["Translation"].default_value=step["offset"]
+        elif typ=="subdivide":
+            node=tree.nodes.new("GeometryNodeSubdivideMesh")
+            node.inputs["Level"].default_value=step["level"]
+        else:
+            node=tree.nodes.new("GeometryNodeSetPosition")
+            position=tree.nodes.new("GeometryNodeInputPosition")
+            xyz=tree.nodes.new("ShaderNodeSeparateXYZ")
+            sine=tree.nodes.new("ShaderNodeMath");sine.operation="SINE"
+            strength=tree.nodes.new("ShaderNodeMath")
+            strength.operation="MULTIPLY"
+            strength.inputs[1].default_value=step["amplitude"]
+            combine=tree.nodes.new("ShaderNodeCombineXYZ")
+            tree.links.new(position.outputs["Position"],xyz.inputs["Vector"])
+            tree.links.new(xyz.outputs["X"],sine.inputs[0])
+            tree.links.new(sine.outputs[0],strength.inputs[0])
+            tree.links.new(strength.outputs[0],combine.inputs["Z"])
+            tree.links.new(combine.outputs["Vector"],node.inputs["Offset"])
+        node.label="Studio Graph Node "+str(index+1)
+        tree.links.new(source,node.inputs["Geometry"])
+        source=node.outputs["Geometry"]
+    exit_node=tree.nodes.new("NodeGroupOutput")
+    tree.links.new(source,exit_node.inputs["Geometry"])
+    modifier=target.modifiers.new("TTG Editable Geometry Graph",type="NODES")
+    modifier.node_group=tree
+
+
+def apply_sculpt_detail(obj_spec,target):
+    detail=obj_spec.get("sculpt_detail")
+    if not detail:return
+    bpy.ops.object.select_all(action="DESELECT")
+    target.select_set(True)
+    bpy.context.view_layer.objects.active=target
+    modifier=target.modifiers.new("TTG Multires Sculpt",type="MULTIRES")
+    for level in range(detail["levels"]):
+        bpy.ops.object.multires_subdivide(modifier=modifier.name,mode="CATMULL_CLARK")
+    modifier.levels=detail["levels"]
+    modifier.sculpt_levels=detail["levels"]
+    modifier.render_levels=detail["levels"]
+
+
 def apply_geometry_nodes(obj_spec, target):
     settings = obj_spec.get("geometry_nodes")
     if not settings:
         return
+    if settings.get("operation")=="graph":
+        return apply_custom_geometry_graph(obj_spec,target)
     tree = bpy.data.node_groups.new("Studio procedural " + obj_spec["id"], "GeometryNodeTree")
     if hasattr(tree, "interface"):
         tree.interface.new_socket(name="Geometry", in_out="INPUT", socket_type="NodeSocketGeometry")
@@ -240,6 +302,17 @@ def apply_rig(obj_spec, target):
         for key in bone.get("keyframes", []):
             pose.rotation_euler = [math.radians(v) for v in key["rotation"]]
             pose.keyframe_insert(data_path="rotation_euler",frame=key["frame"])
+    for bone in rig["bones"]:
+        info=bone.get("ik")
+        if not info: continue
+        empty=bpy.data.objects.new("Studio IK Target "+obj_spec["id"]+"."+bone["name"],None)
+        scene.collection.objects.link(empty)
+        empty.empty_display_type="SPHERE"
+        empty.empty_display_size=.12
+        empty.location=skeleton.matrix_world @ Vector(info["target"])
+        constraint=skeleton.pose.bones[bone["name"]].constraints.new("IK")
+        constraint.target=empty
+        constraint.chain_count=info["chain_count"]
     return skeleton
 
 
@@ -250,8 +323,31 @@ def apply_rigid_body(obj_spec, target):
     bpy.ops.object.select_all(action="DESELECT")
     target.select_set(True)
     bpy.context.view_layer.objects.active=target
+    kind=setup["type"]
+    if kind=="CLOTH":
+        modifier=target.modifiers.new("TTG Cloth",type="CLOTH")
+        modifier.settings.quality=setup["quality"]
+        return
+    if kind=="COLLISION":
+        # Blender collision physics must use an actual collision modifier.
+        bpy.ops.object.modifier_add(type="COLLISION")
+        return
+    if kind in ("SMOKE_DOMAIN","SMOKE_FLOW","LIQUID_DOMAIN","LIQUID_FLOW"):
+        modifier=target.modifiers.new("TTG "+kind,type="FLUID")
+        if kind.endswith("DOMAIN"):
+            modifier.fluid_type="DOMAIN"
+            modifier.domain_settings.domain_type=(
+                "GAS" if kind.startswith("SMOKE") else "LIQUID")
+            modifier.domain_settings.cache_frame_end=int(spec["frames"])
+            modifier.domain_settings.resolution_max=setup["resolution"]
+        else:
+            modifier.fluid_type="FLOW"
+            modifier.flow_settings.flow_type=(
+                "SMOKE" if kind.startswith("SMOKE") else "LIQUID")
+            modifier.flow_settings.flow_behavior="INFLOW"
+        return
     bpy.ops.rigidbody.object_add()
-    target.rigid_body.type=setup["type"]
+    target.rigid_body.type=kind
     target.rigid_body.mass=float(setup.get("mass",1))
     target.rigid_body.friction=float(setup.get("friction",.5))
     target.rigid_body.collision_shape="CONVEX_HULL"
@@ -265,6 +361,7 @@ for obj_spec in spec["objects"]:
     target=bpy.data.objects["Studio."+obj_spec["id"]]
     apply_uv(obj_spec,target)
     apply_geometry_nodes(obj_spec,target)
+    apply_sculpt_detail(obj_spec,target)
     apply_rig(obj_spec,target)
     apply_rigid_body(obj_spec,target)
 

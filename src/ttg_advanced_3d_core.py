@@ -26,7 +26,7 @@ def _local_reference_ids(obj: dict) -> set[str]:
 
 def validate_advanced_object(obj: dict, identifiers: set[str], *, frames: int) -> None:
     """Reject malformed UV, rigs, constraints, nodes and simulation before bpy."""
-    if obj.get("type") != "mesh" and any(k in obj for k in ("uv", "armature", "geometry_nodes")):
+    if obj.get("type") != "mesh" and any(k in obj for k in ("uv", "uv_seams", "armature", "geometry_nodes", "sculpt_detail")):
         raise ValueError("Advanced mesh data requires converted mesh geometry")
     mesh = obj.get("mesh") if obj.get("type") == "mesh" else None
     if "uv" in obj:
@@ -41,6 +41,19 @@ def validate_advanced_object(obj: dict, identifiers: set[str], *, frames: int) -
                 if (not isinstance(coords, list) or len(coords) != 2 or
                     any(type(v) not in (int, float) or not math.isfinite(v) or abs(v)>100 for v in coords)):
                     raise ValueError("UV coordinates out of bounds")
+    if "uv_seams" in obj:
+        if "uv" not in obj:
+            raise ValueError("UV seams require authored UV coordinates")
+        seams=obj["uv_seams"]
+        if not isinstance(seams,list):
+            raise ValueError("UV seam edges must be a list")
+        from ttg_pro_3d_core import assign_uv_seams
+        assign_uv_seams({**obj, "uv_seams":[]}, seams)
+    if "sculpt_detail" in obj:
+        detail=obj["sculpt_detail"]
+        if (not isinstance(detail,dict) or detail.get("mode")!="multires" or
+            type(detail.get("levels")) is not int or not 1<=detail["levels"]<=3):
+            raise ValueError("Sculpt multires levels outside 1–3")
     if "armature" in obj:
         data = obj["armature"]
         bones = data.get("bones") if isinstance(data, dict) else None
@@ -62,6 +75,24 @@ def validate_advanced_object(obj: dict, identifiers: set[str], *, frames: int) -
             head, tail = _v3(bone.get("head")), _v3(bone.get("tail"))
             if sum((a-b)**2 for a,b in zip(head,tail)) < 1e-8:
                 raise ValueError("Bone head and tail must differ")
+            if "ik" in bone:
+                ik=bone["ik"]
+                if not isinstance(ik,dict):
+                    raise ValueError("IK constraint must be an object")
+                from ttg_native_3d import _v3 as coordinates
+                try:
+                    coordinates(ik.get("target"))
+                except (ValueError,TypeError):
+                    raise ValueError("IK target requires finite XYZ") from None
+                count=0
+                cursor=name
+                parents={item["name"]:item.get("parent") for item in bones
+                         if isinstance(item,dict) and "name" in item}
+                while cursor is not None:
+                    count+=1;cursor=parents.get(cursor)
+                if (type(ik.get("chain_count")) is not int or
+                    not 1<=ik["chain_count"]<=count):
+                    raise ValueError("IK chain count exceeds actual ancestors")
             for frame in bone.get("keyframes", []):
                 if (not isinstance(frame,dict) or type(frame.get("frame")) is not int or
                     not 1 <= frame["frame"] <= frames):
@@ -89,22 +120,53 @@ def validate_advanced_object(obj: dict, identifiers: set[str], *, frames: int) -
             raise ValueError("Constraint must target another valid scene object")
     geo=obj.get("geometry_nodes")
     if geo is not None:
-        if not isinstance(geo,dict) or geo.get("operation") not in ("transform", "wave"):
+        if not isinstance(geo,dict) or geo.get("operation") not in ("transform", "wave", "graph"):
             raise ValueError("Only admitted geometry node operations may execute")
-        _v3(geo.get("offset",[0,0,0]))
-        amplitude=geo.get("amplitude",0.1)
-        if type(amplitude) not in (int,float) or not math.isfinite(amplitude) or not 0 <= amplitude <= 2:
-            raise ValueError("Geometry node amplitude outside range")
+        if geo["operation"]=="graph":
+            steps=geo.get("steps")
+            if not isinstance(steps,list) or not 1<=len(steps)<=8:
+                raise ValueError("Geometry graph requires 1–8 nodes")
+            for step in steps:
+                if not isinstance(step,dict) or step.get("type") not in (
+                    "transform","subdivide","wave"):
+                    raise ValueError("Geometry graph node must be an admitted kind")
+                if step["type"]=="transform":
+                    _v3(step.get("offset"))
+                if step["type"]=="subdivide":
+                    level=step.get("level")
+                    if type(level) is not int or not 1<=level<=2:
+                        raise ValueError("Geometry subdivide level out of bounds")
+                if step["type"]=="wave":
+                    strength=step.get("amplitude")
+                    if type(strength) not in (int,float) or not math.isfinite(strength) or not 0<=strength<=2:
+                        raise ValueError("Geometry wave amplitude out of bounds")
+        else:
+            _v3(geo.get("offset",[0,0,0]))
+            amplitude=geo.get("amplitude",0.1)
+            if type(amplitude) not in (int,float) or not math.isfinite(amplitude) or not 0 <= amplitude <= 2:
+                raise ValueError("Geometry node amplitude outside range")
     simulation=obj.get("simulation")
     if simulation is not None:
-        if not isinstance(simulation,dict) or simulation.get("type") not in ("PASSIVE","ACTIVE"):
-            raise ValueError("Simulation supports validated rigid bodies only")
-        mass=simulation.get("mass",1)
-        friction=simulation.get("friction",.5)
-        if any(type(v) not in (int,float) or not math.isfinite(v) for v in (mass, friction)):
-            raise ValueError("Invalid rigid-body numerical property")
-        if not .01 <= mass <= 1000 or not 0 <= friction <= 1:
-            raise ValueError("Rigid-body mass or friction out of range")
+        if not isinstance(simulation,dict):
+            raise ValueError("Simulation must be a validated object")
+        mode=simulation.get("type")
+        if mode in ("PASSIVE","ACTIVE"):
+            mass=simulation.get("mass",1)
+            friction=simulation.get("friction",.5)
+            if any(type(v) not in (int,float) or not math.isfinite(v) for v in (mass, friction)):
+                raise ValueError("Invalid rigid-body numerical property")
+            if not .01<=mass<=1000 or not 0<=friction<=1:
+                raise ValueError("Rigid-body mass or friction out of range")
+        elif mode in ("CLOTH","COLLISION","SMOKE_DOMAIN","SMOKE_FLOW","LIQUID_DOMAIN","LIQUID_FLOW"):
+            if obj.get("type")!="mesh":
+                raise ValueError("Extended physics requires a mesh")
+            quality=simulation.get("quality")
+            resolution=simulation.get("resolution")
+            if type(quality) is not int or not 1<=quality<=12 or type(resolution) is not int or not 16<=resolution<=64:
+                raise ValueError("Fluid/cloth simulation settings out of bounds")
+        else:
+            raise ValueError("Simulation type not admitted")
+
 
 
 def uv_project(mesh: dict, *, axis: str = "z") -> list[list[list[float]]]:
