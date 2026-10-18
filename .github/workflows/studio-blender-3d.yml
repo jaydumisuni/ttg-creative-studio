@@ -20,8 +20,8 @@ permissions:
 
 jobs:
   blender-3d:
-    name: 3D engine / \${{ matrix.os }}
-    runs-on: \${{ matrix.os }}
+    name: 3D engine / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:
       fail-fast: false

@@ -87,7 +87,7 @@ def main():
                 raise AssertionError("Uninstalled Blender unexpectedly rendered")
         app=QApplication.instance() or QApplication([])
         form=Studio3DLab()
-        check("TTG" in form.editor.toPlainText(),"Studio 3D Lab exposes editable scene data")
+        check("TechGuy" in form.editor.toPlainText(),"Studio 3D Lab exposes editable scene data")
         form.frames.setValue(3)
         form.engine.setCurrentText("CYCLES")
         form.samples.setValue(4)
