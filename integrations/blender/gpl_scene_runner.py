@@ -326,17 +326,17 @@ def apply_rigid_body(obj_spec, target):
     setup=obj_spec.get("simulation")
     if not setup:
         return
-    bpy.ops.object.select_all(action="DESELECT")
-    target.select_set(True)
-    bpy.context.view_layer.objects.active=target
+    # Construct cloth and fluid modifiers directly through the data API.
+    # Running a global view-layer update between each fluid modifier has
+    # crashed older Blender distributions, even with valid input.
     kind=setup["type"]
     if kind=="CLOTH":
         modifier=target.modifiers.new("TTG Cloth",type="CLOTH")
         modifier.settings.quality=setup["quality"]
         return
     if kind=="COLLISION":
-        # Blender collision physics must use an actual collision modifier.
-        bpy.ops.object.modifier_add(type="COLLISION")
+        # Direct data API avoids unrelated dependency-graph evaluation.
+        target.modifiers.new("TTG Collision",type="COLLISION")
         return
     if kind in ("SMOKE_DOMAIN","SMOKE_FLOW","LIQUID_DOMAIN","LIQUID_FLOW"):
         modifier=target.modifiers.new("TTG "+kind,type="FLUID")
@@ -352,6 +352,9 @@ def apply_rigid_body(obj_spec, target):
                 "SMOKE" if kind.startswith("SMOKE") else "LIQUID")
             modifier.flow_settings.flow_behavior="INFLOW"
         return
+    bpy.ops.object.select_all(action="DESELECT")
+    target.select_set(True)
+    bpy.context.view_layer.objects.active=target
     bpy.ops.rigidbody.object_add()
     target.rigid_body.type=kind
     target.rigid_body.mass=float(setup.get("mass",1))

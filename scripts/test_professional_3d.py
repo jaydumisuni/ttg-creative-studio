@@ -140,6 +140,10 @@ def main():
     reject(lambda:set_extended_physics(obj,kind="CLOTH",resolution=900),
            "resolution")
     bridge_source=(ROOT/"integrations/blender/gpl_scene_runner.py").read_text()
+    physics_builder=bridge_source.split("def apply_rigid_body(obj_spec, target):",1)[1]
+    check(physics_builder.index('kind=setup["type"]') <
+          physics_builder.index('bpy.ops.object.select_all(action="DESELECT")'),
+          "Cloth and fluid modifiers avoid unnecessary global Blender depsgraph updates")
     check('node.inputs.get("Mesh")' in bridge_source and
           'node.outputs.get("Mesh")' in bridge_source,
           "Blender graph bridge resolves actual Subdivide Mesh sockets")
