@@ -32,6 +32,10 @@ from ttg_pro_3d_core import (
     set_multires, set_bone_ik, set_geometry_graph, set_extended_physics,
     adaptive_sculpt,
 )
+from ttg_pro_3d_v4 import (
+    set_uv_unwrap, set_geometry_dag, set_ik_pole, normalize_skin_weights,
+    sculpt_stroke,
+)
 
 def _rotate(v: list[float], angles: list[float]) -> list[float]:
     x,y,z=v
@@ -467,6 +471,14 @@ class Native3DModeler(QWidget):
             button.clicked.connect(fn)
             properties.addWidget(button)
 
+        properties.addWidget(QLabel("Blender UV solver (executed during Blender render)"))
+        self.advanced_uv_method=QComboBox()
+        self.advanced_uv_method.addItems(["SMART_PROJECT","ANGLE_BASED","CONFORMAL"])
+        properties.addWidget(self.advanced_uv_method)
+        uv_solve=QPushButton("Use Genuine Blender UV Unwrap")
+        uv_solve.clicked.connect(self.use_blender_unwrap)
+        properties.addWidget(uv_solve)
+
         properties.addWidget(QLabel("Rig and skin weights"))
         self.rig_bone=QComboBox()
         properties.addWidget(self.rig_bone)
@@ -504,6 +516,9 @@ class Native3DModeler(QWidget):
             button=QPushButton(label);button.clicked.connect(fn)
             properties.addWidget(button)
 
+        branch_button=QPushButton("Create Two-Branch Geometry Graph")
+        branch_button.clicked.connect(self.make_branching_graph)
+        properties.addWidget(branch_button)
         properties.addWidget(QLabel("Multiresolution sculpt detail"))
         self.multires_levels=QSpinBox()
         self.multires_levels.setRange(1,3)
@@ -514,6 +529,10 @@ class Native3DModeler(QWidget):
         adapt=QPushButton("Adaptive Local Topology Sculpt")
         adapt.clicked.connect(self.adaptive_sculpt)
         properties.addWidget(adapt)
+
+        topology_stroke=QPushButton("Multi-Dab Adaptive Sculpt Stroke")
+        topology_stroke.clicked.connect(self.apply_sculpt_stroke)
+        properties.addWidget(topology_stroke)
 
         properties.addWidget(QLabel("Rig weight painting and IK"))
         self.paint_mode=QComboBox()
@@ -537,6 +556,13 @@ class Native3DModeler(QWidget):
         ik_button=QPushButton("Set IK on Selected Bone")
         ik_button.clicked.connect(self.enable_ik)
         properties.addWidget(ik_button)
+
+        pole=QPushButton("Set IK Pole from XYZ Controls")
+        pole.clicked.connect(self.enable_ik_pole)
+        properties.addWidget(pole)
+        normalize=QPushButton("Normalize Painted Skin Weights")
+        normalize.clicked.connect(self.normalize_weights)
+        properties.addWidget(normalize)
 
         properties.addWidget(QLabel("Editable Geometry Node Chain"))
         self.graph_kind=QComboBox()
@@ -1050,6 +1076,50 @@ class Native3DModeler(QWidget):
         def edit(obj):
             obj.update(set_physics(obj,active=self.rigid_body.currentText()=="ACTIVE"))
         self._advanced_edit("Rigid Body",edit)
+
+    def use_blender_unwrap(self):
+        if not self.ensure_mesh():return
+        self._advanced_edit("Blender UV Unwrap",lambda obj:obj.update(
+            set_uv_unwrap(obj,method=self.advanced_uv_method.currentText())
+        ))
+
+    def enable_ik_pole(self):
+        if not self.ensure_mesh():return
+        name=self.rig_bone.currentText()
+        position=[self.ik_x.value(),self.ik_y.value(),self.ik_z.value()]
+        self._advanced_edit("IK Pole",lambda obj:obj.update(
+            set_ik_pole(obj,name,position)
+        ))
+
+    def normalize_weights(self):
+        if not self.ensure_mesh():return
+        self._advanced_edit("Normalize Weights",lambda obj:obj.update(
+            normalize_skin_weights(obj)
+        ))
+
+    def make_branching_graph(self):
+        if not self.ensure_mesh():return
+        # Edits real Blender DAG branches, with an actual Join Geometry node.
+        offset=self.delta.value()
+        nodes=[
+          {"id":"left","type":"transform","inputs":["input"],"offset":[offset,0,0]},
+          {"id":"right","type":"transform","inputs":["input"],"offset":[-offset,0,0]},
+          {"id":"merged","type":"join","inputs":["left","right"]},
+        ]
+        self._advanced_edit("Branch Geometry Graph",lambda obj:obj.update(
+            set_geometry_dag(obj,nodes,"merged")
+        ))
+
+    def apply_sculpt_stroke(self):
+        if not self.ensure_mesh():return
+        chosen=self._selected_vertices()
+        if not chosen:
+            QMessageBox.information(self,"Sculpt Stroke","Select a mesh vertex first")
+            return
+        self._advanced_edit("Adaptive Sculpt Stroke",lambda obj:obj.update(
+            mesh=sculpt_stroke(obj,chosen,radius=self.sculpt_radius.value(),
+                               strength=self.sculpt_strength.value())
+        ))
 
     def adaptive_sculpt(self):
         if not self.ensure_mesh():return

@@ -149,6 +149,31 @@ for obj in spec["objects"]:
 # Studio scene remains an editable, bounded JSON contract.
 def apply_uv(obj_spec, target):
     mappings = obj_spec.get("uv")
+    settings = obj_spec.get("uv_unwrap")
+    if settings:
+        # Execute an actual Blender UV algorithm on constructed meshes, not a
+        # synthetic planar mapping. External process/scene contract validated
+        # inputs before reaching this GPL module.
+        bpy.ops.object.select_all(action="DESELECT")
+        target.select_set(True)
+        bpy.context.view_layer.objects.active=target
+        bpy.ops.object.mode_set(mode="EDIT")
+        bpy.ops.mesh.select_all(action="SELECT")
+        try:
+            if settings["method"]=="SMART_PROJECT":
+                result=bpy.ops.uv.smart_project(
+                    island_margin=settings["margin"],
+                    angle_limit=math.radians(settings["angle_limit"]))
+            else:
+                bpy.ops.uv.unwrap(
+                    method=settings["method"],margin=settings["margin"])
+            if "FINISHED" not in result:
+                raise RuntimeError("Blender UV unwrap returned no finished mapping")
+        finally:
+            bpy.ops.object.mode_set(mode="OBJECT")
+        if not target.data.uv_layers or not len(target.data.uv_layers.active.data):
+            raise RuntimeError("Blender did not create genuine UV coordinates")
+        return
     if mappings is None:
         return
     if obj_spec.get("uv_seams"):
@@ -161,6 +186,56 @@ def apply_uv(obj_spec, target):
             raise ValueError("UV face mapping did not match constructed mesh")
         for index, coords in zip(polygon.loop_indices, face_uv):
             layer.data[index].uv = coords
+
+
+def apply_geometry_dag(obj_spec,target):
+    """Build a real multi-branch, linked and merged Blender GeometryNodeTree."""
+    payload=obj_spec["geometry_nodes"]
+    tree=bpy.data.node_groups.new("Studio Directed Graph "+obj_spec["id"],"GeometryNodeTree")
+    if hasattr(tree,"interface"):
+        tree.interface.new_socket(name="Geometry",in_out="INPUT",socket_type="NodeSocketGeometry")
+        tree.interface.new_socket(name="Geometry",in_out="OUTPUT",socket_type="NodeSocketGeometry")
+    else:
+        tree.inputs.new("NodeSocketGeometry","Geometry")
+        tree.outputs.new("NodeSocketGeometry","Geometry")
+    input_node=tree.nodes.new("NodeGroupInput")
+    roots={"input":input_node.outputs["Geometry"]}
+    for entry in payload["nodes"]:
+        typ=entry["type"]
+        if typ=="join":
+            node=tree.nodes.new("GeometryNodeJoinGeometry")
+            for source in entry["inputs"]:
+                tree.links.new(roots[source],node.inputs["Geometry"])
+        elif typ=="transform":
+            node=tree.nodes.new("GeometryNodeTransform")
+            node.inputs["Translation"].default_value=entry["offset"]
+            tree.links.new(roots[entry["inputs"][0]],node.inputs["Geometry"])
+        elif typ=="subdivide":
+            node=tree.nodes.new("GeometryNodeSubdivideMesh")
+            node.inputs["Level"].default_value=entry["level"]
+            tree.links.new(roots[entry["inputs"][0]],node.inputs["Mesh"])
+        else:
+            node=tree.nodes.new("GeometryNodeSetPosition")
+            position=tree.nodes.new("GeometryNodeInputPosition")
+            separate=tree.nodes.new("ShaderNodeSeparateXYZ")
+            sine=tree.nodes.new("ShaderNodeMath");sine.operation="SINE"
+            amplitude=tree.nodes.new("ShaderNodeMath");amplitude.operation="MULTIPLY"
+            amplitude.inputs[1].default_value=entry["amplitude"]
+            combine=tree.nodes.new("ShaderNodeCombineXYZ")
+            tree.links.new(position.outputs["Position"],separate.inputs["Vector"])
+            tree.links.new(separate.outputs["X"],sine.inputs[0])
+            tree.links.new(sine.outputs[0],amplitude.inputs[0])
+            tree.links.new(amplitude.outputs[0],combine.inputs["Z"])
+            tree.links.new(combine.outputs["Vector"],node.inputs["Offset"])
+            tree.links.new(roots[entry["inputs"][0]],node.inputs["Geometry"])
+        node.label="Studio DAG "+entry["id"]
+        roots[entry["id"]]=(node.outputs.get("Geometry") or node.outputs.get("Mesh"))
+        if roots[entry["id"]] is None:
+            raise RuntimeError("Geometry DAG output socket was not created")
+    output=tree.nodes.new("NodeGroupOutput")
+    tree.links.new(roots[payload["output"]],output.inputs["Geometry"])
+    modifier=target.modifiers.new("TTG Branching Geometry Graph",type="NODES")
+    modifier.node_group=tree
 
 
 def apply_custom_geometry_graph(obj_spec,target):
@@ -231,6 +306,8 @@ def apply_geometry_nodes(obj_spec, target):
         return
     if settings.get("operation")=="graph":
         return apply_custom_geometry_graph(obj_spec,target)
+    if settings.get("operation")=="dag":
+        return apply_geometry_dag(obj_spec,target)
     tree = bpy.data.node_groups.new("Studio procedural " + obj_spec["id"], "GeometryNodeTree")
     if hasattr(tree, "interface"):
         tree.interface.new_socket(name="Geometry", in_out="INPUT", socket_type="NodeSocketGeometry")
@@ -319,6 +396,15 @@ def apply_rig(obj_spec, target):
         constraint=skeleton.pose.bones[bone["name"]].constraints.new("IK")
         constraint.target=empty
         constraint.chain_count=info["chain_count"]
+        if "pole" in info:
+            pole=bpy.data.objects.new(
+                "Studio IK Pole "+obj_spec["id"]+"."+bone["name"],None)
+            scene.collection.objects.link(pole)
+            pole.empty_display_type="SPHERE"
+            pole.empty_display_size=.10
+            pole.location=skeleton.matrix_world @ Vector(info["pole"])
+            constraint.pole_target=pole
+            constraint.pole_angle=math.radians(info["pole_angle"])
     return skeleton
 
 

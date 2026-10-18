@@ -26,7 +26,7 @@ def _local_reference_ids(obj: dict) -> set[str]:
 
 def validate_advanced_object(obj: dict, identifiers: set[str], *, frames: int) -> None:
     """Reject malformed UV, rigs, constraints, nodes and simulation before bpy."""
-    if obj.get("type") != "mesh" and any(k in obj for k in ("uv", "uv_seams", "armature", "geometry_nodes", "sculpt_detail")):
+    if obj.get("type") != "mesh" and any(k in obj for k in ("uv", "uv_unwrap", "uv_seams", "armature", "geometry_nodes", "sculpt_detail")):
         raise ValueError("Advanced mesh data requires converted mesh geometry")
     mesh = obj.get("mesh") if obj.get("type") == "mesh" else None
     if "uv" in obj:
@@ -41,6 +41,19 @@ def validate_advanced_object(obj: dict, identifiers: set[str], *, frames: int) -
                 if (not isinstance(coords, list) or len(coords) != 2 or
                     any(type(v) not in (int, float) or not math.isfinite(v) or abs(v)>100 for v in coords)):
                     raise ValueError("UV coordinates out of bounds")
+    if "uv_unwrap" in obj:
+        settings=obj["uv_unwrap"]
+        if not isinstance(settings,dict) or settings.get("method") not in (
+                "SMART_PROJECT","ANGLE_BASED","CONFORMAL"):
+            raise ValueError("Approved UV unwrap mode required")
+        margin=settings.get("margin")
+        angle=settings.get("angle_limit")
+        if (type(margin) not in (int,float) or not math.isfinite(margin)
+            or not 0<=margin<=.12 or type(angle) not in (int,float)
+            or not math.isfinite(angle) or not 1<=angle<=89):
+            raise ValueError("Invalid UV unwrap margin/angle")
+        if "uv" in obj:
+            raise ValueError("Automatic unwrap cannot overwrite authored UVs")
     if "uv_seams" in obj:
         if "uv" not in obj:
             raise ValueError("UV seams require authored UV coordinates")
@@ -84,6 +97,16 @@ def validate_advanced_object(obj: dict, identifiers: set[str], *, frames: int) -
                     coordinates(ik.get("target"))
                 except (ValueError,TypeError):
                     raise ValueError("IK target requires finite XYZ") from None
+                if "pole" in ik:
+                    point=ik["pole"]
+                    if (not isinstance(point,list) or len(point)!=3 or
+                        any(type(v) not in (int,float) or not math.isfinite(v)
+                            or abs(v)>2000 for v in point) or
+                        type(ik.get("pole_angle")) not in (int,float) or
+                        not math.isfinite(ik["pole_angle"]) or
+                        not -180<=ik["pole_angle"]<=180 or
+                        ik.get("chain_count",0)<2):
+                        raise ValueError("IK pole requires finite coordinate and 2-bone chain")
                 count=0
                 cursor=name
                 parents={item["name"]:item.get("parent") for item in bones
@@ -120,9 +143,39 @@ def validate_advanced_object(obj: dict, identifiers: set[str], *, frames: int) -
             raise ValueError("Constraint must target another valid scene object")
     geo=obj.get("geometry_nodes")
     if geo is not None:
-        if not isinstance(geo,dict) or geo.get("operation") not in ("transform", "wave", "graph"):
+        if not isinstance(geo,dict) or geo.get("operation") not in ("transform", "wave", "graph","dag"):
             raise ValueError("Only admitted geometry node operations may execute")
-        if geo["operation"]=="graph":
+        if geo["operation"]=="dag":
+            nodes=geo.get("nodes")
+            if not isinstance(nodes,list) or not 1<=len(nodes)<=24:
+                raise ValueError("Geometry DAG requires 1–24 bounded nodes")
+            refs={"input"}
+            for node in nodes:
+                if not isinstance(node,dict):
+                    raise ValueError("Geometry DAG node must be an object")
+                name=node.get("id")
+                kind=node.get("type")
+                sources=node.get("inputs")
+                if (not isinstance(name,str) or not 1<=len(name)<=32 or
+                    not name.replace("_","").isalnum() or name in refs or
+                    kind not in ("transform","subdivide","wave","join") or
+                    not isinstance(sources,list) or
+                    len(sources)!=(2 if kind=="join" else 1) or
+                    len(set(sources))!=len(sources) or any(
+                        type(ref) is not str or ref not in refs for ref in sources)):
+                    raise ValueError("Geometry DAG has invalid node/input or cycle")
+                if kind=="transform":_v3(node.get("offset"))
+                if kind=="subdivide" and (type(node.get("level")) is not int or
+                                          not 1<=node["level"]<=2):
+                    raise ValueError("Geometry DAG subdivision level invalid")
+                if kind=="wave" and (
+                    type(node.get("amplitude")) not in (int,float) or
+                    not math.isfinite(node["amplitude"]) or not 0<=node["amplitude"]<=2
+                ):raise ValueError("Geometry DAG wave strength invalid")
+                refs.add(name)
+            if geo.get("output") not in refs or geo.get("output")=="input":
+                raise ValueError("Geometry DAG output must reference an authored node")
+        elif geo["operation"]=="graph":
             steps=geo.get("steps")
             if not isinstance(steps,list) or not 1<=len(steps)<=8:
                 raise ValueError("Geometry graph requires 1–8 nodes")
