@@ -1,0 +1,48 @@
+name: Creative Studio Optional Cloud Video Provider
+
+on:
+  push:
+    branches: [studio/online-video-provider-20261018]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-contract:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 22
+    env:
+      QT_QPA_PLATFORM: offscreen
+      REPLICATE_API_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Runtime Qt system dependencies on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libopengl0 libxkbcommon-x11-0 libxcb-cursor0 libdbus-1-3 ffmpeg
+      - name: Install Python GUI dependencies only (no models)
+        run: python -m pip install PyQt6==6.10.0 Pillow==11.3.0
+      - name: Verify cloud protocol and GUI with NO network or billable calls
+        run: python -B scripts/test_online_video_provider.py
+      - name: Existing campaign editor regressions
+        run: python -B scripts/test_campaign_designer.py
+      - name: Prove no model assets were downloaded/committed
+        shell: bash
+        run: |
+          if git ls-files | grep -Ei '\\.(safetensors|ckpt|gguf|pt|pth)$'; then
+            echo "Unexpected model weights tracked in Studio" >&2
+            exit 1
+          fi

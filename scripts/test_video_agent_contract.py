@@ -47,8 +47,9 @@ def main():
         check(r.returncode==0 and json.loads(r.stdout)["schema"]=="ttg.creative.video-agent.v1",
               "Any AI can discover versioned shared tool contract")
         catalog=tool_catalog()
-        check(catalog["operations"]["video_generate"]["state"]=="not_admitted",
-              "Uninstalled generator is never claimed operational")
+        check(catalog["operations"]["video_generate"]["state"]=="online_opt_in" and
+              catalog["operations"]["video_local_install"]["state"]=="future_GT502_Spark",
+              "Cloud generation requires approval and local weights remain disabled")
         caps, info=job_cli(directory,{"task":"video_capabilities","jobId":"hello"},"caps")
         check(caps.returncode==0 and info["ok"] and "ffmpeg" in info["meta"],
               "Runtime video capabilities are observed")
@@ -79,9 +80,9 @@ def main():
               "Invalid scene duration fails closed")
         bad,reply=job_cli(directory,{"task":"video_generate","output":str(directory/"fake.mp4")},
                           "unsupported")
-        check(bad.returncode!=0 and "not admitted" in reply.get("error","")
+        check(bad.returncode!=0 and "explicit approval" in reply.get("error","")
           and not (directory/"fake.mp4").exists(),
-              "No fake FreeVideo generation on unapproved backend")
+              "Cloud generation cannot charge or fabricate results without approval")
 
         from PIL import Image
         pic=directory/"image.png"

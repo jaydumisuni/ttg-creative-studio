@@ -38,6 +38,7 @@ from ttg_image_lab_dialog import ImageLabDialog
 from ttg_visual_inspector_dialog import VisualInspectorDialog
 from ttg_mask_painter import MaskPainterDialog
 from ttg_video_lab_dialog import VideoLabDialog, VideoExportThread, VideoTrimDialog
+from ttg_online_video_dialog import OnlineVideoDialog
 from ttg_recovery import RecoveryStore
 from ttg_advanced_panel import AdvancedModePanel
 from ttg_asset_browser import AssetTemplateBrowser
@@ -184,6 +185,7 @@ class CreativeWorkspace(QWidget):
             ("Brush Mask Selected Image", self.brush_mask_selected_image),
             ("Add Audio Track", self.add_audio_track),
             ("Video Lab · Inspect / Import", self.open_video_lab),
+            ("Generate Online Video · Optional Paid", self.open_online_video),
             ("Edit Selected Video Timing", self.edit_selected_video_timing),
             ("Recover Autosave", self.recover_autosave),
             ("Remove Background", self.remove_background_into_project),
@@ -770,6 +772,19 @@ class CreativeWorkspace(QWidget):
             self.remember("add image")
             layer = self.action.add_image(self.project, path, 80, 80)
             self.select_layer_by_id(layer.id)
+
+    def open_online_video(self) -> None:
+        """Opt-in cloud inference; no local model and no Hunter connection."""
+        dialog = OnlineVideoDialog(import_callback=self.import_online_video, parent=self)
+        dialog.exec()
+
+    def import_online_video(self, path: Path) -> None:
+        """Treat cloud output as untrusted media until actual stream inspection."""
+        from ttg_video_media import probe_video
+        info = probe_video(path)
+        self.import_video_clip(path, info, include_audio=bool(info["audio_streams"]),
+                               copy_into_project=False)
+        self.status.setText("Cloud-generated video imported as a normal editable clip")
 
     def open_video_lab(self) -> None:
         """Standalone, model-free video inspection and editable timeline import."""
