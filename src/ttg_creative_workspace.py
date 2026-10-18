@@ -39,6 +39,7 @@ from ttg_visual_inspector_dialog import VisualInspectorDialog
 from ttg_mask_painter import MaskPainterDialog
 from ttg_video_lab_dialog import VideoLabDialog, VideoExportThread, VideoTrimDialog
 from ttg_online_video_dialog import OnlineVideoDialog
+from ttg_online_image_dialog import OnlineImageDialog
 from ttg_recovery import RecoveryStore
 from ttg_advanced_panel import AdvancedModePanel
 from ttg_asset_browser import AssetTemplateBrowser
@@ -185,6 +186,7 @@ class CreativeWorkspace(QWidget):
             ("Brush Mask Selected Image", self.brush_mask_selected_image),
             ("Add Audio Track", self.add_audio_track),
             ("Video Lab · Inspect / Import", self.open_video_lab),
+            ("Generate Online Image · Optional Paid", self.open_online_image),
             ("Generate Online Video · Optional Paid", self.open_online_video),
             ("Edit Selected Video Timing", self.edit_selected_video_timing),
             ("Recover Autosave", self.recover_autosave),
@@ -772,6 +774,11 @@ class CreativeWorkspace(QWidget):
             self.remember("add image")
             layer = self.action.add_image(self.project, path, 80, 80)
             self.select_layer_by_id(layer.id)
+
+    def open_online_image(self) -> None:
+        """Cloud model performs paid inference; image enters native editor."""
+        dialog=OnlineImageDialog(import_callback=self.import_image_lab_result,parent=self)
+        dialog.exec()
 
     def open_online_video(self) -> None:
         """Opt-in cloud inference; no local model and no Hunter connection."""
