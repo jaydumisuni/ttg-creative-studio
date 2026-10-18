@@ -29,3 +29,44 @@ CRITICAL: A test directory is not itself Ptah A06 authorization, E07 resident pr
 
 ## Qualification
 Tier 1 now: source/test GUI and provider protocol checks within Ptah staging, plus hosted Windows/Linux CI, using mock HTTP provider responses (not real generation). Tier 2 after external account activation: actual intentionally approved paid generation and image/video import quality review. Tier 3 after GT502/Spark arrives: opt-in local model installation and hardware proof, no 92 GiB model on KRATOS. Tier 4 before release: Ptah-authorized operational workspace (if requested), physical target-host GUI test, signed release and owner review. Never mark later tiers closed from Tier 1 evidence.
+
+
+## Follow-on acceptance after the #28 merge
+
+The merged image provider was retained without introducing a competing
+second implementation. Image requests now have a **distinct approval token**
+from video requests. Even if video billing is admitted, that cannot be used
+as the per-request approval for paid image generation. A returned cloud PNG
+is saved inside the **current saved editable Studio project** by default,
+then imported as a real image layer. GUI/save/reopen are covered by an
+independent simulated-provider round-trip test.
+
+One more direct Studio executable probe ran successfully in the actual
+Ptah checkout's Patrol-approved scratch directory:
+
+    /home/kratos/projects/Ptah-space/.workspace/scratch/creative-studio-main-20261018
+
+It executed 12 physical image/video job and artifact checks: observable
+image metadata, image resizing, native image enhancement, cloud capability
+discovery, timestamped storyboard, actual native Studio motion-project
+MP4 rendering, cloud-billing refusal for image and video and independent
+SHA-256 evidence. Evidence is
+`studio-ptah-workspace-proof.json` in that directory, with initial
+manifest SHA-256:
+`89e41ca85103e61f1a37f3aa0b48cb9f7345eeb6c440d5b41134248033c199be`.
+
+This is **real Studio process execution from a Ptah filesystem workspace
+directory**, but **NOT a production-enrolled Ptah Node or A05/A06 grant**.
+The earlier PR #28 staging evidence is retained; these observations do
+not convert either staging directory into production authority.
+
+Windows source-level recovery regression now compares the *canonical*
+path of a snapshot's original file, so Windows short-name/long-name
+aliases do not falsely reject a verified recovery. It still verifies
+that unsaved edits survived and the original project remained unchanged.
+
+Stage schedule: Tier 1 source/workspace and Windows/Linux image/video
+tests are now executable. Tier 2 genuine billed cloud-model generation
+must be explicitly authorized with a provider token. Tier 3 local model
+downloads await GT502/Spark. Tier 4 separately authorized Ptah resident
+workspace and physical signed desktop acceptance remain gated.

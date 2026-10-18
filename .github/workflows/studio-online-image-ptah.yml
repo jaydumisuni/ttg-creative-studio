@@ -2,7 +2,7 @@ name: Creative Studio Online Image and Video
 
 on:
   push:
-    branches: [studio/online-image-ptah-20261018]
+    branches: [main, studio/main-ptah-acceptance-20261018, studio/online-image-ptah-20261018]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -55,6 +55,8 @@ jobs:
         run: python -B scripts/test_video_agent_contract.py
       - name: Standalone video editing
         run: python -B scripts/test_standalone_video.py
+      - name: Native image enhancement, masking and canonical autosave recovery
+        run: python -B scripts/test_studio_completion.py
       - name: Campaign Designer regressions
         run: python -B scripts/test_campaign_designer.py
       - name: No tracked model weights

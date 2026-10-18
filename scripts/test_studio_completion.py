@@ -123,7 +123,8 @@ def execute():
         archive=recovery.snapshot(project,savedpath)
         recalled,origin=recovery.load(archive)
         verify("atomic recovery preserves unsaved project edits",
-               recalled.layers[0].transform.x==17 and origin==savedpath)
+               recalled.layers[0].transform.x==17 and origin is not None
+               and origin.resolve()==savedpath.resolve())
         verify("no original overwrite",TTGProject.load(savedpath).layers[0].transform.x==0)
         recovery.clear(savedpath)
         verify("explicit recovery clear",not recovery.pending())

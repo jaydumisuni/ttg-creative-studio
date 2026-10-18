@@ -65,6 +65,9 @@ def main():
         check(readiness()["local_checkpoint_installed_by_studio"] is False,
               "KRATOS image checkpoint not downloaded")
         denied(lambda:submit_image({"prompt":"phone"}),"approval")
+        from ttg_online_video_provider import APPROVAL as VIDEO_APPROVAL
+        denied(lambda:submit_image({"prompt":"phone","paid_approval":VIDEO_APPROVAL}),
+               "approval")
         denied(lambda:submit_image({"prompt":"phone","paid_approval":APPROVAL}),
                "REPLICATE_API_TOKEN")
         denied(lambda:validate_public_https("http://127.0.0.1/bad.png"),"HTTPS")
@@ -136,6 +139,40 @@ def main():
             check(hasattr(desktop,"open_online_image"),
                   "Standalone Studio Tools can open image generator")
             desktop.close()
+            from ttg_action_engine import ActionEngine
+            from ttg_project_schema import TTGProject
+            with tempfile.TemporaryDirectory(prefix="studio-cloud-image-project-") as owned:
+                owned=Path(owned)
+                project=ActionEngine().new_project("Cloud Image Import QA","image")
+                project_file=owned/"editable.ttgstudio.json"
+                project.save(project_file)
+                editor=CreativeWorkspace(owned)
+                editor.project=project
+                editor.project_path=project_file
+                editor._set_asset_root(owned)
+                assets=owned/"assets"/"image-lab"
+                cloud=OnlineImageDialog(import_callback=editor.import_image_lab_result,
+                                        destination_dir=assets)
+                cloud.prediction.setText("abcdefghijkl0001")
+                cloud._latest={"status":"succeeded","prediction_id":"abcdefghijkl0001"}
+                expected=assets/"online-abcdefghijkl0001.png"
+                with patch.object(cloud,"_start") as begin:
+                    cloud.save_image()
+                    check(begin.call_args.kwargs["destination"]==str(expected),
+                          "Cloud image saves inside current editable project by default")
+                assets.mkdir(parents=True,exist_ok=True)
+                Image.new("RGB",(64,48),(30,100,190)).save(expected)
+                cloud._completed("download",{"path":str(expected)})
+                check(editor.selected_layer() is not None and
+                      editor.selected_layer().type=="image",
+                      "Cloud result imports as an actual editable Studio image layer")
+                editor.save_project()
+                persisted=TTGProject.load(project_file)
+                check(persisted.layers and persisted.layers[0].type=="image",
+                      "Cloud-origin editable image survives save/reopen")
+                cloud.close()
+                editor.close()
+                app.processEvents()
         check("image_generate_online" in
               subprocess.run([sys.executable,"-B",str(ROOT/"src/ttg_creative_studio/cli.py"),
                               "--catalog"],cwd=ROOT,capture_output=True,text=True,timeout=15).stdout,
