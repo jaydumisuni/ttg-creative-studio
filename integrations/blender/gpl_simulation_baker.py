@@ -49,6 +49,19 @@ if kind in ("GAS","LIQUID"):
     domain.cache_frame_start=1
     domain.cache_frame_end=frames
     domain.cache_directory=str(dest/"fluid-cache")
+    # Fluid flows are deliberately disabled by the ordinary render bridge to
+    # prevent evaluation crashes. Activate only matching flow types inside this
+    # isolated version-qualified process.
+    flows=[]
+    for other in bpy.data.objects:
+        for candidate in other.modifiers:
+            if candidate.type=="FLUID" and candidate.fluid_type=="FLOW":
+                if candidate.flow_settings.flow_type == ("SMOKE" if kind=="GAS" else "LIQUID"):
+                    candidate.show_viewport=True
+                    candidate.show_render=False
+                    flows.append(other.name)
+    if not flows:
+        raise RuntimeError("Fluid simulation requires a real matching flow object")
     mod.show_viewport=True
     mod.show_render=False
     bpy.ops.object.select_all(action="DESELECT")
@@ -66,6 +79,7 @@ if kind in ("GAS","LIQUID"):
     if len(files)>10000 or sum(p.stat().st_size for p in files)>2*1024**3:
         raise RuntimeError("Fluid cache exceeds admitted disk budget")
     proof={"kind":kind,"status":"baked","frames":frames,
+           "active_flows":flows,
            "cache_files":len(files),
            "cache_bytes":sum(p.stat().st_size for p in files)}
 else:
