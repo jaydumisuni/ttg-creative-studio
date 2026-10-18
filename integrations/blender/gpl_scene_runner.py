@@ -351,6 +351,12 @@ def apply_rigid_body(obj_spec, target):
             modifier.flow_settings.flow_type=(
                 "SMOKE" if kind.startswith("SMOKE") else "LIQUID")
             modifier.flow_settings.flow_behavior="INFLOW"
+        # The older distro Blender used for CI can abort its embedded Python
+        # interpreter if an *unbaked* gas/liquid domain is evaluated by
+        # scene.frame_set(). Preserve editable settings without activating
+        # unsafe fluid evaluation. Bake/enable must be independently admitted.
+        modifier.show_viewport=False
+        modifier.show_render=False
         return
     bpy.ops.object.select_all(action="DESELECT")
     target.select_set(True)

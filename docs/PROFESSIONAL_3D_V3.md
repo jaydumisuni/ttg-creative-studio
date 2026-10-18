@@ -32,8 +32,11 @@ process bridge, and Studio retains the native editable scene JSON.
 6. **Cloth, collision and fluid modifiers**: native Qt selects real Blender
    cloth/collision or SMOKE/Liquid domain/flow properties. Blender runner
    constructs modifiers with bounded quality and 16–64 fluid resolution.
-   Building a saved modifier is **not evidence of baked physics**, good
-   numerical stability, or production fluid/collision simulation quality.
+   **Unbaked fluid modifiers are saved with viewport/render evaluation
+   disabled**, because older Blender builds crashed while evaluating them.
+   Users must separately qualify a compatible fluid bake before enabling
+   those modifiers. Building a saved modifier is **not evidence of baked
+   physics**, numerical stability, or production-quality simulation.
 
 ## Verification and release boundaries
 

@@ -235,6 +235,8 @@ def main():
                 "for bone in o.pose.bones for c in bone.constraints); "
                 "assert any(m.type=='CLOTH' for o in bpy.data.objects for m in o.modifiers); "
                 "assert len([m for o in bpy.data.objects for m in o.modifiers if m.type=='FLUID'])>=4; "
+                "assert all(not m.show_render and not m.show_viewport for o in bpy.data.objects "
+                "for m in o.modifiers if m.type=='FLUID'); "
                 "assert any(m.fluid_type=='DOMAIN' and m.domain_settings.domain_type=='GAS' "
                 "for o in bpy.data.objects for m in o.modifiers if m.type=='FLUID'); "
                 "assert any(m.fluid_type=='DOMAIN' and m.domain_settings.domain_type=='LIQUID' "
