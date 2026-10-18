@@ -1,0 +1,628 @@
+{
+  "version": "0.1.0",
+  "project_type": "motion",
+  "name": "TECHGUY ISP BOX / CINEMATIC 3D PRODUCT CONCEPT",
+  "canvas": {
+    "width": 1280,
+    "height": 720,
+    "fps": 20,
+    "duration": 5.0,
+    "background": "#040A14"
+  },
+  "brand": {
+    "id": "ttg_default",
+    "name": "THETECHGUY DIGITAL SOLUTIONS",
+    "website": "thetechguyds.com",
+    "slogan": "Fairytale Business \u2014 Make a wish, we sort it.",
+    "pillars": [
+      "SYSTEMS",
+      "TOOLS",
+      "ISP",
+      "WEB"
+    ],
+    "colors": {
+      "black": "#050614",
+      "cyan": "#00E5FF",
+      "purple": "#BC13FE",
+      "white": "#F7FAFF"
+    },
+    "locked_assets": {}
+  },
+  "assets": [],
+  "layers": [
+    {
+      "id": "true3d",
+      "type": "video",
+      "name": "Parametric 3D enclosure / camera orbit",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "path": "assets/ispbox_3d_source.mp4",
+        "start": 0,
+        "source_in": 0,
+        "source_out": 5.0,
+        "width": 1280,
+        "height": 720,
+        "speed": 1
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "brand_line",
+      "type": "text",
+      "name": "brand_line",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 84,
+        "y": 112,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "THETECHGUY  /  DIGITAL SOLUTIONS",
+        "size": 19,
+        "color": "#90CBDA",
+        "font_path": "/usr/share/fonts/truetype/lato/Lato-Bold.ttf",
+        "shadow": false
+      },
+      "effects": [],
+      "keyframes": {
+        "opacity": [
+          {
+            "time": 0,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 0.08,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 0.73,
+            "value": 1,
+            "easing": "ease_out"
+          }
+        ],
+        "position": [
+          {
+            "time": 0,
+            "value": [
+              68,
+              112
+            ],
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 0.08,
+            "value": [
+              68,
+              112
+            ],
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 0.88,
+            "value": [
+              84,
+              112
+            ],
+            "easing": "ease_out"
+          }
+        ]
+      },
+      "children": []
+    },
+    {
+      "id": "hero_1",
+      "type": "text",
+      "name": "hero_1",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 79,
+        "y": 228,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "ENGINEERED",
+        "size": 69,
+        "color": "#FAFCFF",
+        "font_path": "/usr/share/fonts/truetype/lato/Lato-Heavy.ttf",
+        "shadow": false
+      },
+      "effects": [],
+      "keyframes": {
+        "opacity": [
+          {
+            "time": 0,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 0.33,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 0.98,
+            "value": 1,
+            "easing": "ease_out"
+          }
+        ],
+        "position": [
+          {
+            "time": 0,
+            "value": [
+              57,
+              228
+            ],
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 0.33,
+            "value": [
+              57,
+              228
+            ],
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.1300000000000001,
+            "value": [
+              79,
+              228
+            ],
+            "easing": "ease_out"
+          }
+        ]
+      },
+      "children": []
+    },
+    {
+      "id": "hero_2",
+      "type": "text",
+      "name": "hero_2",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 79,
+        "y": 317,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "TO PERFORM.",
+        "size": 71,
+        "color": "#F4F7F5",
+        "font_path": "/usr/share/fonts/truetype/lato/Lato-Heavy.ttf",
+        "shadow": false
+      },
+      "effects": [],
+      "keyframes": {
+        "opacity": [
+          {
+            "time": 0,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 0.64,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.29,
+            "value": 1,
+            "easing": "ease_out"
+          }
+        ],
+        "position": [
+          {
+            "time": 0,
+            "value": [
+              54,
+              317
+            ],
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 0.64,
+            "value": [
+              54,
+              317
+            ],
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.44,
+            "value": [
+              79,
+              317
+            ],
+            "easing": "ease_out"
+          }
+        ]
+      },
+      "children": []
+    },
+    {
+      "id": "gold_rule",
+      "type": "shape",
+      "name": "Champagne titanium design rule",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 89,
+        "y": 431,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "shape": "rectangle",
+        "width": 238,
+        "height": 4,
+        "fill": "#C9A471"
+      },
+      "effects": [],
+      "keyframes": {
+        "opacity": [
+          {
+            "time": 0,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.22,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.85,
+            "value": 1,
+            "easing": "ease_in_out"
+          }
+        ]
+      },
+      "children": []
+    },
+    {
+      "id": "product",
+      "type": "text",
+      "name": "product",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 88,
+        "y": 464,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "TECHGUY   ISP BOX",
+        "size": 32,
+        "color": "#D6EAF0",
+        "font_path": "/usr/share/fonts/truetype/lato/Lato-Bold.ttf",
+        "shadow": false
+      },
+      "effects": [],
+      "keyframes": {
+        "opacity": [
+          {
+            "time": 0,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.15,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.7999999999999998,
+            "value": 1,
+            "easing": "ease_out"
+          }
+        ],
+        "position": [
+          {
+            "time": 0,
+            "value": [
+              70,
+              464
+            ],
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.15,
+            "value": [
+              70,
+              464
+            ],
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.95,
+            "value": [
+              88,
+              464
+            ],
+            "easing": "ease_out"
+          }
+        ]
+      },
+      "children": []
+    },
+    {
+      "id": "signature",
+      "type": "text",
+      "name": "signature",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 89,
+        "y": 518,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "70 x 70 x 25 MM  /  CNC ALUMINIUM CONCEPT",
+        "size": 18,
+        "color": "#9BAAB5",
+        "font_path": "/usr/share/fonts/truetype/lato/Lato-Regular.ttf",
+        "shadow": false
+      },
+      "effects": [],
+      "keyframes": {
+        "opacity": [
+          {
+            "time": 0,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.48,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 2.13,
+            "value": 1,
+            "easing": "ease_out"
+          }
+        ],
+        "position": [
+          {
+            "time": 0,
+            "value": [
+              71,
+              518
+            ],
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.48,
+            "value": [
+              71,
+              518
+            ],
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 2.2800000000000002,
+            "value": [
+              89,
+              518
+            ],
+            "easing": "ease_out"
+          }
+        ]
+      },
+      "children": []
+    },
+    {
+      "id": "category",
+      "type": "text",
+      "name": "category",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 89,
+        "y": 585,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "DIMENSIONAL PRODUCT FILM   //   2026",
+        "size": 15,
+        "color": "#75ABB9",
+        "font_path": "/usr/share/fonts/truetype/lato/Lato-Regular.ttf",
+        "shadow": false
+      },
+      "effects": [],
+      "keyframes": {
+        "opacity": [
+          {
+            "time": 0,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.82,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 2.47,
+            "value": 1,
+            "easing": "ease_out"
+          }
+        ],
+        "position": [
+          {
+            "time": 0,
+            "value": [
+              71,
+              585
+            ],
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 1.82,
+            "value": [
+              71,
+              585
+            ],
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 2.62,
+            "value": [
+              89,
+              585
+            ],
+            "easing": "ease_out"
+          }
+        ]
+      },
+      "children": []
+    },
+    {
+      "id": "site",
+      "type": "text",
+      "name": "site",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 88,
+        "y": 667,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "text": "THETECHGUYDS.COM",
+        "size": 16,
+        "color": "#DAE9EE",
+        "font_path": "/usr/share/fonts/truetype/lato/Lato-Bold.ttf",
+        "shadow": false
+      },
+      "effects": [],
+      "keyframes": {
+        "opacity": [
+          {
+            "time": 0,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 2.05,
+            "value": 0,
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 2.6999999999999997,
+            "value": 1,
+            "easing": "ease_out"
+          }
+        ],
+        "position": [
+          {
+            "time": 0,
+            "value": [
+              70,
+              667
+            ],
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 2.05,
+            "value": [
+              70,
+              667
+            ],
+            "easing": "ease_in_out"
+          },
+          {
+            "time": 2.8499999999999996,
+            "value": [
+              88,
+              667
+            ],
+            "easing": "ease_out"
+          }
+        ]
+      },
+      "children": []
+    }
+  ],
+  "audio_markers": [],
+  "export": {
+    "format": "mp4",
+    "quality": "1080p",
+    "codec": "h264"
+  }
+}
