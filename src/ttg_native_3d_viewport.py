@@ -23,6 +23,10 @@ from ttg_native_3d import (
     extrude_face, delete_faces, select_edge, validate_mesh, object_at_frame,
     set_keyframe, remove_keyframe,
 )
+from ttg_advanced_3d_core import (
+    uv_project, uv_transform, sculpt, add_bone, set_skin_weight,
+    add_constraint, set_procedural, set_physics,
+)
 
 def _rotate(v: list[float], angles: list[float]) -> list[float]:
     x,y,z=v
@@ -418,6 +422,83 @@ class Native3DModeler(QWidget):
         ):
             btn=QPushButton(name);btn.clicked.connect(action)
             properties.addWidget(btn)
+        properties.addWidget(QLabel("Advanced mesh sculpting"))
+        self.sculpt_mode=QComboBox()
+        self.sculpt_mode.addItems(["inflate","deflate","smooth"])
+        properties.addWidget(self.sculpt_mode)
+        self.sculpt_radius=QDoubleSpinBox()
+        self.sculpt_radius.setRange(.01,50)
+        self.sculpt_radius.setValue(2.5)
+        self.sculpt_strength=QDoubleSpinBox()
+        self.sculpt_strength.setRange(.01,2)
+        self.sculpt_strength.setValue(.1)
+        properties.addWidget(QLabel("Brush radius"))
+        properties.addWidget(self.sculpt_radius)
+        properties.addWidget(QLabel("Brush strength"))
+        properties.addWidget(self.sculpt_strength)
+        sculpt_button=QPushButton("Sculpt Selected Vertex")
+        sculpt_button.clicked.connect(self.apply_sculpt)
+        properties.addWidget(sculpt_button)
+
+        properties.addWidget(QLabel("UV face-corner editing"))
+        self.uv_axis=QComboBox()
+        self.uv_axis.addItems(["z","x","y"])
+        properties.addWidget(self.uv_axis)
+        self.uv_u=QDoubleSpinBox()
+        self.uv_v=QDoubleSpinBox()
+        for spin in (self.uv_u,self.uv_v):
+            spin.setRange(-20,20)
+            spin.setSingleStep(.05)
+        uvs=QHBoxLayout()
+        uvs.addWidget(self.uv_u)
+        uvs.addWidget(self.uv_v)
+        properties.addLayout(uvs)
+        for label,fn in (
+            ("Project UV Coordinates",self.project_uv),
+            ("Shift UV by U / V",self.shift_uv),
+            ("Set Selected Face Corner UV",self.edit_uv_corner),
+        ):
+            button=QPushButton(label)
+            button.clicked.connect(fn)
+            properties.addWidget(button)
+
+        properties.addWidget(QLabel("Rig and skin weights"))
+        self.rig_bone=QComboBox()
+        properties.addWidget(self.rig_bone)
+        for label,fn in (
+            ("Add Rig Bone",self.make_rig_bone),
+            ("Weight Selected Vertex",self.weight_vertex),
+            ("Key Selected Bone Rotation",self.key_bone),
+        ):
+            button=QPushButton(label);button.clicked.connect(fn)
+            properties.addWidget(button)
+
+        properties.addWidget(QLabel("Object constraints"))
+        self.constraint_target=QComboBox()
+        self.constraint_type=QComboBox()
+        self.constraint_type.addItems(["TRACK_TO","COPY_LOCATION"])
+        properties.addWidget(self.constraint_target)
+        properties.addWidget(self.constraint_type)
+        constrained=QPushButton("Constrain Selected Object")
+        constrained.clicked.connect(self.apply_constraint)
+        properties.addWidget(constrained)
+
+        properties.addWidget(QLabel("Procedural geometry nodes"))
+        self.node_op=QComboBox()
+        self.node_op.addItems(["transform","wave"])
+        properties.addWidget(self.node_op)
+        node_button=QPushButton("Add/Update Node Graph")
+        node_button.clicked.connect(self.apply_nodes)
+        properties.addWidget(node_button)
+
+        properties.addWidget(QLabel("Physics simulation"))
+        self.rigid_body=QComboBox()
+        self.rigid_body.addItems(["ACTIVE","PASSIVE"])
+        properties.addWidget(self.rigid_body)
+        simulation_button=QPushButton("Enable Rigid-Body Simulation")
+        simulation_button.clicked.connect(self.apply_simulation)
+        properties.addWidget(simulation_button)
+
         properties.addStretch(1)
         scroll=QScrollArea()
         scroll.setWidgetResizable(True)
@@ -472,6 +553,20 @@ class Native3DModeler(QWidget):
                 selected_light=max(0,min(selected_light,len(lights)-1))
                 self.light_picker.setCurrentIndex(selected_light)
                 self.light_energy.setValue(float(lights[selected_light].get("energy",400)))
+            targets = [item["id"] for item in self.scene["objects"]
+                       if self.scene["objects"] and
+                       item["id"] != self.scene["objects"][self.selected]["id"]]
+            target_selected = self.constraint_target.currentText()
+            self.constraint_target.clear()
+            self.constraint_target.addItems(targets)
+            if target_selected in targets:
+                self.constraint_target.setCurrentText(target_selected)
+            bones = self.scene["objects"][self.selected].get("armature",{}).get("bones",[]) if self.scene["objects"] else []
+            prior_bone = self.rig_bone.currentText()
+            self.rig_bone.clear()
+            self.rig_bone.addItems([b["name"] for b in bones])
+            if prior_bone in [b["name"] for b in bones]:
+                self.rig_bone.setCurrentText(prior_bone)
             self.frame_control.setMaximum(max(1,int(self.scene.get("frames",1))))
             self.viewport.frame=self.frame_control.value()
             self.viewport.set_scene(self.scene,self.selected,self.mode.currentText(),
@@ -701,7 +796,10 @@ class Native3DModeler(QWidget):
             QMessageBox.information(self,"3D","At least one scene object must remain")
             return
         self.snapshot()
-        self.scene["objects"].pop(self.selected)
+        deleted=self.scene["objects"].pop(self.selected)["id"]
+        for obj in self.scene["objects"]:
+            obj["constraints"]=[entry for entry in obj.get("constraints",[])
+                                if entry["target"]!=deleted]
         self.selected=max(0,self.selected-1)
         self.component=None
         self.commit()
@@ -716,7 +814,11 @@ class Native3DModeler(QWidget):
         self.snapshot()
         try:
             obj=self.scene["objects"][self.selected]
+            if "armature" in obj:
+                raise ValueError("Remove or rebind rig before changing vertex topology")
             obj["mesh"]=subdivide(obj["mesh"])
+            if "uv" in obj:
+                obj["uv"]=uv_project(obj["mesh"])
             self.component=None
             self.commit()
         except Exception as exc:
@@ -731,7 +833,11 @@ class Native3DModeler(QWidget):
         try:
             obj=self.scene["objects"][self.selected]
             oldcount=len(obj["mesh"]["faces"])
+            if "armature" in obj:
+                raise ValueError("Remove or rebind rig before changing vertex topology")
             obj["mesh"]=extrude_face(obj["mesh"],self.component,self.delta.value())
+            if "uv" in obj:
+                obj["uv"]=uv_project(obj["mesh"])
             self.component=len(obj["mesh"]["faces"])-1
             self.commit()
         except Exception as exc:
@@ -744,12 +850,120 @@ class Native3DModeler(QWidget):
         self.snapshot()
         try:
             obj=self.scene["objects"][self.selected]
+            if "armature" in obj:
+                raise ValueError("Remove or rebind rig before changing vertex topology")
             obj["mesh"]=delete_faces(obj["mesh"],[self.component])
+            if "uv" in obj:
+                obj["uv"]=uv_project(obj["mesh"])
             self.component=None
             self.commit()
         except Exception as exc:
             self.scene=self._undo.pop();self.refresh()
             QMessageBox.warning(self,"3D topology",str(exc))
+
+    def _advanced_edit(self, title, make_edit):
+        """Atomic scene edits, retaining Undo and Blender-schema validation."""
+        self.snapshot()
+        try:
+            make_edit(self.scene["objects"][self.selected])
+            self.commit()
+        except Exception as exc:
+            self.scene=self._undo.pop()
+            self.refresh()
+            QMessageBox.warning(self,title,str(exc))
+
+    def apply_sculpt(self):
+        if not self.ensure_mesh():return
+        selected=self._selected_vertices()
+        if not selected:
+            QMessageBox.information(self,"Sculpt","Select a vertex/edge/face first")
+            return
+        def edit(obj):
+            obj["mesh"]=sculpt(
+                obj["mesh"],selected[0],radius=self.sculpt_radius.value(),
+                strength=self.sculpt_strength.value(),mode=self.sculpt_mode.currentText()
+            )
+        self._advanced_edit("Sculpt",edit)
+
+    def project_uv(self):
+        if not self.ensure_mesh():return
+        self._advanced_edit("UV Projection",lambda obj: obj.update(
+            uv=uv_project(obj["mesh"],axis=self.uv_axis.currentText())
+        ))
+
+    def shift_uv(self):
+        if not self.ensure_mesh():return
+        def edit(obj):
+            if "uv" not in obj:raise ValueError("Project UVs first")
+            obj["uv"]=uv_transform(obj["uv"],translate=(self.uv_u.value(),self.uv_v.value()))
+        self._advanced_edit("UV Editing",edit)
+
+    def edit_uv_corner(self):
+        if not self.ensure_mesh():return
+        if self.mode.currentText()!="Face" or self.component is None:
+            QMessageBox.information(self,"UV","Select a face first")
+            return
+        def edit(obj):
+            if "uv" not in obj:raise ValueError("Project UVs first")
+            obj["uv"][self.component][0]=[self.uv_u.value(),self.uv_v.value()]
+        self._advanced_edit("UV Corner",edit)
+
+    def make_rig_bone(self):
+        if not self.ensure_mesh():return
+        def edit(obj):
+            existing=obj.get("armature",{}).get("bones",[])
+            name=f"Bone_{len(existing)+1}"
+            while name in {item["name"] for item in existing}:
+                name += "_"
+            obj.update(add_bone(obj,name,[0,0,0],[0,0,1+len(existing)*.25],
+                                parent=existing[-1]["name"] if existing else None))
+        self._advanced_edit("Armature",edit)
+
+    def weight_vertex(self):
+        if not self.ensure_mesh():return
+        indices=self._selected_vertices()
+        bone=self.rig_bone.currentText()
+        if not indices or not bone:
+            QMessageBox.information(self,"Skinning","Select a vertex and rig bone")
+            return
+        def edit(obj):
+            for vertex in indices:
+                obj.update(set_skin_weight(obj,vertex,bone,1.))
+        self._advanced_edit("Skin Weight",edit)
+
+    def key_bone(self):
+        name=self.rig_bone.currentText()
+        if not name:return
+        def edit(obj):
+            for bone in obj["armature"]["bones"]:
+                if bone["name"]==name:
+                    frames=bone.setdefault("keyframes",[])
+                    pose={"frame":self.frame_control.value(),
+                          "rotation":[0.,0.,round(self.delta.value()*20,3)]}
+                    frames[:]=[frame for frame in frames if frame["frame"]!=pose["frame"]]
+                    frames.append(pose)
+                    frames.sort(key=lambda frame:frame["frame"])
+                    return
+            raise ValueError("Bone no longer exists")
+        self._advanced_edit("Rig Animation",edit)
+
+    def apply_constraint(self):
+        target=self.constraint_target.currentText()
+        if not target:return
+        self._advanced_edit("Constraint",lambda obj: obj.update(add_constraint(
+            obj,target,kind=self.constraint_type.currentText()
+        )))
+
+    def apply_nodes(self):
+        if not self.ensure_mesh():return
+        self._advanced_edit("Geometry Nodes",lambda obj: obj.update(set_procedural(
+            obj,operation=self.node_op.currentText(),offset=[0,0,self.delta.value()]
+        )))
+
+    def apply_simulation(self):
+        def edit(obj):
+            obj.update(set_physics(obj,active=self.rigid_body.currentText()=="ACTIVE"))
+        self._advanced_edit("Rigid Body",edit)
 
     def undo(self):
         if not self._undo:return

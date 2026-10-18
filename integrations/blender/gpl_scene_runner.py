@@ -144,6 +144,139 @@ for obj in spec["objects"]:
         modifier.segments=4
         target.modifiers.new("Weighted normals",type="WEIGHTED_NORMAL")
 
+
+# Advanced features are confined to this GPL Blender subprocess. The source
+# Studio scene remains an editable, bounded JSON contract.
+def apply_uv(obj_spec, target):
+    mappings = obj_spec.get("uv")
+    if mappings is None:
+        return
+    layer = target.data.uv_layers.new(name="TTG Editable UV")
+    for polygon, face_uv in zip(target.data.polygons, mappings):
+        if len(polygon.loop_indices) != len(face_uv):
+            raise ValueError("UV face mapping did not match constructed mesh")
+        for index, coords in zip(polygon.loop_indices, face_uv):
+            layer.data[index].uv = coords
+
+
+def apply_geometry_nodes(obj_spec, target):
+    settings = obj_spec.get("geometry_nodes")
+    if not settings:
+        return
+    tree = bpy.data.node_groups.new("Studio procedural " + obj_spec["id"], "GeometryNodeTree")
+    if hasattr(tree, "interface"):
+        tree.interface.new_socket(name="Geometry", in_out="INPUT", socket_type="NodeSocketGeometry")
+        tree.interface.new_socket(name="Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
+    else:
+        tree.inputs.new("NodeSocketGeometry", "Geometry")
+        tree.outputs.new("NodeSocketGeometry", "Geometry")
+    entry = tree.nodes.new("NodeGroupInput")
+    result = tree.nodes.new("NodeGroupOutput")
+    edit = tree.nodes.new("GeometryNodeSetPosition")
+    tree.links.new(entry.outputs["Geometry"],edit.inputs["Geometry"])
+    tree.links.new(edit.outputs["Geometry"],result.inputs["Geometry"])
+    move = settings.get("offset", [0,0,0])
+    if settings["operation"] == "transform":
+        edit.inputs["Offset"].default_value = move
+    else:
+        # Wave is an actual procedural geometry-node network rather than
+        # baked vertices. Offset.z = sin(position.x * 6) * amplitude.
+        position = tree.nodes.new("GeometryNodeInputPosition")
+        split = tree.nodes.new("ShaderNodeSeparateXYZ")
+        multiplier = tree.nodes.new("ShaderNodeMath")
+        multiplier.operation = "MULTIPLY"
+        multiplier.inputs[1].default_value = 6.0
+        sine = tree.nodes.new("ShaderNodeMath")
+        sine.operation = "SINE"
+        amount = tree.nodes.new("ShaderNodeMath")
+        amount.operation = "MULTIPLY"
+        amount.inputs[1].default_value = settings.get("amplitude", .1)
+        xyz = tree.nodes.new("ShaderNodeCombineXYZ")
+        xyz.inputs["X"].default_value = move[0]
+        xyz.inputs["Y"].default_value = move[1]
+        tree.links.new(position.outputs["Position"], split.inputs["Vector"])
+        tree.links.new(split.outputs["X"], multiplier.inputs[0])
+        tree.links.new(multiplier.outputs[0], sine.inputs[0])
+        tree.links.new(sine.outputs[0], amount.inputs[0])
+        tree.links.new(amount.outputs[0], xyz.inputs["Z"])
+        tree.links.new(xyz.outputs["Vector"], edit.inputs["Offset"])
+    modifier=target.modifiers.new("TTG Procedural Geometry",type="NODES")
+    modifier.node_group=tree
+
+
+def apply_rig(obj_spec, target):
+    rig = obj_spec.get("armature")
+    if not rig:
+        return
+    arm = bpy.data.armatures.new("Studio skeleton " + obj_spec["id"])
+    skeleton = bpy.data.objects.new("Studio Rig " + obj_spec["id"], arm)
+    scene.collection.objects.link(skeleton)
+    # Bones and skin weights are authored in the mesh object's local coords.
+    skeleton.matrix_world = target.matrix_world.copy()
+    bpy.ops.object.select_all(action="DESELECT")
+    skeleton.select_set(True)
+    bpy.context.view_layer.objects.active = skeleton
+    bpy.ops.object.mode_set(mode="EDIT")
+    constructed = {}
+    for bone in rig["bones"]:
+        item = arm.edit_bones.new(bone["name"])
+        item.head = bone["head"]
+        item.tail = bone["tail"]
+        if bone.get("parent") is not None:
+            item.parent=constructed[bone["parent"]]
+        constructed[bone["name"]]=item
+    bpy.ops.object.mode_set(mode="OBJECT")
+    for bone in rig["bones"]:
+        target.vertex_groups.new(name=bone["name"])
+    for vi, weight_map in enumerate(rig["weights"]):
+        for name, strength in weight_map.items():
+            if strength > 0:
+                target.vertex_groups[name].add([vi],strength,"REPLACE")
+    modifier=target.modifiers.new("TTG Armature Deformation",type="ARMATURE")
+    modifier.object=skeleton
+    for bone in rig["bones"]:
+        pose=skeleton.pose.bones[bone["name"]]
+        pose.rotation_mode="XYZ"
+        for key in bone.get("keyframes", []):
+            pose.rotation_euler = [math.radians(v) for v in key["rotation"]]
+            pose.keyframe_insert(data_path="rotation_euler",frame=key["frame"])
+    return skeleton
+
+
+def apply_rigid_body(obj_spec, target):
+    setup=obj_spec.get("simulation")
+    if not setup:
+        return
+    bpy.ops.object.select_all(action="DESELECT")
+    target.select_set(True)
+    bpy.context.view_layer.objects.active=target
+    bpy.ops.rigidbody.object_add()
+    target.rigid_body.type=setup["type"]
+    target.rigid_body.mass=float(setup.get("mass",1))
+    target.rigid_body.friction=float(setup.get("friction",.5))
+    target.rigid_body.collision_shape="CONVEX_HULL"
+
+
+# Construct modifiers in deterministic stages and resolve targets only
+# once every scene object exists. Explicit whitelist prevents arbitrary bpy.
+for obj_spec in spec["objects"]:
+    if obj_spec.get("type")!="mesh":
+        continue
+    target=bpy.data.objects["Studio."+obj_spec["id"]]
+    apply_uv(obj_spec,target)
+    apply_geometry_nodes(obj_spec,target)
+    apply_rig(obj_spec,target)
+    apply_rigid_body(obj_spec,target)
+
+for obj_spec in spec["objects"]:
+    source=bpy.data.objects["Studio."+obj_spec["id"]]
+    for descriptor in obj_spec.get("constraints", []):
+        modifier=source.constraints.new(descriptor["type"])
+        modifier.target=bpy.data.objects["Studio."+descriptor["target"]]
+        if descriptor["type"]=="TRACK_TO":
+            modifier.track_axis="TRACK_NEGATIVE_Z"
+            modifier.up_axis="UP_Y"
+
 for index,light in enumerate(spec.get("lights",[])):
     data=bpy.data.lights.new("Studio softbox "+str(index),type="AREA")
     data.energy=float(light.get("energy",400))
