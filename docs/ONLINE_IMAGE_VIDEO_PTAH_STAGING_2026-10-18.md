@@ -70,3 +70,12 @@ tests are now executable. Tier 2 genuine billed cloud-model generation
 must be explicitly authorized with a provider token. Tier 3 local model
 downloads await GT502/Spark. Tier 4 separately authorized Ptah resident
 workspace and physical signed desktop acceptance remain gated.
+
+## Subsequent online masked-inpainting engineering
+
+The standalone Image Lab now also offers an explicitly paid, mask-guided
+FLUX Fill Pro online model route, preserving white=edit, black=retain
+with separate image and mask inputs. This operation does not require a
+KRATOS checkpoint and does not connect Hunter. See
+[ONLINE_IMAGE_INPAINT_V1.md](ONLINE_IMAGE_INPAINT_V1.md). No live paid
+model-backed image is claimed until authorized provider qualification.
