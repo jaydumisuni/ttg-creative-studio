@@ -197,8 +197,14 @@ def apply_custom_geometry_graph(obj_spec,target):
             tree.links.new(strength.outputs[0],combine.inputs["Z"])
             tree.links.new(combine.outputs["Vector"],node.inputs["Offset"])
         node.label="Studio Graph Node "+str(index+1)
-        tree.links.new(source,node.inputs["Geometry"])
-        source=node.outputs["Geometry"]
+        # Mesh subdivision uses named Mesh sockets; transform and
+        # Set Position use Geometry across supported Blender versions.
+        input_socket=(node.inputs.get("Geometry") or node.inputs.get("Mesh"))
+        output_socket=(node.outputs.get("Geometry") or node.outputs.get("Mesh"))
+        if input_socket is None or output_socket is None:
+            raise RuntimeError("Blender GeometryNodes type has no mesh/geometry sockets")
+        tree.links.new(source,input_socket)
+        source=output_socket
     exit_node=tree.nodes.new("NodeGroupOutput")
     tree.links.new(source,exit_node.inputs["Geometry"])
     modifier=target.modifiers.new("TTG Editable Geometry Graph",type="NODES")
