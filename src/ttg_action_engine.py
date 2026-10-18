@@ -47,6 +47,37 @@ class ActionEngine:
         project.layers.append(layer)
         return layer
 
+    def add_video(self, project: TTGProject, path: str, *,
+                  duration: float, width: int, height: int,
+                  x: float = 0, y: float = 0,
+                  source_in: float = 0, source_out: float | None = None,
+                  start: float = 0, speed: float = 1) -> Layer:
+        """Add an editable, trim-aware real video layer without decoding it."""
+        import math
+        values = (duration, source_in, start, speed)
+        if not all(math.isfinite(float(v)) for v in values):
+            raise ValueError("Video layer parameters must be finite")
+        source_out = duration if source_out is None else source_out
+        if not (0 <= source_in < source_out <= duration and start >= 0 and
+                0.25 <= speed <= 4 and width > 0 and height > 0):
+            raise ValueError("Invalid trim, start, speed or video dimensions")
+        layer = Layer(
+            id=new_id("video"), type="video", name=Path(path).stem,
+            transform=Transform(x=x, y=y, scale_x=min(1.0, project.canvas.width/width),
+                                scale_y=min(1.0, project.canvas.height/height)),
+            properties={"path":path,"start":start,"source_in":source_in,
+                        "source_out":source_out,"speed":speed,
+                        "width":width,"height":height},
+        )
+        # Preserve aspect ratio when fitting to project canvas.
+        scale = min(layer.transform.scale_x, layer.transform.scale_y)
+        layer.transform.scale_x = scale
+        layer.transform.scale_y = scale
+        project.layers.append(layer)
+        if project.project_type == "image":
+            project.project_type = "mixed"
+        return layer
+
     def duplicate_layer(self, project: TTGProject, layer_id: str) -> Layer:
         source = self.get_layer(project, layer_id)
         duplicate = deepcopy(source)
