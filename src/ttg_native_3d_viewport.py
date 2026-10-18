@@ -27,6 +27,11 @@ from ttg_advanced_3d_core import (
     uv_project, uv_transform, sculpt, add_bone, set_skin_weight,
     add_constraint, set_procedural, set_physics,
 )
+from ttg_pro_3d_core import (
+    unwrap_pack_faces, assign_uv_seams, paint_skin_weights,
+    set_multires, set_bone_ik, set_geometry_graph, set_extended_physics,
+    adaptive_sculpt,
+)
 
 def _rotate(v: list[float], angles: list[float]) -> list[float]:
     x,y,z=v
@@ -491,6 +496,77 @@ class Native3DModeler(QWidget):
         node_button.clicked.connect(self.apply_nodes)
         properties.addWidget(node_button)
 
+        properties.addWidget(QLabel("Professional UV and seam tools"))
+        for label,fn in (
+            ("Pack UV Face Islands",self.pack_uv),
+            ("Mark Selected Face Seams",self.mark_uv_seams),
+        ):
+            button=QPushButton(label);button.clicked.connect(fn)
+            properties.addWidget(button)
+
+        properties.addWidget(QLabel("Multiresolution sculpt detail"))
+        self.multires_levels=QSpinBox()
+        self.multires_levels.setRange(1,3)
+        properties.addWidget(self.multires_levels)
+        detail_button=QPushButton("Enable Multires Sculpt Levels")
+        detail_button.clicked.connect(self.enable_multires)
+        properties.addWidget(detail_button)
+        adapt=QPushButton("Adaptive Local Topology Sculpt")
+        adapt.clicked.connect(self.adaptive_sculpt)
+        properties.addWidget(adapt)
+
+        properties.addWidget(QLabel("Rig weight painting and IK"))
+        self.paint_mode=QComboBox()
+        self.paint_mode.addItems(["add","subtract","replace"])
+        properties.addWidget(self.paint_mode)
+        weight_paint=QPushButton("Paint Nearby Vertex Weights")
+        weight_paint.clicked.connect(self.paint_weights)
+        properties.addWidget(weight_paint)
+        self.ik_chain=QSpinBox()
+        self.ik_chain.setRange(1,32)
+        self.ik_x=QDoubleSpinBox()
+        self.ik_y=QDoubleSpinBox()
+        self.ik_z=QDoubleSpinBox()
+        for spin in (self.ik_x,self.ik_y,self.ik_z):
+            spin.setRange(-2000,2000)
+        properties.addWidget(QLabel("IK target XYZ / chain"))
+        row=QHBoxLayout()
+        for spin in (self.ik_x,self.ik_y,self.ik_z,self.ik_chain):
+            row.addWidget(spin)
+        properties.addLayout(row)
+        ik_button=QPushButton("Set IK on Selected Bone")
+        ik_button.clicked.connect(self.enable_ik)
+        properties.addWidget(ik_button)
+
+        properties.addWidget(QLabel("Editable Geometry Node Chain"))
+        self.graph_kind=QComboBox()
+        self.graph_kind.addItems(["transform","subdivide","wave"])
+        properties.addWidget(self.graph_kind)
+        graph_button=QPushButton("Append Geometry Graph Node")
+        graph_button.clicked.connect(self.append_graph_node)
+        properties.addWidget(graph_button)
+        self.graph_nodes=QListWidget()
+        self.graph_nodes.setMaximumHeight(105)
+        properties.addWidget(self.graph_nodes)
+        graph_buttons=QHBoxLayout()
+        up=QPushButton("Node ↑");down=QPushButton("Node ↓")
+        remove=QPushButton("Remove Node")
+        up.clicked.connect(lambda:self.move_graph_node(-1))
+        down.clicked.connect(lambda:self.move_graph_node(1))
+        remove.clicked.connect(self.remove_graph_node)
+        for btn in (up,down,remove):graph_buttons.addWidget(btn)
+        properties.addLayout(graph_buttons)
+
+        properties.addWidget(QLabel("Extended Blender physics"))
+        self.physics_kind=QComboBox()
+        self.physics_kind.addItems([
+            "CLOTH","COLLISION","SMOKE_DOMAIN","SMOKE_FLOW",
+            "LIQUID_DOMAIN","LIQUID_FLOW"])
+        properties.addWidget(self.physics_kind)
+        physics_button=QPushButton("Set Cloth / Fluid / Smoke Modifier")
+        physics_button.clicked.connect(self.apply_extended_physics)
+        properties.addWidget(physics_button)
+
         properties.addWidget(QLabel("Physics simulation"))
         self.rigid_body=QComboBox()
         self.rigid_body.addItems(["ACTIVE","PASSIVE"])
@@ -567,6 +643,16 @@ class Native3DModeler(QWidget):
             self.rig_bone.addItems([b["name"] for b in bones])
             if prior_bone in [b["name"] for b in bones]:
                 self.rig_bone.setCurrentText(prior_bone)
+            selected_graph_row=self.graph_nodes.currentRow()
+            self.graph_nodes.clear()
+            if self.scene["objects"]:
+                geo=self.scene["objects"][self.selected].get("geometry_nodes",{})
+                steps=geo.get("steps",[]) if geo.get("operation")=="graph" else []
+                self.graph_nodes.addItems([
+                    f"{i+1}. {item['type']}" for i,item in enumerate(steps)
+                ])
+                if steps:self.graph_nodes.setCurrentRow(
+                    max(0,min(selected_graph_row,len(steps)-1)))
             self.frame_control.setMaximum(max(1,int(self.scene.get("frames",1))))
             self.viewport.frame=self.frame_control.value()
             self.viewport.set_scene(self.scene,self.selected,self.mode.currentText(),
@@ -964,6 +1050,118 @@ class Native3DModeler(QWidget):
         def edit(obj):
             obj.update(set_physics(obj,active=self.rigid_body.currentText()=="ACTIVE"))
         self._advanced_edit("Rigid Body",edit)
+
+    def adaptive_sculpt(self):
+        if not self.ensure_mesh():return
+        selected=self._selected_vertices()
+        if not selected:
+            QMessageBox.information(self,"Topology Sculpt",
+                                    "Select a vertex, edge or face first")
+            return
+        def edit(obj):
+            if any(key in obj for key in ("uv","uv_seams","armature","sculpt_detail")):
+                raise ValueError(
+                    "Adaptive topology would invalidate UVs/skin; use it before "
+                    "UV mapping, weights or multires editing")
+            obj["mesh"]=adaptive_sculpt(
+                obj["mesh"],selected[0],radius=self.sculpt_radius.value(),
+                strength=self.sculpt_strength.value())
+        self._advanced_edit("Adaptive Sculpt",edit)
+
+    def move_graph_node(self,step):
+        index=self.graph_nodes.currentRow()
+        if index<0 or not self.ensure_mesh():return
+        def edit(obj):
+            graph=obj.get("geometry_nodes",{})
+            if graph.get("operation")!="graph":return
+            items=list(graph["steps"])
+            target=index+step
+            if not 0<=target<len(items):return
+            items[index],items[target]=items[target],items[index]
+            obj.update(set_geometry_graph(obj,items))
+        self._advanced_edit("Reorder Nodes",edit)
+        self.graph_nodes.setCurrentRow(index+step)
+
+    def remove_graph_node(self):
+        index=self.graph_nodes.currentRow()
+        if index<0 or not self.ensure_mesh():return
+        def edit(obj):
+            graph=obj.get("geometry_nodes",{})
+            if graph.get("operation")!="graph":return
+            steps=[x for i,x in enumerate(graph["steps"]) if i!=index]
+            if steps:obj.update(set_geometry_graph(obj,steps))
+            else:obj.pop("geometry_nodes",None)
+        self._advanced_edit("Remove Node",edit)
+
+    def pack_uv(self):
+        if not self.ensure_mesh():return
+        self._advanced_edit("Pack UV",lambda obj:obj.update(
+            uv=unwrap_pack_faces(obj["mesh"])
+        ))
+
+    def mark_uv_seams(self):
+        if not self.ensure_mesh():return
+        if self.mode.currentText()!="Face" or self.component is None:
+            QMessageBox.information(self,"UV Seams","Select a face first")
+            return
+        def edit(obj):
+            face=obj["mesh"]["faces"][self.component]
+            existing=obj.get("uv_seams",[])
+            seams={tuple(sorted(x)) for x in existing}
+            for index,value in enumerate(face):
+                seams.add(tuple(sorted((value,face[(index+1)%len(face)]))))
+            if "uv" not in obj:
+                obj["uv"]=unwrap_pack_faces(obj["mesh"])
+            obj.update(assign_uv_seams(obj,[list(x) for x in sorted(seams)]))
+        self._advanced_edit("UV Seams",edit)
+
+    def enable_multires(self):
+        if not self.ensure_mesh():return
+        self._advanced_edit("Multires",lambda obj:obj.update(
+            set_multires(obj,levels=self.multires_levels.value())
+        ))
+
+    def paint_weights(self):
+        if not self.ensure_mesh():return
+        selected=self._selected_vertices()
+        bone=self.rig_bone.currentText()
+        if not selected or not bone:
+            QMessageBox.information(self,"Paint Weights","Select vertex and rig bone")
+            return
+        self._advanced_edit("Paint Weights",lambda obj:obj.update(
+            paint_skin_weights(obj,vertex=selected[0],bone=bone,
+                               radius=self.sculpt_radius.value(),
+                               strength=self.sculpt_strength.value(),
+                               mode=self.paint_mode.currentText())
+        ))
+
+    def enable_ik(self):
+        bone=self.rig_bone.currentText()
+        if not bone:return
+        coords=[s.value() for s in (self.ik_x,self.ik_y,self.ik_z)]
+        self._advanced_edit("IK",lambda obj:obj.update(
+            set_bone_ik(obj,bone,coords,self.ik_chain.value())
+        ))
+
+    def append_graph_node(self):
+        if not self.ensure_mesh():return
+        kind=self.graph_kind.currentText()
+        def edit(obj):
+            geo=obj.get("geometry_nodes",{})
+            current=geo.get("steps",[]) if geo.get("operation")=="graph" else []
+            step=({"type":"transform","offset":[0,0,self.delta.value()]}
+                  if kind=="transform" else
+                  {"type":"subdivide","level":1} if kind=="subdivide" else
+                  {"type":"wave","amplitude":abs(self.delta.value())})
+            obj.update(set_geometry_graph(obj,[*current,step]))
+        self._advanced_edit("Geometry Graph",edit)
+
+    def apply_extended_physics(self):
+        if not self.ensure_mesh():return
+        kind=self.physics_kind.currentText()
+        self._advanced_edit("Physics",lambda obj:obj.update(
+            set_extended_physics(obj,kind=kind)
+        ))
 
     def undo(self):
         if not self._undo:return
