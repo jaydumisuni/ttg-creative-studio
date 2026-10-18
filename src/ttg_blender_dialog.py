@@ -12,9 +12,12 @@ import uuid
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (QComboBox, QDialog, QFileDialog, QHBoxLayout, QLabel,
-                             QMessageBox, QPlainTextEdit, QPushButton, QSpinBox, QVBoxLayout)
+                             QMessageBox, QPlainTextEdit, QPushButton, QSpinBox, QVBoxLayout,
+                             QTabWidget)
 
 from ttg_blender_engine import blender_status, isp_box_scene, render_scene, validate_scene
+from ttg_native_3d_viewport import Native3DModeler
+from ttg_native_3d import export_obj
 
 
 class BlenderRenderWorker(QThread):
@@ -38,7 +41,7 @@ class Studio3DLab(QDialog):
 
     def __init__(self, import_image=None, import_video=None, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Creative Studio · 3D Lab (Blender backend)")
+        self.setWindowTitle("Creative Studio · Native 3D Modeler + Blender Renderer")
         self.resize(940,700)
         self.import_image=import_image
         self.import_video=import_video
@@ -50,12 +53,18 @@ class Studio3DLab(QDialog):
         root.addWidget(self.status)
         self._refresh_status()
         root.addWidget(QLabel(
-            "3D scene: edit objects, locations, material metallic/roughness, "
-            "lights and camera as JSON. The resulting .blend stays editable in Blender."
+            "Native editable 3D: select objects, vertices, edges or faces; move, "
+            "subdivide and extrude. Blender remains the optional render backend."
         ))
+        self.tabs=QTabWidget()
+        self.modeler=Native3DModeler(isp_box_scene())
         self.editor=QPlainTextEdit(json.dumps(isp_box_scene(),indent=2))
-        self.editor.setToolTip("Editable 3D scene schema; no scripts or untrusted code")
-        root.addWidget(self.editor,2)
+        self.editor.setToolTip("Advanced editable 3D schema; no embedded scripts")
+        self.tabs.addTab(self.modeler,"Visual 3D Modeler")
+        self.tabs.addTab(self.editor,"Advanced Scene JSON")
+        self.modeler.scene_changed.connect(self._modeler_changed)
+        self.tabs.currentChanged.connect(self._tab_changed)
+        root.addWidget(self.tabs,3)
         controls=QHBoxLayout()
         self.engine=QComboBox()
         self.engine.addItems(["BLENDER_EEVEE_NEXT","CYCLES"])
@@ -83,7 +92,9 @@ class Studio3DLab(QDialog):
         preview.clicked.connect(lambda:self.start_render(still=True))
         movie=QPushButton("Render Cinematic · Blender")
         movie.clicked.connect(lambda:self.start_render(still=False))
-        for b in (preset,save,load,preview,movie):
+        obj=QPushButton("Export Geometry OBJ")
+        obj.clicked.connect(self.save_obj)
+        for b in (preset,save,load,obj,preview,movie):
             actions.addWidget(b)
         root.addLayout(actions)
         self.poster=QLabel("No Blender render yet")
@@ -104,6 +115,31 @@ class Studio3DLab(QDialog):
             delivered.addWidget(b)
         root.addLayout(delivered)
 
+    def _modeler_changed(self, scene: dict):
+        self.editor.setPlainText(json.dumps(scene,indent=2))
+        self.status.setText("Native 3D geometry updated · editable scene kept in sync")
+
+    def _tab_changed(self, index: int):
+        if index != 0:
+            return
+        try:
+            validate_scene(json.loads(self.editor.toPlainText()))
+            self.modeler.set_scene(json.loads(self.editor.toPlainText()))
+        except (ValueError,TypeError) as exc:
+            self.status.setText("Advanced scene JSON cannot synchronize: "+str(exc))
+            self.tabs.setCurrentIndex(1)
+
+    def save_obj(self):
+        try:
+            scene=self._scene()
+            target,_=QFileDialog.getSaveFileName(
+                self,"Export mesh geometry","geometry.obj","Wavefront geometry (*.obj)")
+            if not target:return
+            exported=export_obj(scene,target)
+            self.status.setText("Exported real editable mesh geometry to "+str(exported))
+        except Exception as exc:
+            QMessageBox.warning(self,"OBJ Export",str(exc))
+
     def _refresh_status(self):
         available=blender_status()
         self.status.setText(
@@ -114,13 +150,25 @@ class Studio3DLab(QDialog):
         )
 
     def reset(self):
-        self.editor.setPlainText(json.dumps(isp_box_scene(),indent=2))
+        scene=isp_box_scene()
+        self.editor.setPlainText(json.dumps(scene,indent=2))
+        self.modeler.set_scene(scene)
 
     def _scene(self, *, still=False):
         scene=json.loads(self.editor.toPlainText())
         scene["engine"]=self.engine.currentText()
         scene["samples"]=self.samples.value()
         scene["frames"]=1 if still else self.frames.value()
+        if still:
+            # The first-frame render is a derived copy, not a destructive
+            # edit of the user's authored animation track.
+            from ttg_native_3d import object_at_frame
+            for obj in scene["objects"]:
+                evaluated=object_at_frame(obj,1)
+                for field in ("location","rotation","scale"):
+                    if field in evaluated:
+                        obj[field]=evaluated[field].copy()
+                obj.pop("keyframes",None)
         return validate_scene(scene)
 
     def save_scene(self):
@@ -140,6 +188,7 @@ class Studio3DLab(QDialog):
         try:
             data=validate_scene(json.loads(Path(path).read_text(encoding="utf-8")))
             self.editor.setPlainText(json.dumps(data,indent=2))
+            self.modeler.set_scene(data)
             self.frames.setValue(data.get("frames",1))
             self.samples.setValue(data.get("samples",32))
             self.engine.setCurrentText(data.get("engine","BLENDER_EEVEE_NEXT"))
