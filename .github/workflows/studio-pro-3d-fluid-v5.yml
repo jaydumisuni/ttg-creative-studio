@@ -1,0 +1,68 @@
+name: Creative Studio Physical Fluid Simulation V5
+
+on:
+  push:
+    branches: [studio/pro-3d-v5-fluid-20261018]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/ttg_blender_simulation.py'
+      - 'integrations/blender/gpl_simulation_baker.py'
+      - 'scripts/test_simulation_fluid_v5.py'
+      - 'docs/PHYSICAL_3D_FLUID_V5.md'
+      - '.github/workflows/studio-pro-3d-fluid-v5.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  blender45-fluid:
+    name: Real Blender 4.5 LTS gas and liquid bake
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - name: Checkout standalone Studio source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install minimal dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg libegl1 libgl1 libopengl0 libxkbcommon-x11-0 libxcb-cursor0 libdbus-1-3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download official pinned Blender binary, verify official SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=4.5.14
+          stem=blender-${version}-linux-x64
+          url="https://download.blender.org/release/Blender4.5"
+          mkdir -p "$RUNNER_TEMP/ttg-fluid-blender"
+          cd "$RUNNER_TEMP/ttg-fluid-blender"
+          curl --fail --location --retry 2 --connect-timeout 20 --max-time 260 --silent --show-error "$url/$stem.tar.xz" -o "$stem.tar.xz"
+          curl --fail --location --retry 2 --max-time 30 --silent --show-error "$url/blender-$version.sha256" -o "checksums.sha256"
+          grep -F "$stem.tar.xz" checksums.sha256 | sha256sum --check -
+          tar -xJf "$stem.tar.xz"
+          rm -f "$stem.tar.xz"
+          executable="$RUNNER_TEMP/ttg-fluid-blender/$stem/blender"
+          test -x "$executable"
+          "$executable" --version | head -n 1
+          echo "TTG_STUDIO_BLENDER_EXECUTABLE=$executable" >> "$GITHUB_ENV"
+      - name: Physically bake and reopen gas fluid simulation
+        env:
+          TTG_FLUID_BAKE_KIND: GAS
+        run: python -B scripts/test_simulation_fluid_v5.py
+      - name: Physically bake and reopen liquid simulation
+        env:
+          TTG_FLUID_BAKE_KIND: LIQUID
+        run: python -B scripts/test_simulation_fluid_v5.py
+      - name: Remove ephemeral Blender binary and caches
+        if: always()
+        shell: bash
+        run: |
+          rm -rf "$RUNNER_TEMP/ttg-fluid-blender"

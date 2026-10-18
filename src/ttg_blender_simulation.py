@@ -49,7 +49,12 @@ def bake_simulation(blend: str | Path, destination: str | Path, *,
               "gpl_simulation_baker.py")
     if not runner.is_file():
         raise SimulationBakeError("Licensed isolated Blender baker is missing")
-    staging = dest.parent / (".ttg-bake-" + uuid.uuid4().hex)
+    # Fluid domains store an on-disk cache directory path in the .blend.
+    # Keeping the admitted destination fixed avoids invalidating that path
+    # through a final directory rename. On any failure this directory is
+    # removed, so partial cache files are never admitted.
+    staging = (dest if kind in ("GAS","LIQUID")
+               else dest.parent / (".ttg-bake-" + uuid.uuid4().hex))
     staging.mkdir(mode=0o700)
     try:
         cmd = [
@@ -77,7 +82,8 @@ def bake_simulation(blend: str | Path, destination: str | Path, *,
             raise SimulationBakeError("Blender did not independently confirm a bake")
         if output_file.stat().st_size < 100:
             raise SimulationBakeError("No saved baked Blender scene")
-        os.rename(staging, dest)
+        if staging != dest:
+            os.rename(staging, dest)
         return {**proof, "blend": str(dest/"baked.blend"),
                 "receipt": str(dest/"simulation-proof.json")}
     except Exception:
