@@ -12,6 +12,7 @@ if __package__ in (None, ""):
 from ttg_creative_studio.engine import run_image_job
 from ttg_creative_studio.engine.video_jobs import VIDEO_TASKS, run_video_job, tool_catalog
 from ttg_creative_studio.engine.image_jobs import CreativeJobError
+from ttg_online_image_provider import IMAGE_TASKS, run_image_cloud_job
 
 
 def _read_json(path: Path) -> Dict[str, Any]:
@@ -43,7 +44,12 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         job = _read_json(job_path)
-        result = run_video_job(job) if job.get("task") in VIDEO_TASKS else run_image_job(job)
+        if job.get("task") in VIDEO_TASKS:
+            result = run_video_job(job)
+        elif job.get("task") in IMAGE_TASKS:
+            result = run_image_cloud_job(job)
+        else:
+            result = run_image_job(job)
         result["jobPath"] = str(job_path)
         if result_path:
             _write_json(result_path, result)

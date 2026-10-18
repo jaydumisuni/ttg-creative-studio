@@ -24,6 +24,7 @@ from ttg_motion_exporter import MotionExporter
 from ttg_canvas_engine import RenderContext
 from ttg_project_schema import TTGProject
 from ttg_visual_understanding import LocalVisionServer
+from ttg_online_image_provider import state as cloud_image_state
 from ttg_online_video_provider import (
     availability as cloud_video_availability,
     submit_video, status_video, cancel_video, download_video,
@@ -87,6 +88,23 @@ def tool_catalog() -> dict[str, Any]:
                 "state": "online", "side_effects": "bounded new MP4",
                 "requires": ["options.prediction_id", "output"],
                 "description": "Download a successful real MP4; never overwrite files",
+            },
+            "image_generate_online": {
+                "state": "online_opt_in", "side_effects": "billable cloud generation",
+                "requires": ["options.prompt", "options.paid_approval"],
+                "description": "Replicate FLUX Schnell or FLUX Kontext Pro; no local model weights"
+            },
+            "image_generation_status": {
+                "state": "online", "side_effects": "none",
+                "requires": ["options.prediction_id"]
+            },
+            "image_generation_cancel": {
+                "state": "online", "side_effects": "cancel provider prediction",
+                "requires": ["options.prediction_id", "options.cancel_approval"]
+            },
+            "image_generation_download": {
+                "state": "online", "side_effects": "download verified new PNG",
+                "requires": ["options.prediction_id", "output"]
             },
             "video_local_install": {
                 "state": "future_GT502_Spark", "side_effects": "none",
@@ -291,6 +309,7 @@ def run_video_job(job: dict[str, Any]) -> dict[str, Any]:
                 "meta": {"catalog": tool_catalog(), "ffmpeg": ffmpeg,
                          "ffprobe": bool(shutil.which("ffprobe")),
                          "generation": provider_state,
+                         "image_generation": cloud_image_state(),
                          "local_video_generation": "awaiting_GT502_or_Spark"}}
     if task == "video_generate":
         reply = submit_video(options)

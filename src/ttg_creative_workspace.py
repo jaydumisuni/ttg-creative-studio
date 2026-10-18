@@ -35,6 +35,7 @@ from ttg_action_engine import ActionEngine
 from ttg_campaign_composer import CampaignBrief, compose_campaign
 from ttg_campaign_dialog import CampaignDesignerDialog
 from ttg_image_lab_dialog import ImageLabDialog
+from ttg_online_image_dialog import OnlineImageDialog
 from ttg_visual_inspector_dialog import VisualInspectorDialog
 from ttg_mask_painter import MaskPainterDialog
 from ttg_video_lab_dialog import VideoLabDialog, VideoExportThread, VideoTrimDialog
@@ -181,6 +182,7 @@ class CreativeWorkspace(QWidget):
         ]))
         toolbar.addWidget(self._menu_button("Tools", [
             ("Image Lab · Generate / Enhance", self.open_image_lab),
+            ("Online Image Generation · Optional Paid", self.open_online_image_lab),
             ("Visual Inspector · Analyze Image", self.open_visual_inspector),
             ("Brush Mask Selected Image", self.brush_mask_selected_image),
             ("Add Audio Track", self.add_audio_track),
@@ -495,6 +497,28 @@ class CreativeWorkspace(QWidget):
         self.refresh_all()
         self.autosave_snapshot()
         self.status.setText("Audio track added to project timeline")
+
+    def open_online_image_lab(self) -> None:
+        """Optional paid cloud image generation; no checkpoint on KRATOS."""
+        if self.project is None:
+            self.new_project()
+        if self.project_path is None:
+            self.save_project()
+        if self.project_path is None:
+            return
+        destination = self.project_path.parent / "assets" / "image-lab"
+        dialog = OnlineImageDialog(destination, self)
+        dialog.completed.connect(self._import_verified_cloud_image)
+        dialog.show()
+        self._online_image_lab_dialog = dialog
+
+    def _import_verified_cloud_image(self, filename: str) -> None:
+        """Keep asynchronous provider callbacks from terminating the Qt event loop."""
+        try:
+            self.import_image_lab_result(filename)
+        except Exception as exc:
+            QMessageBox.warning(self, "Cloud Image Import",
+                                "Saved PNG could not be imported: " + str(exc))
 
     def open_image_lab(self) -> None:
         if self.project is None:
