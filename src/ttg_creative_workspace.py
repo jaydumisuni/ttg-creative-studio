@@ -37,6 +37,7 @@ from ttg_campaign_dialog import CampaignDesignerDialog
 from ttg_image_lab_dialog import ImageLabDialog
 from ttg_visual_inspector_dialog import VisualInspectorDialog
 from ttg_mask_painter import MaskPainterDialog
+from ttg_video_lab_dialog import VideoLabDialog, VideoExportThread, VideoTrimDialog
 from ttg_recovery import RecoveryStore
 from ttg_advanced_panel import AdvancedModePanel
 from ttg_asset_browser import AssetTemplateBrowser
@@ -87,6 +88,7 @@ class CreativeWorkspace(QWidget):
         self.recovery_store = RecoveryStore()
         self._unsaved_identity = uuid.uuid4().hex
         self._image_lab_dialog = None
+        self._video_export_worker = None
         self._autosave_last = None
         self._build_ui()
         self._apply_theme()
@@ -145,6 +147,7 @@ class CreativeWorkspace(QWidget):
             ("Text", self.add_text),
             ("Shape", self.add_shape),
             ("Image", self.add_image),
+            ("Video Clip · Inspect / Import", self.open_video_lab),
             ("ISP Diagram", self.add_isp),
             ("Board Callout", self.add_board),
         ]))
@@ -180,6 +183,8 @@ class CreativeWorkspace(QWidget):
             ("Visual Inspector · Analyze Image", self.open_visual_inspector),
             ("Brush Mask Selected Image", self.brush_mask_selected_image),
             ("Add Audio Track", self.add_audio_track),
+            ("Video Lab · Inspect / Import", self.open_video_lab),
+            ("Edit Selected Video Timing", self.edit_selected_video_timing),
             ("Recover Autosave", self.recover_autosave),
             ("Remove Background", self.remove_background_into_project),
             ("Show Packs", self.show_pack_status),
@@ -244,7 +249,7 @@ class CreativeWorkspace(QWidget):
         self.canvas.layerSelected.connect(self.select_layer_by_id)
         self.canvas.layerMoved.connect(self.canvas_moved_layer)
         self.properties.propertyChanged.connect(self.apply_property_change)
-        self.timeline.timeChanged.connect(lambda t: self.status.setText(f"Timeline time: {t:.2f}s"))
+        self.timeline.timeChanged.connect(self.seek_timeline)
         self.advanced.effectRequested.connect(self.apply_effect)
         self.advanced.templateRequested.connect(self.load_template_by_id)
         self.advanced.previewRequested.connect(self.preview_still)
@@ -586,6 +591,11 @@ class CreativeWorkspace(QWidget):
             self.playback.set_project(self.project)
             self.status.setText("Still preview refreshed. Playback preview is now enabled for this version.")
 
+    def seek_timeline(self, time_seconds: float) -> None:
+        self.status.setText(f"Timeline time: {time_seconds:.2f}s")
+        if self.project is not None and self.still_preview_approved:
+            self.playback.seek(time_seconds)
+
     def try_playback_preview(self) -> None:
         if not self.still_preview_approved:
             QMessageBox.information(self, "Playback Preview", "Preview the still frame first. Playback is enabled after the still looks right.")
@@ -595,7 +605,8 @@ class CreativeWorkspace(QWidget):
     def validate_project(self, show_dialog: bool = True) -> bool:
         if self.project is None:
             return False
-        messages = self.validator.validate(self.project, self.project_root)
+        asset_root = self.project_path.resolve().parent if self.project_path else self.project_root
+        messages = self.validator.validate(self.project, asset_root)
         errors = [m for m in messages if m.level == "error"]
         self.info.clear()
         if not messages:
@@ -711,6 +722,7 @@ class CreativeWorkspace(QWidget):
                 return
             self.project_path = Path(path)
         self.project.save(self.project_path)
+        self._set_asset_root(self.project_path.resolve().parent)
         self.recovery_store.clear(self.project_path)
         self._autosave_last = None
         self.status.setText(f"Saved {self.project_path}")
@@ -759,6 +771,157 @@ class CreativeWorkspace(QWidget):
             layer = self.action.add_image(self.project, path, 80, 80)
             self.select_layer_by_id(layer.id)
 
+    def open_video_lab(self) -> None:
+        """Standalone, model-free video inspection and editable timeline import."""
+        dialog = VideoLabDialog(parent=self)
+        if dialog.exec() != dialog.DialogCode.Accepted:
+            return
+        if not dialog.metadata:
+            return
+        try:
+            self.import_video_clip(
+                Path(dialog.filename.text().strip()),
+                dialog.metadata,
+                timeline_start=dialog.project_start.value(),
+                trim_in=dialog.trim_in.value(),
+                trim_out=dialog.trim_out.value(),
+                speed=dialog.speed.value(),
+                copy_into_project=dialog.portable.isChecked(),
+                include_audio=dialog.import_audio.isChecked(),
+            )
+        except Exception as exc:
+            QMessageBox.warning(self, "Video Lab", str(exc))
+
+    def edit_selected_video_timing(self) -> None:
+        layer=self.selected_layer()
+        if layer is None or layer.type != "video":
+            QMessageBox.information(self, "Video Timing", "Select a video layer first.")
+            return
+        from ttg_video_media import probe_video
+        asset_root=self.project_path.resolve().parent if self.project_path else self.project_root
+        path=Path(layer.properties["path"])
+        source=path if path.is_absolute() else asset_root/path
+        try:
+            source_info=probe_video(source)
+            dialog=VideoTrimDialog(layer.properties,source_info["duration"],self)
+            if dialog.exec() != dialog.DialogCode.Accepted:
+                return
+            has_audio=any(m.get("clip_layer_id")==layer.id for m in self.project.audio_markers)
+            if has_audio and dialog.speed.value()!=1:
+                raise ValueError("Remove this clip's audio before changing speed from 1×")
+            self.remember("edit video trim")
+            layer.properties.update({
+                "start":dialog.start.value(), "source_in":dialog.trim_in.value(),
+                "source_out":dialog.trim_out.value(), "speed":dialog.speed.value()
+            })
+            if has_audio:
+                for marker in self.project.audio_markers:
+                    if marker.get("clip_layer_id")==layer.id:
+                        marker["start"]=dialog.start.value()
+                        marker["source_in"]=dialog.trim_in.value()
+                        marker["duration"]=dialog.trim_out.value()-dialog.trim_in.value()
+            self.project.canvas.duration=max(
+                self.project.canvas.duration,
+                dialog.start.value()+
+                (dialog.trim_out.value()-dialog.trim_in.value())/dialog.speed.value()
+            )
+            self.still_preview_approved=False
+            self.refresh_all()
+            self.autosave_snapshot()
+            self.status.setText("Video clip timing updated non-destructively")
+        except Exception as exc:
+            QMessageBox.warning(self,"Video Timing",str(exc))
+
+    def import_video_clip(
+        self, source: Path, metadata: dict, *, timeline_start: float = 0,
+        trim_in: float = 0, trim_out: float | None = None, speed: float = 1,
+        copy_into_project: bool = False, include_audio: bool = True
+    ) -> None:
+        """Add an editable real-media layer. Linking uses no duplicate storage."""
+        from ttg_video_media import probe_video
+        import hashlib
+        import os
+        import tempfile
+        source = source.expanduser().resolve(strict=True)
+        observed = probe_video(source)
+        if (observed["width"] != metadata["width"] or
+            observed["height"] != metadata["height"] or
+            observed["size_bytes"] != metadata["size_bytes"] or
+            observed["mtime_ns"] != metadata.get("mtime_ns")):
+            raise ValueError("Source video changed since inspection; inspect it again")
+        if self.project is None:
+            self.new_project()
+        if self.project is None:
+            return
+        source_out = observed["duration"] if trim_out is None else trim_out
+        if not (0 <= trim_in < source_out <= observed["duration"]):
+            raise ValueError("Video trim is outside the physical source")
+        if not (0.25 <= speed <= 4):
+            raise ValueError("Video speed must be 0.25–4×")
+        timeline_end = timeline_start + (source_out - trim_in) / speed
+        if timeline_start < 0 or timeline_end > 600:
+            raise ValueError("Trim clip to fit within the 600-second Studio timeline")
+        if self.project_path is None:
+            self.save_project()
+        if self.project_path is None:
+            return
+        root = self.project_path.resolve().parent
+        if copy_into_project:
+            folder = root / "assets" / "video"
+            folder.mkdir(parents=True, exist_ok=True)
+            # Avoid gigabyte-scale duplication when importing the same source.
+            digest = hashlib.sha256()
+            with source.open("rb") as handle:
+                for block in iter(lambda: handle.read(1024*1024), b""):
+                    digest.update(block)
+            dest = folder / (digest.hexdigest()[:20] + source.suffix.lower())
+            if dest.exists():
+                existing = hashlib.sha256()
+                with dest.open("rb") as handle:
+                    for chunk in iter(lambda: handle.read(1024*1024), b""):
+                        existing.update(chunk)
+                if existing.hexdigest() != digest.hexdigest():
+                    raise ValueError("A different media file already uses this asset identity")
+            else:
+                fd, staged = tempfile.mkstemp(prefix=".clip-", dir=folder)
+                try:
+                    with os.fdopen(fd, "wb") as target, source.open("rb") as origin:
+                        shutil.copyfileobj(origin, target, length=1024*1024)
+                        target.flush()
+                        os.fsync(target.fileno())
+                    os.replace(staged, dest)
+                finally:
+                    Path(staged).unlink(missing_ok=True)
+            source = dest
+        try:
+            reference = source.relative_to(root).as_posix()
+        except ValueError:
+            reference = str(source)
+        self.remember("import video clip")
+        self.project.canvas.duration = max(self.project.canvas.duration, timeline_end)
+        layer = self.action.add_video(
+            self.project, reference, duration=observed["duration"],
+            width=observed["width"], height=observed["height"],
+            source_in=trim_in, source_out=trim_out, start=timeline_start, speed=speed,
+        )
+        # Explicit source audio selection preserves the video's trim and timeline.
+        if include_audio and observed["audio_streams"] and speed == 1:
+            self.project.audio_markers.append({
+                "path": reference, "start": timeline_start,
+                "clip_layer_id": layer.id,
+                "source_in": trim_in,
+                "duration": (observed["duration"] if trim_out is None else trim_out) - trim_in,
+                "volume": 1.0
+            })
+        self.selected_layer_id = layer.id
+        self.still_preview_approved = False
+        self.refresh_all()
+        self.autosave_snapshot()
+        self.status.setText(
+            f"Video clip imported: {layer.name} · " +
+            ("portable media asset" if copy_into_project else "linked source, no duplicate")
+        )
+
     def add_asset_from_browser(self, path: str) -> None:
         if self.project is None:
             self.new_project()
@@ -777,7 +940,13 @@ class CreativeWorkspace(QWidget):
     def delete_layer(self) -> None:
         if self.project and self.selected_layer_id:
             self.remember("delete layer")
-            self.action.remove_layer(self.project, self.selected_layer_id)
+            removed_id = self.selected_layer_id
+            self.action.remove_layer(self.project, removed_id)
+            # Remove only the audio explicitly owned by the removed clip.
+            self.project.audio_markers = [
+                marker for marker in self.project.audio_markers
+                if marker.get("clip_layer_id") != removed_id
+            ]
             self.selected_layer_id = self.project.layers[0].id if self.project.layers else None
             self.refresh_all()
 
@@ -948,15 +1117,42 @@ class CreativeWorkspace(QWidget):
             self.status.setText(f"Exported {len(frames)} frames")
 
     def export_mp4(self) -> None:
+        """Export native video asynchronously without freezing the editor."""
+        if self._video_export_worker is not None and self._video_export_worker.isRunning():
+            QMessageBox.information(self, "Export MP4", "An MP4 export is already running.")
+            return
         if not self.project or not self.validate_project():
             return
         if not self.still_preview_approved:
             QMessageBox.information(self, "Export MP4", "Preview the still frame first.")
             return
-        path, _ = QFileDialog.getSaveFileName(self, "Export MP4", "ttg-export.mp4", "MP4 (*.mp4)")
-        if path:
-            if not path.lower().endswith(".mp4"):
-                path += ".mp4"
-            work_dir = Path(tempfile.gettempdir()) / "ttg_mp4_export"
-            self.export_service.export_mp4(self.project, path, work_dir)
-            self.status.setText(f"Exported {path}")
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export MP4", "ttg-export.mp4", "MP4 (*.mp4)"
+        )
+        if not path:
+            return
+        if not path.lower().endswith(".mp4"):
+            path += ".mp4"
+        from copy import deepcopy
+        snapshot = deepcopy(self.project)
+        asset_root = self.project_path.resolve().parent if self.project_path else self.project_root
+        scratch = Path(tempfile.gettempdir()) / "ttg_mp4_export"
+        self._video_export_worker = VideoExportThread(snapshot, asset_root, Path(path), scratch)
+        self._video_export_worker.completed.connect(self._video_export_complete)
+        self._video_export_worker.failed.connect(self._video_export_failed)
+        self.status.setText("Rendering MP4 in background. Editor remains responsive.")
+        self._video_export_worker.start()
+
+    def _video_export_complete(self, filename: str) -> None:
+        self.status.setText(f"Exported verified MP4: {filename}")
+
+    def _video_export_failed(self, message: str) -> None:
+        self.status.setText("Video export failed; original output preserved.")
+        QMessageBox.warning(self, "Video Export", message)
+
+    def closeEvent(self, event) -> None:
+        if self._video_export_worker is not None and self._video_export_worker.isRunning():
+            QMessageBox.information(self, "Video Export", "An MP4 export is still running.")
+            event.ignore()
+            return
+        super().closeEvent(event)

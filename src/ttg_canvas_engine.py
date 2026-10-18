@@ -69,7 +69,9 @@ class CanvasRenderer:
             self._draw_shape_layer(canvas, layer)
         elif layer.type == "particle":
             self._draw_particle_placeholder(canvas, layer)
-        elif layer.type in {"camera", "light", "audio", "video"}:
+        elif layer.type == "video":
+            self._draw_video_layer(canvas, layer, time)
+        elif layer.type in {"camera", "light", "audio"}:
             return
         elif layer.type in {"diagram_node", "connector_line", "measurement"}:
             self._draw_diagram_layer(canvas, layer)
@@ -143,6 +145,36 @@ class CanvasRenderer:
         canvas.alpha_composite(image, (x, y))
         if layer.properties.get("reflection"):
             self._draw_reflection(canvas, image, x, y, float(layer.properties.get("reflection_strength", 0.25)))
+
+    def _draw_video_layer(self, canvas: Image.Image, layer: Layer, time: float) -> None:
+        """Composite actual source frames, respecting edits and timeline timing.
+
+        Never substitute a placeholder video frame for an unreadable clip.
+        """
+        from ttg_video_media import video_frame, clip_source_time
+        media_time = clip_source_time(layer.properties, time)
+        if media_time is None:
+            return
+        path_string = layer.properties.get("path")
+        if not isinstance(path_string, str) or not path_string:
+            raise ValueError("Video layer has no media path")
+        source = self.context.resolve_asset(path_string)
+        image = video_frame(source, media_time)
+        image = self._apply_effects(image, layer.effects)
+        # Use authored dimensions so selection handles agree with actual video pixels.
+        width = max(1, int(float(layer.properties.get("width", image.width)) * layer.transform.scale_x))
+        height = max(1, int(float(layer.properties.get("height", image.height)) * layer.transform.scale_y))
+        if width * height > 16_000_000:
+            raise ValueError("Video layer size exceeds 16 MP canvas limit")
+        image = image.resize((width, height), Image.Resampling.LANCZOS)
+        if layer.transform.rotation_z:
+            image = image.rotate(layer.transform.rotation_z, expand=True,
+                                 resample=Image.Resampling.BICUBIC)
+        if layer.transform.opacity < 1:
+            image.putalpha(image.getchannel("A").point(
+                lambda p: int(p * layer.transform.opacity)
+            ))
+        canvas.alpha_composite(image, (int(layer.transform.x), int(layer.transform.y)))
 
     def _draw_text_layer(self, canvas: Image.Image, layer: Layer) -> None:
         text = str(layer.properties.get("text", layer.name))

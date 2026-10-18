@@ -40,6 +40,21 @@ class ProjectValidator:
                         path = Path(project_root) / path
                     if not path.exists():
                         messages.append(ValidationMessage("warning", f"Image file missing: {asset_path}", layer.id))
+            if layer.type == "video":
+                from ttg_video_media import clip_source_time
+                asset_path = layer.properties.get("path")
+                if not isinstance(asset_path, str) or not asset_path:
+                    messages.append(ValidationMessage("error", "Video layer has no file", layer.id))
+                elif project_root:
+                    clip_path = Path(asset_path)
+                    if not clip_path.is_absolute():
+                        clip_path = Path(project_root)/clip_path
+                    if not clip_path.is_file():
+                        messages.append(ValidationMessage("error", f"Video file missing: {asset_path}", layer.id))
+                try:
+                    clip_source_time(layer.properties, float(layer.properties.get("start",0)))
+                except (ValueError, TypeError, OverflowError):
+                    messages.append(ValidationMessage("error", f"Invalid video clip timings: {layer.name}", layer.id))
             for prop, frames in layer.keyframes.items():
                 last_time = -1.0
                 for frame in frames:

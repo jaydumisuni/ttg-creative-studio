@@ -4,13 +4,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-import tempfile
+from io import BytesIO
 
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QWidget
 
-from ttg_export_service import ExportService
+from ttg_canvas_engine import RenderContext
+from ttg_motion_exporter import MotionExporter
 from ttg_project_schema import TTGProject
 
 
@@ -51,10 +52,28 @@ class PlaybackPanel(QWidget):
         if self.project is None:
             return
         self.time += 1 / max(1, self.project.canvas.fps)
-        if self.time > self.project.canvas.duration:
+        if self.time >= self.project.canvas.duration:
             self.time = 0.0
-        temp = Path(tempfile.gettempdir()) / "ttg_playback_preview.png"
-        # Uses current motion renderer through export service path indirectly for still preview.
-        ExportService(self.project_root).export_png(self.project, temp)
-        pix = QPixmap(str(temp))
-        self.label.setPixmap(pix.scaled(self.label.size(), aspectRatioMode=1, transformMode=1))
+        self.seek(self.time)
+
+    def seek(self, seconds: float) -> None:
+        if self.project is None:
+            return
+        self.time = max(0.0, min(self.project.canvas.duration-0.0001, seconds))
+        try:
+            image = MotionExporter(RenderContext(self.project_root)).render_frame(
+                self.project, self.time
+            )
+            data = BytesIO()
+            image.save(data, format="PNG")
+            pix = QPixmap()
+            if not pix.loadFromData(data.getvalue(), "PNG"):
+                raise RuntimeError("Could not display rendered timeline frame")
+            self.label.setPixmap(pix.scaled(
+                self.label.size(),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            ))
+        except Exception as exc:
+            self.stop_playback()
+            self.label.setText(f"Playback unavailable: {exc}")

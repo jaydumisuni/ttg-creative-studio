@@ -72,15 +72,16 @@ class MotionExporter:
                 raise FileNotFoundError(f"Missing audio file: {path}")
             start = float(marker.get("start", 0))
             duration = float(marker.get("duration", project.canvas.duration-start))
+            source_in = float(marker.get("source_in", 0))
             volume = float(marker.get("volume", 1))
-            if (not all(math.isfinite(x) for x in (start,duration,volume))
-                    or start < 0 or duration <= 0 or not (0 <= volume <= 3)
+            if (not all(math.isfinite(x) for x in (start,duration,source_in,volume))
+                    or start < 0 or duration <= 0 or source_in < 0 or not (0 <= volume <= 3)
                     or start >= project.canvas.duration):
                 raise ValueError("Invalid audio start, duration or volume")
             args += ["-i", str(path)]
             delay_ms = int(start*1000)
             filters.append(
-                f"[{len(refs)+1}:a]atrim=duration={duration:.3f},"
+                f"[{len(refs)+1}:a]atrim=start={source_in:.3f}:duration={duration:.3f},"
                 f"asetpts=PTS-STARTPTS,volume={volume:.3f},"
                 f"adelay={delay_ms}:all=1[a{index}]"
             )
