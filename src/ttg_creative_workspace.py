@@ -778,8 +778,18 @@ class CreativeWorkspace(QWidget):
             self.select_layer_by_id(layer.id)
 
     def open_online_image(self) -> None:
-        """Cloud model performs paid inference; image enters native editor."""
-        dialog=OnlineImageDialog(import_callback=self.import_image_lab_result,parent=self)
+        """Cloud output belongs to the current saved project, not a random folder."""
+        if self.project is None:
+            self.new_project()
+        if self.project_path is None:
+            self.save_project()
+        if self.project_path is None:
+            return
+        target=self.project_path.resolve().parent/"assets"/"image-lab"
+        dialog=OnlineImageDialog(
+            import_callback=self.import_image_lab_result,parent=self,
+            destination_dir=target
+        )
         dialog.exec()
 
     def open_online_video(self) -> None:

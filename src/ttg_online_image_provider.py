@@ -16,9 +16,12 @@ import urllib.request
 
 from PIL import Image, ImageOps
 from ttg_online_video_provider import (
-    APPROVAL, VideoProviderError, NoRedirect, _json_request, _output_url,
+    VideoProviderError, NoRedirect, _json_request, _output_url,
     _token, _is_private_host, validate_public_https, PREDICTION,
 )
+
+# Image consent is separate from video consent to prevent cross-product approval reuse.
+APPROVAL = "APPROVE_PAID_IMAGE_GENERATION"
 
 IMAGE_MODELS = {
     "generate": "black-forest-labs/flux-schnell",

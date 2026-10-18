@@ -11,9 +11,8 @@ from PyQt6.QtWidgets import (
     QCheckBox,QComboBox,QDialog,QFileDialog,QFormLayout,QHBoxLayout,
     QLabel,QLineEdit,QMessageBox,QPlainTextEdit,QPushButton,QVBoxLayout,
 )
-from ttg_online_video_provider import APPROVAL
 from ttg_online_image_provider import (
-    readiness,submit_image,image_status,image_cancel,download_image,
+    APPROVAL, readiness,submit_image,image_status,image_cancel,download_image,
 )
 
 
@@ -46,8 +45,9 @@ class ImageCloudWorker(QThread):
 
 
 class OnlineImageDialog(QDialog):
-    def __init__(self,import_callback=None,parent=None):
+    def __init__(self,import_callback=None,parent=None,destination_dir:Path|None=None):
         super().__init__(parent)
+        self.destination_dir=Path(destination_dir) if destination_dir is not None else None
         self.setWindowTitle("Creative Studio · Online Image AI")
         self.resize(670,540)
         self.import_callback=import_callback
@@ -163,12 +163,25 @@ class OnlineImageDialog(QDialog):
     def save_image(self):
         if not self._latest or self._latest.get("status")!="succeeded":
             return
-        path,_=QFileDialog.getSaveFileName(self,"Save AI image",
-                                          "creative-generated.png","PNG (*.png)")
-        if not path:
-            return
-        if not path.lower().endswith(".png"):
-            path+=".png"
+        # When used from an editable Studio project, keep the downloaded PNG
+        # inside that project. Arbitrary Save As paths previously prevented
+        # native layer import and could leak assets outside the workspace.
+        if self.destination_dir is not None:
+            from ttg_online_video_provider import PREDICTION
+            ident=self.prediction.text().strip()
+            if not PREDICTION.fullmatch(ident):
+                self.log.appendPlainText("Invalid prediction ID")
+                return
+            self.destination_dir.mkdir(parents=True,exist_ok=True)
+            path=str(self.destination_dir/("online-"+ident+".png"))
+        else:
+            path,_=QFileDialog.getSaveFileName(
+                self,"Save AI image","creative-generated.png","PNG (*.png)"
+            )
+            if not path:
+                return
+            if not path.lower().endswith(".png"):
+                path+=".png"
         if Path(path).exists():
             QMessageBox.warning(self,"Choose new filename","Never overwrite an existing file.")
             return
