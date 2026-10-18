@@ -4,10 +4,14 @@ on:
   push:
     branches:
       - studio/blender-3d-20261018
+      - studio/native-3d-core-20261018
   pull_request:
     branches: [main]
     paths:
       - 'src/ttg_blender_*'
+      - 'src/ttg_native_3d.py'
+      - 'src/ttg_native_3d_viewport.py'
+      - 'scripts/test_native_3d.py'
       - 'src/ttg_creative_workspace.py'
       - 'integrations/blender/**'
       - 'scripts/test_blender_3d.py'
@@ -46,7 +50,9 @@ jobs:
           ffprobe -version | head -1
       - name: Install minimal Studio QA libraries (no large AI checkpoints)
         run: python -m pip install PyQt6==6.10.0 Pillow==11.3.0
-      - name: Validate scene edit and real Blender PBR render when available
+      - name: Qualify native viewport and editable mesh topology
+        run: python -B scripts/test_native_3d.py
+      - name: Validate edited native mesh through real Blender PBR render
         run: python -B scripts/test_blender_3d.py
       - name: Check core Campaign Designer regression
         run: python -B scripts/test_campaign_designer.py

@@ -20,7 +20,7 @@ import uuid
 SCHEMA = "ttg.studio.blender.scene.v1"
 MAX_OBJECTS = 96
 MAX_LIGHTS = 12
-ALLOWED = {"cube", "cylinder", "uv_sphere", "torus", "text"}
+ALLOWED = {"cube", "cylinder", "uv_sphere", "torus", "text", "mesh"}
 def bridge_path() -> Path:
     """Find standalone GPL bridge in source or PyInstaller onedir/onefile."""
     roots = [
@@ -84,6 +84,8 @@ def validate_scene(data: dict) -> dict:
     if not isinstance(objects, list) or not 1 <= len(objects) <= MAX_OBJECTS:
         raise ValueError("Scene must have 1–96 objects")
     identifiers = set()
+    total_vertices = 0
+    total_faces = 0
     for obj in objects:
         if not isinstance(obj, dict):
             raise ValueError("Object must be a dictionary")
@@ -110,8 +112,30 @@ def validate_scene(data: dict) -> dict:
         bevel=obj.get("bevel",0)
         if type(bevel) not in (int,float) or not math.isfinite(bevel) or not 0<=bevel<=2:
             raise ValueError("Invalid bevel amount")
+        track=obj.get("keyframes",[])
+        if not isinstance(track,list) or len(track)>64:
+            raise ValueError("At most 64 animation keyframes per object")
+        seen_frames=set()
+        for keyframe in track:
+            if not isinstance(keyframe,dict):
+                raise ValueError("Keyframe must be an object")
+            frame=keyframe.get("frame")
+            if type(frame) is not int or not 1<=frame<=frames or frame in seen_frames:
+                raise ValueError("Animation keyframe index duplicate or out of range")
+            seen_frames.add(frame)
+            for field in ("location","rotation","scale"):
+                transform=_vec(keyframe.get(field),3,f"{key}.{field}.keyframe")
+                if field=="scale" and any(x<=0 for x in transform):
+                    raise ValueError("Animation keyframe scale must be positive")
         if obj["type"] == "text" and not (isinstance(obj.get("text"),str) and 1<=len(obj["text"])<=160):
             raise ValueError("Text primitive requires bounded text")
+        if obj["type"] == "mesh":
+            from ttg_native_3d import validate_mesh
+            mesh=validate_mesh(obj.get("mesh"))
+            total_vertices += len(mesh["vertices"])
+            total_faces += len(mesh["faces"])
+            if total_vertices > 20_000 or total_faces > 20_000:
+                raise ValueError("3D scene exceeds bounded total mesh complexity")
     lights = data.get("lights", [])
     if not isinstance(lights, list) or len(lights)>MAX_LIGHTS:
         raise ValueError("Maximum 12 lights")

@@ -90,3 +90,16 @@ acceptance on actual ATHENA or future GT502/Spark remains distinct.
 This closes the external high-quality rendering backend gap. It does **not**
 claim that Creative Studio has a full embedded mesh-modeling viewport,
 Blender-equivalent physics simulation, or Blender's entire UI.
+
+
+## Native Creative Studio modeling extension (October 2026)
+
+The standalone 3D Lab now has a native interactive visual modeler with
+object/vertex/edge/face editing, editable mesh topology, scene materials,
+camera, lights, keyframed object transforms, Undo/Redo and OBJ export.
+Its scene JSON is still consumed by the **independent Blender GPL
+subprocess** for Cycles/EEVEE rendering.
+
+See [NATIVE_3D_MODELER_V1.md](NATIVE_3D_MODELER_V1.md). This native
+modeler is not full Blender feature parity; sculpting, rigs, UV tools,
+geometry nodes and advanced simulation remain in Blender.

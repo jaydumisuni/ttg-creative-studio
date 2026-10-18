@@ -98,6 +98,18 @@ for obj in spec["objects"]:
         bpy.ops.mesh.primitive_uv_sphere_add(segments=32,ring_count=16)
     elif kind=="torus":
         bpy.ops.mesh.primitive_torus_add(major_segments=64,minor_segments=12)
+    elif kind=="mesh":
+        # This GPL file executes separately inside Blender; the Studio
+        # application exchanges validated geometry using plain scene JSON.
+        geometry=obj["mesh"]
+        mesh=bpy.data.meshes.new("TTG editable mesh "+obj["id"])
+        mesh.from_pydata(geometry["vertices"], [], geometry["faces"])
+        mesh.update()
+        target=bpy.data.objects.new("Studio."+obj["id"],mesh)
+        scene.collection.objects.link(target)
+        bpy.ops.object.select_all(action="DESELECT")
+        target.select_set(True)
+        bpy.context.view_layer.objects.active=target
     elif kind=="text":
         bpy.ops.object.text_add()
         bpy.context.object.data.body=obj["text"]
@@ -111,6 +123,20 @@ for obj in spec["objects"]:
     target.rotation_euler=[math.radians(v) for v in obj.get("rotation",[0,0,0])]
     target.scale=obj.get("scale",[1,1,1])
     target.data.materials.append(material_for(obj))
+    for frame_spec in sorted(obj.get("keyframes",[]), key=lambda k:k["frame"]):
+        frame=int(frame_spec["frame"])
+        target.location=frame_spec["location"]
+        target.rotation_euler=[
+            math.radians(a) for a in frame_spec["rotation"]
+        ]
+        target.scale=frame_spec["scale"]
+        for property_name in ("location","rotation_euler","scale"):
+            target.keyframe_insert(data_path=property_name, frame=frame)
+    if obj.get("keyframes"):
+        first=sorted(obj["keyframes"],key=lambda k:k["frame"])[0]
+        target.location=first["location"]
+        target.rotation_euler=[math.radians(a) for a in first["rotation"]]
+        target.scale=first["scale"]
     bevel=float(obj.get("bevel",0))
     if bevel and kind in ("cube","cylinder"):
         modifier=target.modifiers.new("Machined edge bevel",type="BEVEL")

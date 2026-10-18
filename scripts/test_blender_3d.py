@@ -82,6 +82,25 @@ def main():
     rejected(changed,"lights")
     changed=json.loads(json.dumps(scene));changed["engine"]="UNTRUSTED_PLUGIN"
     rejected(changed,"EEVEE")
+    # Qualify the actual native mesh interchange through the same Blender
+    # physical render, not only validated JSON or a static primitive scene.
+    from ttg_native_3d import convert_primitive, extrude_face
+    convert_primitive(scene["objects"][1])
+    scene["objects"][1]["mesh"]=extrude_face(
+        scene["objects"][1]["mesh"], 0, .16
+    )
+    from ttg_native_3d import set_keyframe
+    mesh_obj=scene["objects"][1]
+    set_keyframe(mesh_obj,1,max_frame=scene["frames"])
+    mesh_obj["location"][0]+=0.5
+    set_keyframe(mesh_obj,3,max_frame=scene["frames"])
+    check(len(mesh_obj["keyframes"])==2 and
+          mesh_obj["keyframes"][1]["location"][0]!=
+          mesh_obj["keyframes"][0]["location"][0],
+          "Native object transform keyframes admitted for actual Blender animation")
+    check(validate_scene(scene)==scene and
+          len(scene["objects"][1]["mesh"]["faces"])>6,
+          "Native edited mesh admitted into Blender physical render")
     with tempfile.TemporaryDirectory(prefix="studio-3d-test-") as directory:
         folder=Path(directory)
         (folder/"source.ttg3d.json").write_text(json.dumps(scene))
