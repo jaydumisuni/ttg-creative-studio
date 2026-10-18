@@ -136,6 +136,12 @@ def validate_scene(data: dict) -> dict:
             total_faces += len(mesh["faces"])
             if total_vertices > 20_000 or total_faces > 20_000:
                 raise ValueError("3D scene exceeds bounded total mesh complexity")
+    # Advanced Studio mesh data is validated in native Python before it may
+    # reach the separately licensed Blender script. Cross-object constraints
+    # are resolved only after collecting *all* object identifiers.
+    from ttg_advanced_3d_core import validate_advanced_object
+    for item in objects:
+        validate_advanced_object(item, identifiers, frames=frames)
     lights = data.get("lights", [])
     if not isinstance(lights, list) or len(lights)>MAX_LIGHTS:
         raise ValueError("Maximum 12 lights")
