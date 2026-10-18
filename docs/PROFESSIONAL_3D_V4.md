@@ -39,3 +39,21 @@ Commercial release signing is an independent gate.
 
 No temporary test renders, duplicated weight files or donor checkout belong
 in the repository.
+
+## Isolated cloth simulation baking
+
+The 3D Lab now exposes **Bake Cloth Cache · Isolated Blender** only after a
+real Blender scene with a cloth object has rendered. It launches a separate
+Blender GPL worker via `src/ttg_blender_simulation.py` and accepts the run
+only if the physical cloth point-cache reports baked, a new `.blend` is
+saved, and a JSON digest receipt is emitted. The source scene is preserved;
+failed or crashed runs cannot claim completion. `test_simulation_bake.py`
+qualifies this in an actual separate Blender process on Linux CI, without
+running Blender on KRATOS.
+
+Gas/liquid cache baking is implemented as a separate *opt-in experimental*
+path that rejects Blender versions earlier than 4.2 and requires actual cache
+files and a saved `.blend` before reporting success. Blender 3.4's previously
+observed fluid evaluation crash means gas/liquid production acceptance is
+**not achieved** by this workflow. Complex collision systems and long-running
+production-quality simulations remain distinct from bounded cache existence.

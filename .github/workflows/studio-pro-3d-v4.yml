@@ -43,6 +43,8 @@ jobs:
           python -B scripts/test_advanced_3d.py
           python -B scripts/test_professional_3d.py
           python -B scripts/test_blender_3d.py
+      - name: Qualify isolated Blender cloth cache bake and fluid fail-closed guards
+        run: python -B scripts/test_simulation_bake.py
       - name: Blender remains an external GPL process
         shell: bash
         run: |

@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (QComboBox, QDialog, QFileDialog, QHBoxLayout, QLabe
                              QTabWidget)
 
 from ttg_blender_engine import blender_status, isp_box_scene, render_scene, validate_scene
+from ttg_blender_simulation import bake_simulation
 from ttg_native_3d_viewport import Native3DModeler
 from ttg_native_3d import export_obj
 
@@ -36,6 +37,26 @@ class BlenderRenderWorker(QThread):
             self.failed.emit(str(exc))
 
 
+class BlenderBakeWorker(QThread):
+    succeeded = pyqtSignal(object)
+    failed = pyqtSignal(str)
+
+    def __init__(self, scene_file: Path, destination: Path, object_id: str):
+        super().__init__()
+        self.scene_file = scene_file
+        self.destination = destination
+        self.object_id = object_id
+
+    def run(self):
+        try:
+            self.succeeded.emit(
+                bake_simulation(self.scene_file, self.destination,
+                                object_id=self.object_id, kind="CLOTH")
+            )
+        except Exception as exc:
+            self.failed.emit(str(exc))
+
+
 class Studio3DLab(QDialog):
     """Parametric scene editing, renderer selection, and Studio media import."""
 
@@ -46,6 +67,7 @@ class Studio3DLab(QDialog):
         self.import_image=import_image
         self.import_video=import_video
         self._worker=None
+        self._bake_worker=None
         self._result=None
         root=QVBoxLayout(self)
         self.status=QLabel()
@@ -97,6 +119,10 @@ class Studio3DLab(QDialog):
         for b in (preset,save,load,obj,preview,movie):
             actions.addWidget(b)
         root.addLayout(actions)
+        self.bake_cloth_button=QPushButton("Bake Cloth Cache · Isolated Blender")
+        self.bake_cloth_button.setEnabled(False)
+        self.bake_cloth_button.clicked.connect(self.start_cloth_bake)
+        root.addWidget(self.bake_cloth_button)
         self.poster=QLabel("No Blender render yet")
         self.poster.setMinimumHeight(175)
         self.poster.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -228,10 +254,60 @@ class Studio3DLab(QDialog):
         self.image_button.setEnabled(True)
         self.video_button.setEnabled(bool(result.get("film")))
         self.blend_button.setEnabled(True)
+        try:
+            has_cloth=any(o.get("simulation",{}).get("type")=="CLOTH"
+                          for o in self._scene()["objects"])
+        except (ValueError,TypeError,KeyError):
+            has_cloth=False
+        self.bake_cloth_button.setEnabled(has_cloth)
         self.status.setText("Blender produced editable .blend and verified physical render files.")
 
     def _failed(self, message):
         self.status.setText("3D render failed (no success claimed): "+message)
+
+    def start_cloth_bake(self):
+        if not self._result or not Path(self._result["blend"]).is_file():
+            self.status.setText("Render and save a real Blender scene before baking")
+            return
+        if self._bake_worker and self._bake_worker.isRunning():
+            self.status.setText("Isolated cloth bake is already running")
+            return
+        cloth=[o for o in self._scene()["objects"]
+               if o.get("simulation",{}).get("type")=="CLOTH"]
+        if not cloth:
+            self.status.setText("The current scene has no cloth simulation")
+            return
+        decision=QMessageBox.question(
+            self,"Bake Cloth in External Blender",
+            "Bake the selected cloth simulation in a separate bounded Blender "
+            "process and verify the saved cache? This creates a new output folder."
+        )
+        if decision!=QMessageBox.StandardButton.Yes:
+            return
+        parent=QFileDialog.getExistingDirectory(
+            self,"Select parent directory for newly baked scene")
+        if not parent:return
+        dest=Path(parent)/("ttg-cloth-bake-"+uuid.uuid4().hex[:10])
+        self.bake_cloth_button.setEnabled(False)
+        self._bake_worker=BlenderBakeWorker(
+            Path(self._result["blend"]),dest,cloth[0]["id"]
+        )
+        self._bake_worker.succeeded.connect(self._baked)
+        self._bake_worker.failed.connect(self._bake_failed)
+        self._bake_worker.finished.connect(
+            lambda:self.bake_cloth_button.setEnabled(True)
+        )
+        self.status.setText("External cloth point-cache bake running; no success assumed")
+        self._bake_worker.start()
+
+    def _baked(self, receipt: dict):
+        self.status.setText(
+            "Physically baked cloth cache verified. Saved Blender file: "+
+            receipt["blend"]
+        )
+
+    def _bake_failed(self, message: str):
+        self.status.setText("Cloth bake not admitted: "+message)
 
     def use_image(self):
         if self._result and self.import_image:
@@ -251,8 +327,9 @@ class Studio3DLab(QDialog):
         subprocess.Popen([status["executable"],self._result["blend"]])
 
     def closeEvent(self,event):
-        if self._worker and self._worker.isRunning():
-            self.status.setText("3D rendering active; finish the render before closing.")
+        if ((self._worker and self._worker.isRunning()) or
+            (self._bake_worker and self._bake_worker.isRunning())):
+            self.status.setText("3D Blender execution active; finish it before closing.")
             event.ignore()
             return
         super().closeEvent(event)
