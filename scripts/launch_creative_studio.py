@@ -33,14 +33,51 @@ def main() -> int:
         }))
         return 0
     if "--qualify-gui" in sys.argv:
+        import faulthandler
         import json
+        import os
         position = sys.argv.index("--qualify-gui")
-        if len(sys.argv) != position + 2:
-            raise ValueError("--qualify-gui requires one empty proof directory")
-        from ttg_frozen_gui_probe import qualify_gui
-        report = qualify_gui(Path(sys.argv[position + 1]))
-        print(json.dumps({"result": report["result"], "checks": len(report["checks"])}))
-        return 0
+        proof_dir = Path(sys.argv[position + 1]) if len(sys.argv) > position+1 else None
+        if proof_dir is None or not proof_dir.is_dir() or list(proof_dir.iterdir()):
+            # Existing proof must never be overwritten, including transient
+            # diagnostics for a failed second invocation.
+            return 3
+        diag = proof_dir / "gui-failure.txt"
+        stage = proof_dir / "gui-stage.txt"
+        stack = proof_dir / "gui-hang-stack.txt"
+        old_stage = os.environ.get("TTG_STUDIO_GUI_STAGE_FILE")
+        try:
+            stage.write_text("launcher-entered\n", encoding="utf-8")
+            os.environ["TTG_STUDIO_GUI_STAGE_FILE"] = str(stage)
+            with stack.open("w", encoding="utf-8") as trace:
+                faulthandler.dump_traceback_later(45, file=trace, repeat=False)
+                try:
+                    if len(sys.argv) != position + 2:
+                        raise ValueError("--qualify-gui needs exactly one proof directory")
+                    # Import must be within this boundary: a missing PyInstaller
+                    # module must not show a modal traceback on unattended CI.
+                    from ttg_frozen_gui_probe import qualify_gui
+                    report = qualify_gui(proof_dir)
+                finally:
+                    faulthandler.cancel_dump_traceback_later()
+            # Remove only these transient QA trace files on success;
+            # immutable four-file evidence receipt remains unchanged.
+            stage.unlink(missing_ok=True)
+            stack.unlink(missing_ok=True)
+            print(json.dumps({"result": report["result"], "checks": len(report["checks"])}))
+            return 0
+        except Exception as exc:
+            if not diag.exists():
+                diag.write_text(
+                    type(exc).__name__ + ": " + str(exc)[:900] + "\n",
+                    encoding="utf-8",
+                )
+            return 3
+        finally:
+            if old_stage is None:
+                os.environ.pop("TTG_STUDIO_GUI_STAGE_FILE", None)
+            else:
+                os.environ["TTG_STUDIO_GUI_STAGE_FILE"] = old_stage
     return run()
 
 
