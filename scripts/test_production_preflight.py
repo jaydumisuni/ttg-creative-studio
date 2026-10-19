@@ -122,7 +122,12 @@ def main():
     for token in ("unins000.exe", "TTG Creative Studio.exe", "--self-check",
                   "/VERYSILENT", "Start-Process"):
         assert token in windows_script, token
-    passed.append("CI exercises real Windows install+smoke+uninstall")
+    assert "Invoke-BoundedInstallerStep" in windows_script
+    assert windows_script.count("Invoke-BoundedInstallerStep -FilePath") == 4
+    assert "WaitForExit($TimeoutSeconds * 1000)" in windows_script
+    assert "Stop-Process -Id $process.Id -Force" in windows_script
+    assert " -Wait -PassThru" not in windows_script
+    passed.append("CI exercises bounded real Windows install+GUI+smoke+uninstall")
     print(json.dumps({"result": "PASS", "checks": len(passed),
                       "evidence": passed}, indent=2))
 
