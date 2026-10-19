@@ -42,7 +42,16 @@ $proof = Join-Path $env:RUNNER_TEMP "studio-installed-gui-proof-windows"
 if (Test-Path -LiteralPath $proof) { throw "Existing GUI proof path; will not overwrite" }
 New-Item -ItemType Directory -Path $proof -ErrorAction Stop | Out-Null
 $guiArg = '--qualify-gui "' + $proof + '"'
-Invoke-BoundedInstallerStep -FilePath $app -Arguments $guiArg -Label "Installed GUI qualification" -TimeoutSeconds 120
+try {
+    Invoke-BoundedInstallerStep -FilePath $app -Arguments $guiArg -Label "Installed GUI qualification" -TimeoutSeconds 120
+} catch {
+    $diagnostic = Join-Path $proof "gui-failure.txt"
+    if (Test-Path -LiteralPath $diagnostic) {
+        Write-Host "Studio GUI qualification diagnostic:"
+        Get-Content -LiteralPath $diagnostic | Write-Host
+    }
+    throw
+}
 & python -B (Join-Path $projectRoot "scripts\verify_frozen_gui_proof.py") $proof
 if ($LASTEXITCODE -ne 0) { throw "Installed GUI proof has invalid artifacts or hashes" }
 

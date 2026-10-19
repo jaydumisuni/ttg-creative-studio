@@ -47,6 +47,20 @@ def main():
                     raise AssertionError("Missing font glyphs incorrectly passed GUI approval")
             assert not list(missing_font.iterdir())
 
+        # Frozen windowed executables must return a bounded error receipt
+        # rather than displaying a modal traceback and hanging CI.
+        from unittest.mock import patch as mock_patch
+        import launch_creative_studio
+        with tempfile.TemporaryDirectory(prefix="ttg-gui-diagnostic-") as error_dir:
+            with mock_patch.object(
+                sys, "argv", ["TTG Creative Studio", "--qualify-gui", error_dir]
+            ), mock_patch("ttg_frozen_gui_probe.qualify_gui",
+                         side_effect=AssertionError("Unreadable/missing Windows UI font")):
+                assert launch_creative_studio.main() == 3
+            assert "Unreadable/missing Windows UI font" in (
+                Path(error_dir) / "gui-failure.txt"
+            ).read_text()
+
         # A fresh operation must never overwrite existing proof artifacts.
         second = subprocess.run(
             [sys.executable, "-B", str(ROOT / "scripts" / "launch_creative_studio.py"),
@@ -72,6 +86,7 @@ def main():
         "reject replacing an existing proof",
         "reject image tampering",
         "reject unreadable Windows UI font glyphs",
+        "windowed CI saves non-modal GUI failure diagnostic",
     ]}, indent=2))
 
 

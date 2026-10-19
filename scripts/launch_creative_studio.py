@@ -38,7 +38,21 @@ def main() -> int:
         if len(sys.argv) != position + 2:
             raise ValueError("--qualify-gui requires one empty proof directory")
         from ttg_frozen_gui_probe import qualify_gui
-        report = qualify_gui(Path(sys.argv[position + 1]))
+        proof_dir = Path(sys.argv[position + 1])
+        try:
+            report = qualify_gui(proof_dir)
+        except Exception as exc:
+            # Windowed PyInstaller executables otherwise show a modal error
+            # popup with no interactive user on CI, hanging Start-Process.
+            # Store only a bounded, human-readable error (never raw secrets).
+            if proof_dir.is_dir() and not (proof_dir / "gui-proof.json").exists():
+                diagnostic = proof_dir / "gui-failure.txt"
+                if not diagnostic.exists():
+                    diagnostic.write_text(
+                        type(exc).__name__ + ": " + str(exc)[:900] + "\n",
+                        encoding="utf-8",
+                    )
+            return 3
         print(json.dumps({"result": report["result"], "checks": len(report["checks"])}))
         return 0
     return run()
