@@ -67,30 +67,37 @@ def main() -> int:
 
     engine_closed = not missing_source
     automated_visual_pass = still.get("passed") is True and motion.get("passed") is True and manifest.get("automated_status") == "passed"
-    human_visual_pass = manifest.get("human_approval") == "approved"
-    visual_closed = not missing_outputs and automated_visual_pass and human_visual_pass
+    # This is an approved visual *review artifact*, not necessarily an
+    # approval from the product owner. For example the checked-in reference
+    # review was performed by an OpenAI model, not a human release approver.
+    visual_review_pass = manifest.get("human_approval") == "approved"
+    visual_reviewer = str(manifest.get("visual_reviewer") or "unidentified")[:160]
+    visual_closed = not missing_outputs and automated_visual_pass and visual_review_pass
     release_candidate = engine_closed and visual_closed
 
     blockers = []
     if not automated_visual_pass:
         blockers.append("Automated still/motion visual guardrails have not all passed.")
-    if not human_visual_pass:
-        blockers.append("Explicit human visual approval is missing or pending.")
+    if not visual_review_pass:
+        blockers.append("Visual reference review is missing or pending.")
 
     lines = [
         "# TTG Creative Studio Release Decision",
         "",
         f"- Engine/workflow closure: {'PASS' if engine_closed else 'FAIL'}",
         f"- Automated visual guardrails: {'PASS' if automated_visual_pass else 'FAIL'}",
-        f"- Human visual approval: {'PASS' if human_visual_pass else 'PENDING'}",
+        f"- Visual reference review: {'PASS' if visual_review_pass else 'PENDING'}",
+        f"- Visual reference reviewer: {visual_reviewer}",
         f"- Visual proof closure: {'PASS' if visual_closed else 'FAIL'}",
-        f"- Release-candidate decision: {'PASS' if release_candidate else 'BLOCKED'}",
+        f"- Release-candidate decision (engineering only): {'PASS' if release_candidate else 'BLOCKED'}",
+        "- Owner commercial release approval: NOT VERIFIED BY THIS REPORT",
+        "- Trusted signing and physical-device acceptance: NOT VERIFIED BY THIS REPORT",
         "",
         "## Meaning",
         "",
-        "A PASS requires implementation/review files, non-empty visual artifacts, passing still/motion guardrails, the composed ad proof, and explicit visual approval.",
+        "An engineering PASS requires implementation/review files, non-empty visual artifacts, passing still/motion guardrails, the composed ad proof and an approved reference review.",
         "",
-        "The clean GitHub Actions checkout provides reproducible runtime proof. Target-machine installation remains the final environment confirmation.",
+        "A reference review (including AI review) does not authorize a public release. Trusted publisher signing, physical installation, actual provider-backed inference and owner authorization require independent evidence.",
         "",
         "## Missing source/review requirements",
         "",
