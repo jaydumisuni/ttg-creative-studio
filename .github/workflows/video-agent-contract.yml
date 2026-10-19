@@ -9,6 +9,8 @@ on:
       - 'src/ttg_creative_studio/**'
       - 'src/ttg_visual_understanding.py'
       - 'scripts/test_video_agent_contract.py'
+      - 'scripts/test_internal_client_handoff.py'
+      - 'docs/release/INTERNAL_CLIENT_HANDOFF_2026-10-20.md'
       - 'docs/VIDEO_AGENT_CONTRACT_V1.md'
       - 'docs/HUNTER_CREATIVE_ENGINE_V1.md'
       - '.github/workflows/video-agent-contract.yml'
@@ -56,3 +58,5 @@ jobs:
         run: python -B src/ttg_creative_studio/cli.py --catalog
       - name: Run physical FFprobe, visual sampling, storyboard and MP4 proof
         run: python -B scripts/test_video_agent_contract.py
+      - name: Qualify standalone client integration without connecting Hunter
+        run: python -B scripts/test_internal_client_handoff.py

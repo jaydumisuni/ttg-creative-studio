@@ -60,7 +60,8 @@ Hunter should not run heavy image/video work inside Cloudflare Workers.
 
 ## Shared video tools (18 October 2026)
 
-Hunter now uses the **same versioned video job CLI contract as any approved AI**.
+Creative Studio exposes a **shared versioned video job CLI contract** that Hunter or another
+authorized client may connect to later; Hunter is **not connected yet**.
 See [VIDEO_AGENT_CONTRACT_V1.md](VIDEO_AGENT_CONTRACT_V1.md) for discovered
 operations, GPU-free metadata/frame understanding, optional local VLM,
 reviewable storyboards and actual native motion-project MP4 export.
