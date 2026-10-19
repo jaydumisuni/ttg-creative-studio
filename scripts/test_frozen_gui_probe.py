@@ -80,6 +80,10 @@ def main():
             pass
         else:
             raise AssertionError("Tampered GUI proof passed signature-free hash validation")
+    # Installed Windows proof must use native font rasterization; an
+    # offscreen-only Windows run previously accepted missing-glyph squares.
+    script = (ROOT / "scripts" / "test_installer_windows.ps1").read_text()
+    assert '$env:QT_QPA_PLATFORM = "windows"' in script
     print(json.dumps({"result": "PASS", "checks": [
         "real native GUI launch/edit/save/export/screenshot",
         "artifact SHA-256 verification",
@@ -87,6 +91,7 @@ def main():
         "reject image tampering",
         "reject unreadable Windows UI font glyphs",
         "windowed CI saves non-modal GUI failure diagnostic",
+        "installed Windows GUI must exercise native font backend",
     ]}, indent=2))
 
 

@@ -1,6 +1,12 @@
 # Test actual Windows installer installation/uninstallation on disposable CI host.
 # This script does not perform signing, publish a release or install on ATHENA.
 $ErrorActionPreference = "Stop"
+# Windows releases must use native Qt font/display plumbing. The offscreen
+# plugin used by Linux CI gave all installed Windows Arial glyphs identical
+# tofu advances, making readable buttons impossible despite passing smoke.
+# A native Windows desktop backend is what a real installed user runs.
+if ($env:OS -ne "Windows_NT") { throw "Windows installer QA requires Windows" }
+$env:QT_QPA_PLATFORM = "windows"
 
 function Invoke-BoundedInstallerStep {
     param(
