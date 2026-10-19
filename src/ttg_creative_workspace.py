@@ -276,7 +276,7 @@ class CreativeWorkspace(QWidget):
     def _apply_theme(self) -> None:
         self.setStyleSheet(
             """
-            QWidget{background:#050814;color:#eaf3ff;font-family:Segoe UI;}
+            QWidget{background:#050814;color:#eaf3ff;font-family:Arial;}
             QPushButton,QToolButton{background:#16224d;color:#f1f7ff;border:1px solid #3f72ff;border-radius:7px;padding:6px 10px;}
             QPushButton:hover,QToolButton:hover{background:#25356d;}
             QPushButton#campaignDesignerButton{background:#1c706c;color:#f6fffe;border:1px solid #58e8d9;font-weight:700;padding:7px 13px;}

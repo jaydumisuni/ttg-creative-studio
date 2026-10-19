@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 from PIL import Image
+from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import QApplication
 
 from ttg_action_engine import ActionEngine
@@ -38,6 +39,19 @@ def qualify_gui(proof_dir: Path) -> dict:
         assert studio.campaign_button.isEnabled(), "Campaign action is unreachable"
         assert studio.toolbar_scroll.widget() is not None
         assert studio.layer_list is not None
+
+        # QT_QPA_PLATFORM=offscreen on Windows can render missing font
+        # glyphs as identical squares, despite passing a GUI screenshot
+        # existence test. Qualify real proportional Latin glyph metrics
+        # in the *actual* themed widget font, not a fresh unrelated QFont.
+        ui_font = studio.campaign_button.font()
+        ui_metrics = QFontMetrics(ui_font)
+        narrow = ui_metrics.horizontalAdvance("iiiiii")
+        wide = ui_metrics.horizontalAdvance("WWWWWW")
+        assert narrow > 0 and wide > narrow * 1.3, (
+            f"Unreadable/missing Windows UI font: {ui_font.family()!r}, "
+            f"narrow={narrow}, wide={wide}"
+        )
 
         project = ActionEngine().new_project("Standalone Installed GUI QA", "image")
         project.canvas.width, project.canvas.height = 480, 320
@@ -82,6 +96,9 @@ def qualify_gui(proof_dir: Path) -> dict:
         report = {
             "schema": "ttg.creative.frozen-gui-qualification.v1",
             "result": "PASS",
+            "ui_font_evidence": {"family": ui_font.family(),
+                                 "narrow_advance": narrow,
+                                 "wide_advance": wide},
             "checks": [
                 "real QWidget window shown",
                 "Campaign Designer reachable",
