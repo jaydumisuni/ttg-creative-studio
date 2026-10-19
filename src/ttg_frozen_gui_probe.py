@@ -7,6 +7,7 @@ caller-created, empty proof directory. It does not claim visual owner approval.
 from __future__ import annotations
 
 import hashlib
+import os
 import json
 from pathlib import Path
 
@@ -24,14 +25,31 @@ def _sha(path: Path) -> str:
 
 
 def qualify_gui(proof_dir: Path) -> dict:
+    def phase(label: str) -> None:
+        # Written only for installed frozen-app QA, not direct unit tests.
+        stage = os.environ.get("TTG_STUDIO_GUI_STAGE_FILE")
+        if stage:
+            Path(stage).write_text(label + "\n", encoding="utf-8")
+
+    phase("qualifier-entered")
     proof_dir = proof_dir.expanduser().resolve(strict=True)
-    if not proof_dir.is_dir() or list(proof_dir.iterdir()):
+    expected_trace = os.environ.get("TTG_STUDIO_GUI_STAGE_FILE")
+    diagnostic_files = set()
+    if expected_trace and Path(expected_trace).parent.resolve() == proof_dir:
+        diagnostic_files = {Path(expected_trace).name, "gui-hang-stack.txt"}
+    if not proof_dir.is_dir() or any(
+        item.name not in diagnostic_files for item in proof_dir.iterdir()
+    ):
         raise ValueError("GUI proof destination must be an existing empty directory")
 
+    phase("qt-application")
     app = QApplication.instance() or QApplication([])
+    phase("constructing-main-window")
     win = CreativeStudioWindow()
+    phase("constructed-main-window")
     try:
         win.resize(1280, 800)
+        phase("show-window")
         win.show()
         app.processEvents()
         assert win.isVisible(), "Main application window failed to open"
@@ -44,6 +62,7 @@ def qualify_gui(proof_dir: Path) -> dict:
         # glyphs as identical squares, despite passing a GUI screenshot
         # existence test. Qualify real proportional Latin glyph metrics
         # in the *actual* themed widget font, not a fresh unrelated QFont.
+        phase("measure-themed-font")
         ui_font = studio.campaign_button.font()
         ui_metrics = QFontMetrics(ui_font)
         narrow = ui_metrics.horizontalAdvance("iiiiii")
@@ -53,6 +72,7 @@ def qualify_gui(proof_dir: Path) -> dict:
             f"narrow={narrow}, wide={wide}"
         )
 
+        phase("create-test-project")
         project = ActionEngine().new_project("Standalone Installed GUI QA", "image")
         project.canvas.width, project.canvas.height = 480, 320
         shape = ActionEngine().add_shape(project, "rectangle", 76, 61)
@@ -63,6 +83,7 @@ def qualify_gui(proof_dir: Path) -> dict:
         studio.project_path = proof_dir / "gui-editable.ttgstudio.json"
         studio._set_asset_root(proof_dir)
         studio.selected_layer_id = layer.id
+        phase("refresh-project-widgets")
         studio.refresh_all()
         app.processEvents()
         assert studio.selected_layer().id == layer.id
@@ -74,6 +95,7 @@ def qualify_gui(proof_dir: Path) -> dict:
         assert studio.selected_layer().properties["text"] == "STUDIO READY"
         studio.redo()
         assert studio.selected_layer().properties["text"] == "EDITED IN STUDIO"
+        phase("save-edited-project")
         studio.save_project()
         saved = TTGProject.load(studio.project_path)
         assert len(saved.layers) == 2
@@ -86,6 +108,7 @@ def qualify_gui(proof_dir: Path) -> dict:
             assert len(rendered.convert("RGB").getcolors(480 * 320) or []) > 4, (
                 "Rendered canvas appears blank/monochrome"
             )
+        phase("capture-native-window")
         screenshot = proof_dir / "gui-window.png"
         app.processEvents()
         assert win.grab().save(str(screenshot), "PNG")
@@ -118,10 +141,13 @@ def qualify_gui(proof_dir: Path) -> dict:
                 for file in (studio.project_path, png, screenshot)
             },
         }
+        phase("write-proof-manifest")
         (proof_dir / "gui-proof.json").write_text(
             json.dumps(report, indent=2) + "\n", encoding="utf-8"
         )
+        phase("proof-complete")
         return report
     finally:
+        phase("close-window")
         win.close()
         app.processEvents()

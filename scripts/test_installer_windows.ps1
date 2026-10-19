@@ -45,6 +45,13 @@ $guiArg = '--qualify-gui "' + $proof + '"'
 try {
     Invoke-BoundedInstallerStep -FilePath $app -Arguments $guiArg -Label "Installed GUI qualification" -TimeoutSeconds 120
 } catch {
+    foreach ($file in @("gui-stage.txt", "gui-hang-stack.txt")) {
+        $path = Join-Path $proof $file
+        if (Test-Path -LiteralPath $path) {
+            Write-Host "Installed GUI diagnostic $file"
+            Get-Content -LiteralPath $path | Select-Object -First 90 | Write-Host
+        }
+    }
     $diagnostic = Join-Path $proof "gui-failure.txt"
     if (Test-Path -LiteralPath $diagnostic) {
         Write-Host "Studio GUI qualification diagnostic:"
