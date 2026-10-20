@@ -1,0 +1,16 @@
+{
+  "creative_engine": "TTG Creative Studio native CanvasRenderer through ExportService",
+  "from_scratch": true,
+  "reference_images_used": 0,
+  "model_inference_used": false,
+  "asset_images_imported": 0,
+  "native_editable_layers": 100,
+  "canvas": [
+    1440,
+    1080
+  ],
+  "image_sha256": "99a0f174668fe7bb200d1c450c30b4b57c8722904c1ef9d3dfe059ebf731733a",
+  "project_sha256": "39464b04384a252d706aef969d1372ce82b73ceb9a9035fa642d45f096d2fd19",
+  "validation": "save/reload plus independent identical native rerender PASS",
+  "transparent_claims": "Not a diffusion model or photorealistic 3D renderer. Mockup uses native 2D shapes, text and Studio gradient/shadow/extrusion effects."
+}
