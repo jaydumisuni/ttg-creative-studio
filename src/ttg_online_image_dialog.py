@@ -63,10 +63,18 @@ class OnlineImageDialog(QDialog):
         ))
         form=QFormLayout()
         self.operation=QComboBox()
-        self.operation.addItem("Generate image · FLUX Schnell","generate")
+        self.operation.addItem("Generate image · choose quality model","generate")
         self.operation.addItem("Edit image · FLUX Kontext Pro","edit")
         self.operation.addItem("Inpaint with mask · FLUX Fill Pro","inpaint")
         form.addRow("Operation",self.operation)
+        self.quality=QComboBox()
+        self.quality.addItem("Premium branded mockup · Nano Banana Pro","brand_pro")
+        self.quality.addItem("Photoreal image · FLUX.2 Pro","photoreal")
+        self.quality.addItem("Fast preview · FLUX Schnell","fast")
+        form.addRow("Generation quality",self.quality)
+        self.operation.currentIndexChanged.connect(
+            lambda _: self.quality.setEnabled(self.operation.currentData()=="generate")
+        )
         self.prompt=QPlainTextEdit()
         self.prompt.setPlaceholderText("Describe the product image or editing instructions")
         self.prompt.setMaximumHeight(105)
@@ -197,11 +205,15 @@ class OnlineImageDialog(QDialog):
             return
         if QMessageBox.question(
             self,"Confirm paid image generation",
-            "Submit this prompt and the selected source/mask image data to Replicate? "
-            "Review the current model price first; Studio cannot guarantee a spend ceiling."
+            "Submit this prompt to Replicate using the selected model: "
+            + (self.quality.currentText() if self.operation.currentData()=="generate"
+               else self.operation.currentText()) + "? "
+            "Any selected source/mask image data will also be sent. "
+            "Review the model's current price; Studio cannot guarantee a spend ceiling."
         )!=QMessageBox.StandardButton.Yes:
             return
         settings={"operation":self.operation.currentData(),
+            "quality":self.quality.currentData(),
             "prompt":self.prompt.toPlainText(),
             "aspect_ratio":self.ratio.currentText(),
             "input_image":self._local_source or self.image_url.text().strip(),
