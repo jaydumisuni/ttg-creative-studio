@@ -231,19 +231,107 @@ def _room(w:int,h:int,seed:int=49,warmth:float=.55)->Image.Image:
         array[:,:,1]+=field*power*.74*wall
         array[:,:,2]+=field*power*.54*wall
     im=Image.fromarray(np.uint8(np.clip(array,0,255)),"RGB").convert("RGBA")
-    return im
+    return _architectural_finish(im,seed,warmth)
+
+
+def _architectural_finish(im: Image.Image, seed: int, warmth: float) -> Image.Image:
+    """Native Studio optical finish for an authored architectural scene.
+
+    Adds deterministic multi-scale wall plaster, plausible window-occlusion
+    gradients, diffuse floor/desk stone microstructure, and soft-bounced light.
+    This improves the existing Studio scene; it is not a ray tracer or photo.
+    """
+    w, h = im.size
+    rng = np.random.default_rng(seed ^ 0x753AD)
+    sy, sx = np.mgrid[0:h, 0:w].astype(np.float32)
+    u = sx / w
+    v = sy / h
+
+    # Coarse and high-frequency texture operate at independent spatial scales.
+    coarse = np.asarray(Image.fromarray(
+        rng.integers(0, 256, (max(2, h // 55), max(2, w // 55)), dtype=np.uint8)
+    ).resize((w, h), Image.Resampling.BICUBIC), dtype=np.float32)
+    medium = np.asarray(Image.fromarray(
+        rng.integers(0, 256, (max(2, h // 10), max(2, w // 10)), dtype=np.uint8)
+    ).resize((w, h), Image.Resampling.BICUBIC), dtype=np.float32)
+    micro = rng.normal(0, 1, (h, w)).astype(np.float32)
+    grain = (coarse - 127) * .075 + (medium - 127) * .027 + micro * 2.1
+    wall = (u > .181) & (u < .939) & (v < .861)
+    # The wall is not uniformly lit; the glazed doorway darkens its edge.
+    occlusion = 14 * np.exp(-((u-.19)/.028)**2)
+    occlusion += 10 * np.exp(-((u-.93)/.03)**2)
+    indirect = 8 * np.exp(-((v-.86)/.045)**2)
+    upper = 5 * np.exp(-((v-.02)/.085)**2)
+    falloff = np.clip((v-.56)*19, 0, 8)
+    img = np.asarray(im.convert("RGB"), dtype=np.float32).copy()
+    wall_light = grain - occlusion + indirect + upper - falloff
+    for c, tint in enumerate((1.0, .95, .88)):
+        img[:,:,c] += wall * wall_light * tint
+
+    # Polished stone, bounded to the floor and the existing reception desk:
+    # slightly distorted veins, fine fissures and shifted reflection pools.
+    vein_a = np.sin((u*14 + np.sin(v*45 + u*22)*.19 +
+                     np.sin(u*63-v*25)*.041 + v*1.7)*math.pi)
+    vein_b = np.sin((u*30 - v*6 + np.sin(v*28-u*11)*.37)*math.pi)
+    seam = np.clip((vein_a-.915)/.075, 0, 1)
+    hairline = np.clip((vein_b-.976)/.02, 0, 1)
+    stone = seam*16 + hairline*9 + micro*.86
+    floor = (v > .87) & (u < .615)  # keep original wall and glass untouched
+    desk = (u > .64) & (v > (.9-(u-.64)*.31)) & (v < .985)
+    slab = floor | desk
+    warm_bounce = 9*np.exp(-((v-.89)/.013)**2)
+    for c, strength in enumerate((1.0, 1.01, 1.02)):
+        img[:,:,c] += slab * (stone*strength + warm_bounce*warmth)
+    im = Image.fromarray(np.uint8(np.clip(img,0,255)), "RGB").convert("RGBA")
+
+    # Procedural leaf silhouettes with specular veins (no image assets).
+    # Restrained, because foliage is deliberately foreground/out of focus.
+    leaves = Image.new("RGBA", (w,h))
+    draw = ImageDraw.Draw(leaves, "RGBA")
+    anchor=(int(w*.977), int(h*.81))
+    for i in range(24):
+        theta=(i*2.39996323 + .2)
+        scale=.023+.033*((i*11)%13)/13
+        ex=int(w*(.967 + math.cos(theta)*(.018 + .052*((i*7)%11)/11)))
+        ey=int(h*(.81 - abs(math.sin(theta))*(.05+.16*((i*5)%9)/9)))
+        mid=((anchor[0]+ex)//2,(anchor[1]+ey)//2)
+        dx,dy=ex-anchor[0],ey-anchor[1]
+        norm=max(1,math.hypot(dx,dy))
+        perp=(-dy/norm,dx/norm)
+        breadth=scale*min(w,h)*(.50+.4*((i*13)%7)/7)
+        tip=(ex,ey)
+        a=(int(mid[0]+perp[0]*breadth),int(mid[1]+perp[1]*breadth))
+        b=(int(mid[0]-perp[0]*breadth),int(mid[1]-perp[1]*breadth))
+        green=(31+i%5*5,54+i%7*6,26+i%4*3,195)
+        draw.polygon([anchor,a,tip,b],fill=green)
+        draw.line([anchor,mid,tip],fill=(96,107,48,95),width=max(1,w//1100))
+    # Multi-plane focus: foreground leaves soften without losing contours.
+    leaf_soft=leaves.filter(ImageFilter.GaussianBlur(max(1,w//950)))
+    return Image.alpha_composite(im,leaf_soft)
+
+
+def _metallic_shading(shape: tuple[int,int], seed: int, light_shift: float):
+    """Generate fine horizontal brushed metal with studio-window reflections."""
+    w,h = shape
+    rng=np.random.default_rng(seed)
+    xs=np.arange(w,dtype=np.float32)[None,:]/max(1,w)
+    ys=np.arange(h,dtype=np.float32)[:,None]/max(1,h)
+    # Long anisotropic horizontal scratches (same intensity across each row).
+    scratches=rng.normal(0,2.1,(h,1)).astype(np.float32)
+    scratches+=1.3*np.sin(ys*math.pi*260)
+    fine=rng.normal(0,1.15,(h,w)).astype(np.float32)
+    # Several broad softbox reflections with specular attenuation.
+    window=36*np.exp(-((xs-(.35+light_shift*.1))/.11)**2)
+    window+=21*np.exp(-((xs-(.81-light_shift*.12))/.055)**2)
+    window-=26*np.exp(-((xs-.58)/.08)**2)
+    lateral=9*np.cos((ys*4.0+xs*.25)*math.pi)
+    burnish=7*np.sin(xs*math.pi*19)
+    metal=np.clip(159+window+scratches+fine+lateral+burnish,45,246)
+    return np.stack((metal,metal+4.0,metal+9.0),axis=2).clip(0,255).astype("uint8")
 
 def _steel_texture(size,seed=1,light_shift=0.):
-    w,h=size
-    rng=np.random.default_rng(seed)
-    xs=np.arange(w,dtype=np.float32)[None,:]
-    ys=np.arange(h,dtype=np.float32)[:,None]
-    streak=rng.normal(0,5,w).astype(np.float32)[None,:]
-    scratch=rng.normal(0,1,(h,w)).astype(np.float32)
-    reflection=22*np.cos((xs/w)*math.pi*1.6+light_shift)+13*np.cos(xs/w*math.pi*5+light_shift)
-    edge=(ys/h)*-40
-    brightness=np.clip(174+reflection+streak+scratch+edge,66,241)
-    return Image.fromarray(np.stack([brightness,brightness+5,brightness+10],axis=2).clip(0,255).astype("uint8"),"RGB").convert("RGBA")
+    """Brushed metal finished by Studio's own anisotropic material routine."""
+    return Image.fromarray(_metallic_shading(size,seed,light_shift),"RGB").convert("RGBA")
 
 def _mask(size,layer,kind):
     w,h=size

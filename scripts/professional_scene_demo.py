@@ -76,12 +76,32 @@ def make(prompt:str,destination:Path,*,video:bool)->dict:
         luminance=ImageStat.Stat(colors).stddev
         if colors.size!=(1440,1080) or min(luminance)<18:
             raise AssertionError("Native 1440p image failed resolution or tonal detail check")
+    # Reuse Studio's EXISTING Visual Inspector measurements as evidence.
+    # These objective numbers cannot certify semantic correctness or realism.
+    from ttg_visual_understanding import measure_image, suggest_adjustments
+    measurements = measure_image(still)
+    suggestions = suggest_adjustments(measurements)
+    metrics = {
+        key: measurements[key] for key in (
+            "dimensions", "luminance_mean_0_255", "luminance_stddev_0_255",
+            "edge_energy_0_255", "dominant_colors", "measurement_method"
+        )
+    }
+    quality = {
+        "status": "MEASURED_VISUAL_REVIEW_REQUIRED",
+        "observed_pixels": metrics,
+        "candidate_adjustments": suggestions,
+        "semantic_realism_confirmed": False,
+        "exact_brand_geometry": "editable_project_text_and_polygons_only",
+        "human_review_required": True,
+    }
     report={"schema":"ttg.studio.professional-scene-proof.v1",
             "status":"ENGINEERING_PASS_VISUAL_REVIEW_REQUIRED",
             "source_instruction":prompt,
             "native_engine":"Studio CanvasRenderer + existing cinematic materials",
             "from_scratch":True,"external_reference_images":0,"cloud_requests":0,
             "model_inference":False,"native_layers":len(loaded.layers),
+            "visual_review":quality,
             "project_file":project_file.name,"still":still.name,
             "still_sha256":digest(still),"rerender_sha256_match":True,
             "visual_quality":"Not certified photorealistic; owner must inspect actual output"}
