@@ -61,6 +61,10 @@ class CanvasRenderer:
         return canvas
 
     def _draw_layer(self, canvas: Image.Image, layer: Layer, time: float) -> None:
+        if layer.properties.get("cinematic_material"):
+            from ttg_cinematic_renderer import draw_native_material
+            draw_native_material(canvas, layer, time)
+            return
         if layer.type == "image":
             self._draw_image_layer(canvas, layer)
         elif layer.type in {"text", "text3d"}:

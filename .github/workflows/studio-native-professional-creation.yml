@@ -1,0 +1,58 @@
+name: Studio Native Professional Creation
+
+on:
+  push:
+    branches: [studio/zero-billing-professional-creation-20261020]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/ttg_cinematic_renderer.py'
+      - 'src/ttg_canvas_engine.py'
+      - 'src/ttg_banana_actions.py'
+      - 'src/ttg_banana_level.py'
+      - 'src/ttg_creative_workspace.py'
+      - 'scripts/professional_scene_demo.py'
+      - 'scripts/test_professional_creation.py'
+      - 'docs/BANANA_LEVEL.md'
+      - 'docs/PROFESSIONAL_NATIVE_CREATION_V1.md'
+      - '.github/workflows/studio-native-professional-creation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-creation:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install render dependencies
+        run: python -m pip install numpy Pillow PyQt6
+      - name: Ubuntu GUI platform runtime
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libopengl0 libxkbcommon-x11-0 libxcb-cursor0 libdbus-1-3
+      - name: Native professional-creation regression
+        run: python -B scripts/test_professional_creation.py
+      - name: Real image generation through existing Studio renderer
+        run: python -B scripts/professional_scene_demo.py --still-only --prompt "Create a premium THETECHGUY office wall sign with glowing blue circuits" --output ci-native-wall-sign
+      - name: Preserve short-lived output for visual inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-professional-wall-sign-${{ matrix.os }}
+          path: ci-native-wall-sign/
+          if-no-files-found: error
+          retention-days: 7

@@ -41,3 +41,12 @@ Photoshop power gives control.
 Canva simplicity gives speed.
 Filmora motion gives video flow.
 Banana Level gives the memorable TTG experience: the tool feels like it did the hard part for the user.
+
+## Offline professional wall-sign creation (G6.1)
+
+The existing BananaActions now provides a concrete native scene family:
+**Professional Office Wall Sign**. It uses Studio's own material compositor,
+original geometry, editable letterforms and MotionExporter. It does not
+claim unrestricted AI image generation or certified photorealism.
+See [Professional Native Creation](PROFESSIONAL_NATIVE_CREATION_V1.md)
+for proof, operation, limits and remaining quality work.
