@@ -30,7 +30,7 @@
   },
   "assets": [
     {
-      "id": "asset_cdd12eea50",
+      "id": "asset_3b9766b6b4",
       "kind": "image",
       "name": "scene_01",
       "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\zip_import_workspace\\assets\\scene_01.jpg",
@@ -39,7 +39,7 @@
       "required": false
     },
     {
-      "id": "asset_aa55f8ecf7",
+      "id": "asset_8fdb6882ea",
       "kind": "image",
       "name": "scene_02",
       "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\zip_import_workspace\\assets\\scene_02.jpg",
@@ -48,7 +48,7 @@
       "required": false
     },
     {
-      "id": "asset_c01640fbd1",
+      "id": "asset_65fb3edc7c",
       "kind": "image",
       "name": "scene_03",
       "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\zip_import_workspace\\assets\\scene_03.jpg",
@@ -57,7 +57,7 @@
       "required": false
     },
     {
-      "id": "asset_67854c94b4",
+      "id": "asset_e02f88ce1b",
       "kind": "image",
       "name": "scene_04",
       "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\zip_import_workspace\\assets\\scene_04.jpg",
@@ -68,7 +68,7 @@
   ],
   "layers": [
     {
-      "id": "scene_9f7e04e698",
+      "id": "scene_c56f3bafb7",
       "type": "image",
       "name": "Scene 1: scene_01",
       "visible": true,
@@ -86,7 +86,7 @@
         "opacity": 1
       },
       "properties": {
-        "asset": "asset_cdd12eea50",
+        "asset": "asset_3b9766b6b4",
         "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\zip_import_workspace\\assets\\scene_01.jpg",
         "width": 900,
         "height": 1280,
@@ -150,7 +150,7 @@
       "children": []
     },
     {
-      "id": "scene_6b64e7deb0",
+      "id": "scene_05e1d1286c",
       "type": "image",
       "name": "Scene 2: scene_02",
       "visible": true,
@@ -168,7 +168,7 @@
         "opacity": 1
       },
       "properties": {
-        "asset": "asset_aa55f8ecf7",
+        "asset": "asset_8fdb6882ea",
         "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\zip_import_workspace\\assets\\scene_02.jpg",
         "width": 900,
         "height": 1280,
@@ -232,7 +232,7 @@
       "children": []
     },
     {
-      "id": "scene_d02fb7b8d7",
+      "id": "scene_f13f4d9f6d",
       "type": "image",
       "name": "Scene 3: scene_03",
       "visible": true,
@@ -250,7 +250,7 @@
         "opacity": 1
       },
       "properties": {
-        "asset": "asset_c01640fbd1",
+        "asset": "asset_65fb3edc7c",
         "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\zip_import_workspace\\assets\\scene_03.jpg",
         "width": 900,
         "height": 1280,
@@ -314,7 +314,7 @@
       "children": []
     },
     {
-      "id": "scene_fb3b6ffe7f",
+      "id": "scene_279614891a",
       "type": "image",
       "name": "Scene 4: scene_04",
       "visible": true,
@@ -332,7 +332,7 @@
         "opacity": 1
       },
       "properties": {
-        "asset": "asset_67854c94b4",
+        "asset": "asset_e02f88ce1b",
         "path": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\ttg_ad_project_workflow_self_test\\zip_import_workspace\\assets\\scene_04.jpg",
         "width": 900,
         "height": 1280,
