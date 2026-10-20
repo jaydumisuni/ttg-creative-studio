@@ -30,6 +30,17 @@ IMAGE_MODELS = {
     "edit": "black-forest-labs/flux-kontext-pro",
     "inpaint": "black-forest-labs/flux-fill-pro",
 }
+# Existing Replicate transport; model-specific payloads are not interchangeable.
+# Quality routes remain usage-billed and per-job consent gated.
+GENERATION_PROFILES = {
+    "fast": {"model": IMAGE_MODELS["generate"],
+             "label": "Fast preview · FLUX Schnell"},
+    "photoreal": {"model": "black-forest-labs/flux-2-pro",
+                  "label": "Professional photography · FLUX.2 Pro"},
+    "brand_pro": {"model": "google/nano-banana-pro",
+                  "label": "Premium branded mockups · Nano Banana Pro"},
+}
+
 MAX_IMAGE_BYTES = 32 * 1024 * 1024
 MAX_IMAGE_PIXELS = 28_000_000
 # Replicate recommends inline data URI for small assets; larger ones must be
@@ -103,10 +114,13 @@ def readiness() -> dict:
                  else "billing_disabled" if os.environ.get("REPLICATE_API_TOKEN","").strip()
                  else "credentials_required"),
         "models": IMAGE_MODELS,
+        "generation_profiles": GENERATION_PROFILES,
         "local_checkpoint_installed_by_studio": False,
         "local_model_download": "deferred_GT502_or_Spark",
         "pricing": {
             "generate": "https://replicate.com/black-forest-labs/flux-schnell",
+            "photoreal": "https://replicate.com/black-forest-labs/flux-2-pro",
+            "brand_pro": "https://replicate.com/google/nano-banana-pro",
             "edit": "https://replicate.com/black-forest-labs/flux-kontext-pro",
             "inpaint": "https://replicate.com/black-forest-labs/flux-fill-pro",
         },
@@ -150,11 +164,27 @@ def submit_image(options:dict) -> dict:
     if os.environ.get("TTG_STUDIO_ENABLE_PAID_IMAGE")!="1":
         raise VideoProviderError("Paid image requests disabled by operator")
     data={"prompt":prompt.strip(), "output_format":"png"}
+    model=IMAGE_MODELS[operation]
     if operation=="generate":
         ratio=options.get("aspect_ratio","1:1")
         if ratio not in ("1:1","16:9","9:16","4:3","3:4","3:2","2:3"):
             raise VideoProviderError("Unsupported image aspect ratio")
-        data.update({"aspect_ratio":ratio,"num_outputs":1,"num_inference_steps":4})
+        quality=options.get("quality","fast")
+        if quality not in GENERATION_PROFILES:
+            raise VideoProviderError("Unsupported quality profile")
+        model=GENERATION_PROFILES[quality]["model"]
+        if quality=="fast":
+            data.update({"aspect_ratio":ratio,"num_outputs":1,
+                         "num_inference_steps":4})
+        elif quality=="photoreal":
+            # FLUX.2 Pro accepts resolution in megapixels and input_images.
+            data.update({"aspect_ratio":ratio, "resolution":"2 MP",
+                         "input_images":[]})
+        else:
+            # Nano Banana Pro uses image_input (not FLUX input_images) and
+            # supports 2K output with explicit no-fallback identity.
+            data.update({"aspect_ratio":ratio,"resolution":"2K",
+                         "image_input":[],"allow_fallback_model":False})
     elif operation=="edit":
         image=options.get("input_image")
         if not image:
@@ -179,9 +209,11 @@ def submit_image(options:dict) -> dict:
         # substitute an unmasked semantic edit for a masking request.
         data["outpaint"]="None"
     reply=_image_record(_json_request(
-        "POST","/v1/models/"+IMAGE_MODELS[operation]+"/predictions",{"input":data},
+        "POST","/v1/models/"+model+"/predictions",{"input":data},
     ))
-    reply["model"]=IMAGE_MODELS[operation]
+    reply["model"]=model
+    if operation=="generate":
+        reply["quality"]=quality
     reply["billing"]="external paid image generation"
     return reply
 

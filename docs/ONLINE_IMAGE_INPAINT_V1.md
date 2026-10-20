@@ -54,3 +54,34 @@ live image/mask test. The current passing mock tests do **not** prove
 that the remote model produced a real image.
 
 No installed checkpoint, token, media asset or source data is committed.
+
+## Professional image generation profiles (20 October 2026)
+
+Creative Studio's existing optional Replicate image provider now offers distinct
+quality modes for NEW images; it does not replace the native rendering engine.
+Returned PNGs continue to enter the normal editable Studio project.
+
+- Premium branded mockup: google/nano-banana-pro, resolution=2K,
+  image_input=[], output_format=png, allow_fallback_model=false.
+- Photorealistic imagery: black-forest-labs/flux-2-pro, resolution=2 MP,
+  input_images=[], output_format=png.
+- Fast preview: existing FLUX Schnell with four steps, unchanged as the
+  legacy compatible provider path. The GUI favors premium quality.
+
+Provider input fields differ. The code never sends Schnell-only step options
+to the professional models or silently changes a paid model.
+
+Official published model schemas:
+https://replicate.com/google/nano-banana-pro
+https://replicate.com/black-forest-labs/flux-2-pro/api/schema
+https://replicate.com/black-forest-labs/flux-schnell/api/schema
+
+All previous payment controls remain mandatory: privately provided token,
+operator TTG_STUDIO_ENABLE_PAID_IMAGE=1, distinct per-job image consent,
+GUI confirmation identifying the exact selected model, and a check of live
+provider pricing. There is no default cloud call or local model download.
+
+Automated qualification verifies provider request schema and model selection
+using synthetic HTTP fixtures only. No paid inference has been performed.
+Future accepted output requires separately authorized physical provider
+execution and Visual Inspector plus human art-direction review.

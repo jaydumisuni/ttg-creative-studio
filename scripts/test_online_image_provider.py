@@ -97,6 +97,43 @@ def main():
                 check(sent["input"]["num_outputs"]==1 and
                       "paid_approval" not in sent["input"],
                       "Exactly one image requested, consent not leaked")
+                from ttg_online_image_provider import GENERATION_PROFILES
+                check("brand_pro" in GENERATION_PROFILES and
+                      "photoreal" in GENERATION_PROFILES,
+                      "Professional profiles discoverable from existing provider")
+                for profile, model in (
+                    ("photoreal","black-forest-labs/flux-2-pro"),
+                    ("brand_pro","google/nano-banana-pro"),
+                ):
+                    fake.calls.clear()
+                    outcome=submit_image({
+                        "operation":"generate","quality":profile,
+                        "prompt":"Professional THETECHGUY wall sign",
+                        "aspect_ratio":"4:3","paid_approval":APPROVAL})
+                    payload=json.loads(fake.calls[0][2])["input"]
+                    check(fake.calls[0][1].endswith("/models/"+model+"/predictions")
+                          and outcome["model"]==model,
+                          "Model-specific quality route selects "+profile)
+                    check(payload["output_format"]=="png"
+                          and "num_inference_steps" not in payload
+                          and "num_outputs" not in payload
+                          and "paid_approval" not in payload,
+                          "High-quality request does not reuse fast-only settings or leak consent")
+                    if profile=="photoreal":
+                        check(payload["resolution"]=="2 MP"
+                              and payload["input_images"]==[]
+                              and "image_input" not in payload,
+                              "FLUX.2 Pro uses correct input_images field")
+                    else:
+                        check(payload["resolution"]=="2K"
+                              and payload["image_input"]==[]
+                              and payload["allow_fallback_model"] is False,
+                              "Nano Banana Pro uses correct image_input and no fallback")
+                denied(lambda:submit_image({
+                    "operation":"generate","quality":"unsupported",
+                    "prompt":"product","paid_approval":APPROVAL,
+                }),"quality profile")
+                fake.calls.clear()
                 prediction["status"]="processing"
                 check(image_status("abcdefghijkl0001")["status"]=="processing",
                       "Remote image job progress observed")
@@ -132,6 +169,14 @@ def main():
             app=QApplication.instance() or QApplication([])
             ui=OnlineImageDialog()
             check(not ui.consent.isChecked(),"Paid image consent unchecked by default")
+            check(ui.quality.currentData()=="brand_pro",
+                  "Premium branded visual quality selected by default with no billing enabled")
+            ui.operation.setCurrentIndex(1)
+            check(not ui.quality.isEnabled(),
+                  "Generation-only quality selection disabled during editing")
+            ui.operation.setCurrentIndex(0)
+            check(ui.quality.isEnabled(),
+                  "Generation-only quality control re-enabled when appropriate")
             check("No provider token" in ui.ready.text(),
                   "Offline/no-token image UI indicates requirement")
             ui.close()
