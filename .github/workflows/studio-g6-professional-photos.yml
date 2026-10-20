@@ -1,0 +1,56 @@
+name: Creative Studio G6 Professional Photo Route
+
+on:
+  push:
+    branches: [studio/g6-provider-production-20261020]
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/ttg_professional_image_production.py"
+      - "src/ttg_production_director.py"
+      - "src/ttg_creative_studio/cli.py"
+      - "src/ttg_online_image_dialog.py"
+      - "scripts/test_professional_image_production.py"
+      - "scripts/test_online_image_provider.py"
+      - "docs/PROFESSIONAL_NATIVE_CREATION_V1.md"
+      - ".github/workflows/studio-g6-professional-photos.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  g6-production:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    env:
+      QT_QPA_PLATFORM: offscreen
+      TTG_STUDIO_ENABLE_PAID_IMAGE: "0"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install required Qt headless system libraries (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libopengl0 libxkbcommon-x11-0 libxcb-cursor0 libdbus-1-3
+      - name: Install image and GUI dependencies
+        run: python -m pip install Pillow==11.3.0 PyQt6==6.10.0
+      - name: Run photo-production routing, approval and evidence tests
+        run: python -B scripts/test_professional_image_production.py
+      - name: Verify original Studio native Production Director
+        run: python -B scripts/test_studio_production_director.py
+      - name: Verify existing optional paid Image Lab
+        run: python -B scripts/test_online_image_provider.py
+      - name: Verify existing inpainting and vision
+        run: |
+          python -B scripts/test_online_inpainting.py
+          python -B scripts/test_visual_understanding.py

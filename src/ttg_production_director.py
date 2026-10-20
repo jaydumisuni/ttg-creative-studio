@@ -148,6 +148,45 @@ class ProductionDirector:
                 raise ProductionError(f"Visible image layer unavailable: {layer.name}")
         return verified
 
+    def choose_instruction_route(self, instruction: str, *, exact: bool = False,
+                                 reference: Path | None = None) -> dict[str, Any]:
+        """Classify a user's creative instruction without running a provider.
+
+        Native route only if existing Studio procedural scene creation accepts
+        the exact instruction. Unfamiliar photographic requests are routed to
+        an explicit neural plan; neither branch makes fictitious images.
+        """
+        if not isinstance(instruction,str) or not 1 <= len(instruction.strip()) <= 1000:
+            raise ProductionError("A bounded creative instruction is required")
+        if exact:
+            if reference is None:
+                raise ProductionError("Exact mode needs an original reference")
+            return {"route":"reference_layer_composite","requires_paid_provider":False}
+        if reference is not None:
+            raise ProductionError("Non-exact reference requires explicit neural reference mode")
+        # BananaActions accepts any instruction containing "lobby", but
+        # its implementation always builds a THETECHGUY office-wall sign.
+        # Never turn an unrelated hotel lobby PHOTO into a branded sign.
+        import re
+        lower=instruction.lower()
+        explicit_sign=bool(re.search(
+            r"\b(?:wall|office|lobby)\b.{0,90}\b(?:sign|logo|wordmark)\b|"
+            r"\b(?:sign|logo|wordmark)\b.{0,90}\b(?:wall|office|lobby)\b",lower
+        ))
+        photo_request=bool(re.search(r"\b(?:photograph|photo of|portrait photo|"
+                                     r"product photo|realistic photo)\b",lower))
+        try:
+            if not explicit_sign or photo_request:
+                raise ValueError("Only explicit editable office-wall logo scenes are native")
+            BananaActions().create_professional_wall_sign(instruction)
+        except ValueError:
+            from ttg_professional_image_production import choose_quality
+            quality=choose_quality(instruction)
+            return {"route":"neural_photo","quality":quality,
+                    "requires_paid_provider":True,
+                    "state":"plan_only_without_explicit_paid_approval"}
+        return {"route":"studio_native_procedural_scene","requires_paid_provider":False}
+
     def produce(self, *, instruction:str, exact:bool=False,
                 reference:Path|None=None, output_name:str="studio_production",
                 dry_run:bool=False) -> dict[str,Any]:

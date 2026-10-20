@@ -225,8 +225,13 @@ def main():
             app=QApplication.instance() or QApplication([])
             ui=OnlineImageDialog()
             check(not ui.consent.isChecked(),"Paid image consent unchecked by default")
-            check(ui.quality.currentData()=="brand_pro",
-                  "Premium branded visual quality selected by default with no billing enabled")
+            check(ui.quality.currentData()=="auto",
+                  "Production Director automatic model routing selected by default, without billing")
+            from ttg_professional_image_production import choose_quality
+            check(choose_quality("Photograph a dining room",ui.quality.currentData())=="photoreal",
+                  "Auto model choice routes photographic instructions to FLUX.2 Pro")
+            check(choose_quality("Mockup for brand logo",ui.quality.currentData())=="brand_pro",
+                  "Auto model choice routes branding instructions to Nano Banana Pro")
             ui.operation.setCurrentIndex(1)
             check(not ui.quality.isEnabled(),
                   "Generation-only quality selection disabled during editing")

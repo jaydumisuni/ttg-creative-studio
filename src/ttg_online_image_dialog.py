@@ -11,8 +11,9 @@ from PyQt6.QtWidgets import (
     QCheckBox,QComboBox,QDialog,QFileDialog,QFormLayout,QHBoxLayout,
     QLabel,QLineEdit,QMessageBox,QPlainTextEdit,QPushButton,QVBoxLayout,
 )
+from ttg_professional_image_production import choose_quality
 from ttg_online_image_provider import (
-    APPROVAL, readiness,submit_image,image_status,image_cancel,download_image,
+    APPROVAL, GENERATION_PROFILES, readiness,submit_image,image_status,image_cancel,download_image,
     inline_image_url, compact_reference_image,
 )
 
@@ -71,6 +72,7 @@ class OnlineImageDialog(QDialog):
         self.operation.addItem("Inpaint with mask · FLUX Fill Pro","inpaint")
         form.addRow("Operation",self.operation)
         self.quality=QComboBox()
+        self.quality.addItem("Auto · Production Director selects model", "auto")
         self.quality.addItem("Premium branded mockup · Nano Banana Pro","brand_pro")
         self.quality.addItem("Photoreal image · FLUX.2 Pro","photoreal")
         self.quality.addItem("Fast preview · FLUX Schnell","fast")
@@ -256,24 +258,28 @@ class OnlineImageDialog(QDialog):
             QMessageBox.warning(self,"Provider unavailable",
                 "Set REPLICATE_API_TOKEN and TTG_STUDIO_ENABLE_PAID_IMAGE=1 in an approved session.")
             return
+        chosen_quality = (choose_quality(self.prompt.toPlainText(),self.quality.currentData())
+                          if self.operation.currentData()=="generate"
+                          else self.quality.currentData())
+        model_name = (GENERATION_PROFILES[chosen_quality]["model"]
+                      if self.operation.currentData()=="generate" else self.operation.currentText())
         if QMessageBox.question(
             self,"Confirm paid image generation",
             "Submit this prompt to Replicate using the selected model: "
-            + (self.quality.currentText() if self.operation.currentData()=="generate"
-               else self.operation.currentText()) + "? "
+            + str(model_name) + "? "
             "Any selected source/mask image data will also be sent. "
             "Review the model's current price; Studio cannot guarantee a spend ceiling."
         )!=QMessageBox.StandardButton.Yes:
             return
         selected=self._local_source or self.image_url.text().strip()
-        if self.operation.currentData()=="generate" and selected and self.quality.currentData()=="fast":
+        if self.operation.currentData()=="generate" and selected and chosen_quality=="fast":
             QMessageBox.warning(
                 self,"Reference model unavailable",
                 "Fast preview cannot use a reference photo. Select Nano Banana Pro or FLUX.2 Pro."
             )
             return
         settings={"operation":self.operation.currentData(),
-            "quality":self.quality.currentData(),
+            "quality":chosen_quality,
             "prompt":self.prompt.toPlainText(),
             "aspect_ratio":self.ratio.currentText(),
             "reference_image":selected if self.operation.currentData()=="generate" else "",
