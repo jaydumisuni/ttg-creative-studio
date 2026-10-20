@@ -34,6 +34,7 @@ from PyQt6.QtWidgets import (
 from ttg_action_engine import ActionEngine
 from ttg_campaign_composer import CampaignBrief, compose_campaign
 from ttg_campaign_dialog import CampaignDesignerDialog
+from ttg_banana_actions import BananaActions
 from ttg_image_lab_dialog import ImageLabDialog
 from ttg_visual_inspector_dialog import VisualInspectorDialog
 from ttg_mask_painter import MaskPainterDialog
@@ -76,6 +77,7 @@ class CreativeWorkspace(QWidget):
         self.effects = EffectActions()
         self.timeline_actions = TimelineActions()
         self.preset_actions = PresetActions()
+        self.banana = BananaActions()
         self.history = ProjectHistory()
         self.validator = ProjectValidator()
         self.planner = RenderPlanner()
@@ -142,6 +144,7 @@ class CreativeWorkspace(QWidget):
         ]))
         toolbar.addWidget(self._menu_button("Templates", [
             ("New Campaign Designer", self.design_campaign),
+            ("Professional Office Wall Sign · No AI", self.create_native_professional_scene),
             ("Basic Intro", lambda: self.reset_project(make_ttg_intro_project())),
             ("THETECHGUY Reference Intro", self.load_reference_intro),
             ("Cinematic TTG Intro", lambda: self.reset_project(IntroBuilder().build_ttg_intro())),
@@ -622,6 +625,38 @@ class CreativeWorkspace(QWidget):
         if errors and show_dialog:
             QMessageBox.warning(self, "Validation", "Fix project errors before export.")
         return not errors
+
+    def create_native_professional_scene(self) -> None:
+        """Use Studio's own cinematic material pipeline, without a cloud model."""
+        description, approved = QInputDialog.getMultiLineText(
+            self, "Create · Professional Office Wall Sign",
+            "Describe your branded office sign. This offline scene family "
+            "supports lobby, logo, metallic wall lettering and lighting.",
+            "Create a premium THETECHGUY office-wall logo with brushed steel "
+            "TG emblem, glowing blue circuit traces and a realistic dark lobby."
+        )
+        if not approved:
+            return
+        if self.project is not None and self.project.layers:
+            confirmation = QMessageBox.question(
+                self, "Replace current project?",
+                "A new original scene will replace the current Studio project. "
+                "Save it first if you want to keep it.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if confirmation != QMessageBox.StandardButton.Yes:
+                return
+        try:
+            created = self.banana.create_professional_wall_sign(description)
+        except Exception as exc:
+            QMessageBox.warning(self, "Professional scene", str(exc))
+            return
+        self.reset_project(created)
+        self.status.setText(
+            "Created original Studio office-wall scene with native editable "
+            "materials. Preview and save before exporting."
+        )
 
     def create_campaign(self, brief: CampaignBrief, destination: Path) -> Path:
         """Create actual project assets, open it in Studio, enable layer editing."""

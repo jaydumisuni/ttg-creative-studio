@@ -1,0 +1,59 @@
+# Native Professional Creation — Studio G6.1 evidence
+
+This updates Creative Studio's existing Banana Level, CanvasRenderer, CinematicRenderer and MotionExporter. It is NOT a new product, not a parallel renderer, not Hunter and not a cloud-model installation.
+
+## What the current native proof actually establishes
+
+Creative Studio can construct one **supported scene family** (brushed-metal office-wall signage) from a text instruction. BananaActions composes a normal, editable TTGProject of native material, geometry and text layers. Existing CanvasRenderer now delegates marked materials to Studio's cinematic material routines. The same project stays editable, saves/reloads and can render with MotionExporter and the existing FFmpeg pack.
+
+Implemented material options: a deterministic original architectural lobby with glass, skyline, wall, stone floor and stylised foliage; brushed metal polygon glyphs, material typography, bevel/shadow and neon circuit traces; blue, violet and gold illumination selected by instruction. This generates its own scene geometry and pixels—no reference photo, stock imagery, downloaded checkpoint, cloud call or Hunter.
+
+### Use the desktop app
+
+Templates → **Professional Office Wall Sign · No AI**. Enter an instruction for a lobby, logo, wall or office sign; inspect and edit its project layers, save, then export a PNG or MP4 using the existing tools. A separate unsupported instruction is rejected instead of pretending to fulfil arbitrary text-to-image requests.
+
+### Reproduce on an authorized workstation
+
+\`\`\`bash
+python -B scripts/professional_scene_demo.py \
+  --prompt "Create a premium THETECHGUY office-wall logo with raised steel and blue circuit lighting" \
+  --output /path/to/EMPTY/studio-proof
+\`\`\`
+
+This produces an original full-resolution PNG, editable Studio project, lower-resolution H.264 MP4, an original synthesized WAV/AAC audio cue, and a structured verification report. The command does **not** download model files or charge a provider.
+
+**Native engine qualification:** 17 checks including exact editable branding, scene-layer mutation, deterministic reload/re-render, measured pixel changes and support boundaries. Existing video and campaign regression suites remain required. No finished reference image was provided to these runs.
+
+### What it does not prove
+
+This is not universal text-to-image or text-to-video inference. The authored office-sign scene family uses physically *inspired* procedural materials, and its current visual output remains recognizably stylized rather than matching the user's reference photograph's complete depth, ray-traced metal, high-quality shadows and natural scene complexity.
+
+More scene families, physically based material shading and substantive semantic quality assessment are required before claiming that Studio can generate arbitrary professional photographs or cinematic video. Existing online providers may supply generative inference only after user permission, an actual provisioned provider and acceptable costs. Blender is optional, never a mandatory replacement for Studio's canonical scene and editor. Local FreeVideo model use also remains optional and unqualified, with separately documented model size/license/resource requirements.
+
+**Keep subjective quality and production admission separate from technical file-export success.** The proof's status is ENGINEERING_PASS_VISUAL_REVIEW_REQUIRED, not 'photorealistic quality achieved'. Sergeant reviews source and engineering evidence, while creative acceptance is determined by the requested visible result.
+
+## Scope and storage
+
+The source changes remain inside Studio. Models are not downloaded. Output ZIP contains editable project and actual generated files. Temporary render frames are removed after successful MP4 export. Do not commit huge scratch files or alter Ptah, Oracle, Hunter or release signing to run this test.
+
+## Roadmap impact
+
+G6.1 scene-engine recovery and one professional native material path are implemented and qualified. G6.2 broader prompt-conditioned scene coverage, G6.3 physical material realism, G6.4 semantic visual inspection/repair and G6.5 genuinely generative video remain open—not silently marked completed by this demonstration.
+
+## KRATOS 20 October 2026 physical proof
+
+Original 1440×1080 Studio still and 2.5-second H.264/AAC animation generated
+from an instruction using Studio's own editable layers. No prior scene image
+was imported. Repeat render SHA-256 matched; the video contains changing
+frames and independently decoded non-silent AAC audio.
+
+A size-bounded visual sample of the actual Studio output is in
+[docs/proofs/studio_native_professional_20261020.webp](proofs/studio_native_professional_20261020.webp).
+
+The full native project, full-resolution PNG, MP4, cue and verification JSON
+are packaged on KRATOS at
+`/home/kratos/Downloads/TTG_Studio_From_Scratch_Native_2026-10-20.zip`.
+The ZIP's image assets were generated by Studio, not reused from a finished
+photo. The verified render remains visibly stylized compared with the
+photorealistic reception-wall reference, so full quality acceptance is NOT
+claimed.

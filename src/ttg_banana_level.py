@@ -22,6 +22,15 @@ class BananaWorkflow:
 
 BANANA_WORKFLOWS = (
     BananaWorkflow(
+        "professional_wall_sign",
+        "Professional Office Wall Sign",
+        "Creates an original illuminated, brushed-metal office identity scene "
+        "using native Studio materials, editable layers and cinematic exports.",
+        ("instruction",),
+        ("editable_project", "rendered_png", "motion_project"),
+        ai_optional=True,
+    ),
+    BananaWorkflow(
         "make_it_pop",
         "Make It Pop",
         "Instantly improves a flat design with premium glow, contrast, spacing and depth.",
