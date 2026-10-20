@@ -1,0 +1,31 @@
+{
+  "schema": "ttg.cs.ptah-exact-reference-proof.v1",
+  "target_node": "kratos-HP-290-G4-Microtower-PC",
+  "workspace": "Ptah-space/.workspace/scratch/creative_studio_exact_reference_20261020",
+  "engine": "TTG Creative Studio ExportService/CanvasRenderer",
+  "reference_based_recreation": true,
+  "model_inference": false,
+  "project_layers": 5,
+  "reference_sha256": "3b5fba35b6eba5f50201ee9b3bdb9498973dede244d780e57f66cb8962933922",
+  "native_render_sha256": "644234a5f1ff52f1856cf04d44852e6c6d13e33730eaa6e00071e427fb04d637",
+  "native_render_bytes": 2147556,
+  "render_dimensions": [
+    1448,
+    1086
+  ],
+  "pixel_mismatch_count": 0,
+  "native_repeat_binary_identical": true,
+  "original_reference_layer_hidden": true,
+  "layer_move_demo": {
+    "index": 1,
+    "delta_x": 30,
+    "changed_pixels_bbox": [
+      433,
+      149,
+      1056,
+      576
+    ]
+  },
+  "deliverable_kratos": "/home/kratos/Downloads/TTG_Creative_Studio_KRATOS_Ptah_Verified_2026-10-20.zip",
+  "bundle_sha256": "8a8896586522b8b496daae3c555403d8ea27b809b8b3c0c800cd352a3036b13b"
+}
