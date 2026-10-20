@@ -131,3 +131,68 @@ also rendered successfully but still requires visual quality acceptance.
 
 Tests: python -B scripts/test_studio_production_director.py. Windows and
 Linux qualification is specified in studio-production-director.yml.
+
+## G6.2–G6.6 · General professional image production (20 October 2026)
+
+**Product:** Standalone Creative Studio; Hunter is NOT connected. This extends
+the existing Production Director and Image Lab rather than creating another
+provider, model host, workspace, or rendering engine.
+
+Creative Studio's `studio_produce` job automatically distinguishes:
+- **Exact** reference reconstruction: existing reference-layer composite.
+- **Explicit** supported editable office-wall sign: existing native renderer.
+- **Unfamiliar** photographic instructions: neural-photo provider PLAN, not a
+  fabricated native result. For example, a hotel lobby photo is not mapped to
+  a THETECHGUY office sign just because the instruction mentions "lobby."
+
+Optional `studio_produce_photoreal` calls the same standalone provider route.
+Both use `ttg_professional_image_production.ProfessionalImagePipeline`
+with the already-implemented Replicate transport (no alternate billing path).
+
+**Workflow:** `plan` → per-job explicit `submit` → `inspect` → `complete`.
+Auto chooses FLUX.2 Pro for general photographs or Nano Banana Pro for
+branding/lettering. Image Lab exposes the same *Auto · Production Director*
+selection and names the actual provider model in the paid confirmation.
+Manual model selection remains available. Before any paid submission,
+`REPLICATE_API_TOKEN`, `TTG_STUDIO_ENABLE_PAID_IMAGE=1`, and the
+per-request `APPROVE_PAID_IMAGE_GENERATION` signal are mandatory. Billing,
+license terms and prices remain provider-controlled; Studio does not promise
+that generation is free. No token is committed or included in receipts.
+
+A successful provider prediction does **not** mean the artwork is approved.
+The completion phase fetches and verifies real decoded PNG pixels using the
+existing provider, preserves provider prediction ID and requested model,
+measures visible pixels using the existing Visual Inspector, optionally
+records installed local VLM observations, and constructs a valid native
+`.ttgstudio.json` project containing the raster as one transformable
+image layer. **Individual objects inside the generated photograph are NOT
+represented as editable vector layers.** Typography and shape overlays
+remain separately editable through the existing editor.
+
+Receipt state is **`visual_review_required`** until actual visual review.
+An assistant must not infer correct spelling, hands, material realism, object
+counts, or scene quality merely from HTTP success or PNG decoding.
+Corrections require a separately approved, paid retry, capped at 3 attempts
+per revision chain; no automatic model spending or infinite retries.
+
+### Honest qualification matrix
+
+| Stage | Current evidence | Closure |
+| --- | --- | --- |
+| G6.2 | Native/reference/neural production route and 11 unfamiliar prompt plans | Engineering test passed |
+| G6.3 | Existing model schemas, guarded provider requests, mock protocol fixtures | **NOT passed: no real cloud-generated photo on KRATOS** |
+| G6.4 | Measured pixel analysis, optional local semantic inspection and manual retry budget | Workflow tested; semantic image-quality approval pending physical evidence |
+| G6.5 | Verified PNG + SHA256 + model prediction provenance to editable Studio raster layer | Contract/test qualified; real provider end-to-end pending G6.3 |
+| G6.6 | Prompt planning and source-level KRATOS checks | **NOT passed: ten actual unseen real-generation images not reviewed** |
+
+**Evidence boundary:** `scripts/test_professional_image_production.py`
+has eleven unseen prompt plans and simulated provider protocol fixtures, which
+are explicitly NOT evidence of photorealistic model inference. The existing
+paid provider cannot be used on KRATOS until credentials and operator admission
+are available; no model weights are downloaded. On real acceptance, run at
+least ten unseen prompts across architecture, products, portraits and branded
+mockups; independently inspect provider receipts, actual pixels, typography,
+hands, material realism and follow-up edits, then attach proof to this document.
+
+**No premature closure:** General-purpose photo synthesis remains pending
+G6.3 and G6.6. No universal prompt-success guarantees are offered.
