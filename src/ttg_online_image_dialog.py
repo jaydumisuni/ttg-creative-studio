@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
 )
 from ttg_online_image_provider import (
     APPROVAL, readiness,submit_image,image_status,image_cancel,download_image,
-    inline_image_url,
+    inline_image_url, compact_reference_image,
 )
 
 
@@ -54,8 +54,11 @@ class OnlineImageDialog(QDialog):
         self.import_callback=import_callback
         self._worker=None
         self._latest=None
+        self._submitted=None
+        self._pending_reference_sha=None
         self._local_source=None
         self._local_mask=None
+        self._source_manifest=None
         root=QVBoxLayout(self)
         root.addWidget(QLabel(
             "Online AI image generation/editing · no model download on KRATOS. "
@@ -79,12 +82,18 @@ class OnlineImageDialog(QDialog):
         self.prompt.setPlaceholderText("Describe the product image or editing instructions")
         self.prompt.setMaximumHeight(105)
         form.addRow("Prompt",self.prompt)
+        recreate=QPushButton("Prepare THETECHGUY Reference Recreation")
+        recreate.setToolTip(
+            "Prepare a detailed prompt only. Does NOT submit to a model or charge a provider."
+        )
+        recreate.clicked.connect(self.prepare_wall_sign_recreation)
+        form.addRow("Professional preset",recreate)
         self.ratio=QComboBox()
-        for ratio in ("1:1","16:9","9:16","4:3","3:4","3:2","2:3"):
+        for ratio in ("1:1","16:9","9:16","4:3","3:4","3:2","2:3","match_input_image"):
             self.ratio.addItem(ratio)
         form.addRow("Generation ratio",self.ratio)
         self.image_url=QLineEdit()
-        self.image_url.setPlaceholderText("Public HTTPS image URL, or select a small local file")
+        self.image_url.setPlaceholderText("Optional generation reference / editing source HTTPS URL")
         self.image_url.textEdited.connect(lambda _: self._clear_inline("image"))
         source_row=QHBoxLayout()
         source_row.addWidget(self.image_url,1)
@@ -102,7 +111,7 @@ class OnlineImageDialog(QDialog):
         mask_button.clicked.connect(self.select_local_mask)
         mask_row.addWidget(mask_button)
         form.addRow("Inpainting mask",mask_row)
-        self.local_info=QLabel("Optional local files are sent to the external provider only after paid confirmation.")
+        self.local_info=QLabel("Reference photos are locally reduced for private, bounded transport. No upload before consent.")
         self.local_info.setWordWrap(True)
         form.addRow("Input privacy",self.local_info)
         root.addLayout(form)
@@ -141,6 +150,7 @@ class OnlineImageDialog(QDialog):
     def _clear_inline(self, which: str) -> None:
         if which=="image":
             self._local_source=None
+            self._source_manifest=None
         else:
             self._local_mask=None
 
@@ -152,22 +162,36 @@ class OnlineImageDialog(QDialog):
         if not filename:
             return
         try:
-            uri=inline_image_url(filename)
+            if which=="image" and self.operation.currentData()=="generate":
+                info=compact_reference_image(filename)
+                uri=info["uri"]
+            else:
+                info=None
+                uri=inline_image_url(filename)
         except Exception as exc:
             QMessageBox.warning(self,"Image size/privacy",str(exc))
             return
         if which=="image":
             self._local_source=uri
+            self._source_manifest=info
             self.image_url.setText("")
             self.image_url.setPlaceholderText("Local source selected: "+Path(filename).name)
         else:
             self._local_mask=uri
             self.mask_url.setText("")
             self.mask_url.setPlaceholderText("Local mask selected: "+Path(filename).name)
-        self.local_info.setText(
-            "Selected local image bytes will be transmitted to Replicate only "
-            "if you approve the specific paid operation."
-        )
+        if info:
+            self.local_info.setText(
+                "Local reference prepared, not uploaded: "
+                f"{info['transmitted_dimensions'][0]}×{info['transmitted_dimensions'][1]} "
+                f"· {info['transmitted_bytes']:,} bytes. Original file unchanged. "
+                "Provider receives only this compressed copy after paid confirmation."
+            )
+        else:
+            self.local_info.setText(
+                "Selected local image bytes will be transmitted to Replicate only "
+                "if you approve the specific paid operation."
+            )
 
     def select_local_source(self):
         self._choose_inline("image")
@@ -194,6 +218,35 @@ class OnlineImageDialog(QDialog):
         self._worker.finished.connect(lambda:self.generate_button.setEnabled(True))
         self._worker.start()
 
+    def prepare_wall_sign_recreation(self):
+        """Author a photoreal recreation instruction without starting inference."""
+        self.operation.setCurrentIndex(0)
+        self.quality.setCurrentIndex(self.quality.findData("brand_pro"))
+        self.ratio.setCurrentText("match_input_image" if (
+            self._local_source or self.image_url.text().strip()) else "4:3")
+        self.prompt.setPlainText(
+            "Create a NEW photorealistic premium architectural lobby photograph "
+            "matching the selected reference image's geometry, visual hierarchy "
+            "and camera perspective. Center on a raised brushed stainless-steel "
+            "TG monogram with physically plausible chamfered extrusion and precise "
+            "thin electric-blue LED circuit traces; beneath it render the EXACT "
+            "legible metal lettering 'THETECHGUY' and a smaller line "
+            "'DIGITAL SOLUTIONS'. Retain the fine textured charcoal wall, "
+            "floor-to-ceiling black-framed office glazing on the left, muted "
+            "distant city, narrow dark wood slats at right, black glossy marble "
+            "reception desk and green foreground foliage. Soft warm ceiling "
+            "downlights, realistic wall contact shadows, metal anisotropic "
+            "highlights, delicate blue light spill and marble reflections. "
+            "Photographic realism, sophisticated interior-product photography, "
+            "restrained optical depth, accurate scale, professional color grade. "
+            "No extra lettering, no watermarks, no cartoon or vector appearance. "
+            "Reference is a guide; generate new pixels rather than reusing "
+            "the photograph as a finished background."
+        )
+        self.log.appendPlainText(
+            "Prepared photoreal reference-recreation prompt. No provider called."
+        )
+
     def generate(self):
         self.refresh_ready()
         if not self.consent.isChecked():
@@ -212,13 +265,26 @@ class OnlineImageDialog(QDialog):
             "Review the model's current price; Studio cannot guarantee a spend ceiling."
         )!=QMessageBox.StandardButton.Yes:
             return
+        selected=self._local_source or self.image_url.text().strip()
+        if self.operation.currentData()=="generate" and selected and self.quality.currentData()=="fast":
+            QMessageBox.warning(
+                self,"Reference model unavailable",
+                "Fast preview cannot use a reference photo. Select Nano Banana Pro or FLUX.2 Pro."
+            )
+            return
         settings={"operation":self.operation.currentData(),
             "quality":self.quality.currentData(),
             "prompt":self.prompt.toPlainText(),
             "aspect_ratio":self.ratio.currentText(),
-            "input_image":self._local_source or self.image_url.text().strip(),
+            "reference_image":selected if self.operation.currentData()=="generate" else "",
+            "input_image":selected if self.operation.currentData()!="generate" else "",
             "mask_image":self._local_mask or self.mask_url.text().strip(),
             "paid_approval":APPROVAL}
+        self._pending_reference_sha=(
+            self._source_manifest.get("source_sha256")
+            if self.operation.currentData()=="generate" and self._source_manifest
+            else None
+        )
         self.consent.setChecked(False)
         self._start("submit",settings=settings)
 
@@ -265,12 +331,38 @@ class OnlineImageDialog(QDialog):
             self.log.appendPlainText("Verified image saved: "+reply["path"])
             if self.import_callback:
                 try:
-                    self.import_callback(reply["path"])
+                    provenance={
+                        "provider":"replicate",
+                        "prediction_id":reply["prediction_id"],
+                        "sha256":reply["sha256"],
+                        "width":reply["width"],
+                        "height":reply["height"],
+                        "model_identity_verified":False,
+                    }
+                    if (self._submitted and
+                        self._submitted.get("prediction_id")==reply["prediction_id"]):
+                        # Recorded from the actual POST response, not a guess
+                        # based on the currently displayed selector.
+                        provenance.update({
+                            "model":self._submitted["model"],
+                            "quality":self._submitted.get("quality"),
+                            "reference_supplied":self._submitted.get("reference_supplied",False),
+                            "model_identity_verified":True,
+                        })
+                        if (self._submitted.get("reference_sha256")
+                            and self._submitted.get("reference_supplied")):
+                            provenance["reference_sha256"]=self._submitted["reference_sha256"]
+                    self.import_callback(reply["path"],provenance)
                 except Exception as exc:
                     self.log.appendPlainText("Import failed: "+str(exc))
             return
         self.prediction.setText(reply.get("prediction_id",""))
         self._latest=reply
+        if kind=="submit":
+            self._submitted=dict(reply)
+            if self._pending_reference_sha and reply.get("reference_supplied"):
+                self._submitted["reference_sha256"]=self._pending_reference_sha
+            self._pending_reference_sha=None
         self.log.appendPlainText(kind+": "+str(reply.get("status")))
         self.download_button.setEnabled(reply.get("status")=="succeeded")
 

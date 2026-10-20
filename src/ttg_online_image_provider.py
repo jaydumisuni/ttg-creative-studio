@@ -74,6 +74,100 @@ def inline_image_url(path: str | Path) -> str:
     return "data:" + mime + ";base64," + base64.b64encode(raw).decode("ascii")
 
 
+def compact_reference_image(path: str | Path) -> dict:
+    """Prepare a visually grounded model reference without sharing local paths.
+
+    Some excellent photographs greatly exceed Studio's conservative inline
+    transport bound. Downscale/encode ONLY the transmitted copy in memory,
+    preserve the source unchanged, and return auditable dimensions/digests.
+    This does not transmit anything or incur any usage charge.
+    """
+    source=Path(path).expanduser()
+    if source.is_symlink() or not source.is_file():
+        raise VideoProviderError("Select a regular local image reference")
+    if source.suffix.lower() not in (".png",".jpg",".jpeg",".webp"):
+        raise VideoProviderError("Reference must be PNG, JPEG or WebP")
+    if source.stat().st_size>MAX_IMAGE_BYTES:
+        raise VideoProviderError("Reference exceeds 32 MiB local file limit")
+    raw=source.read_bytes()
+    try:
+        with Image.open(io.BytesIO(raw)) as image:
+            if (image.format not in ("PNG","JPEG","WEBP")
+                or image.width*image.height > MAX_INLINE_PIXELS):
+                raise ValueError("Reference dimensions unsupported")
+            image.load()
+            original=(image.width,image.height)
+            alpha=image.mode in ("RGBA","LA") or ("transparency" in image.info)
+            working=ImageOps.exif_transpose(image).convert("RGBA" if alpha else "RGB")
+    except (OSError,ValueError,Image.DecompressionBombError):
+        raise VideoProviderError("Reference is not a valid bounded image") from None
+    original_sha=hashlib.sha256(raw).hexdigest()
+    if len(raw)<=MAX_INLINE_BYTES:
+        mime={"PNG":"image/png","JPEG":"image/jpeg","WEBP":"image/webp"}[image.format]
+        return {
+            "uri":"data:"+mime+";base64,"+base64.b64encode(raw).decode("ascii"),
+            "source_sha256":original_sha,
+            "source_dimensions":list(original),
+            "transmitted_dimensions":list(original),
+            "transmitted_bytes":len(raw),
+            "reference_compressed":False,
+        }
+    for bound in (1280,1024,896,768,640,512):
+        preview=working.copy()
+        preview.thumbnail((bound,bound),Image.Resampling.LANCZOS)
+        for quality in (75,58):
+            stream=io.BytesIO()
+            preview.save(stream,format="WEBP",quality=quality,method=0)
+            encoded=stream.getvalue()
+            if 0<len(encoded)<=MAX_INLINE_BYTES:
+                return {
+                    "uri":"data:image/webp;base64,"+base64.b64encode(encoded).decode("ascii"),
+                    "source_sha256":original_sha,
+                    "source_dimensions":list(original),
+                    "transmitted_dimensions":list(preview.size),
+                    "transmitted_bytes":len(encoded),
+                    "reference_compressed":(encoded!=raw),
+                }
+    raise VideoProviderError("Unable to encode selected reference within 235 KB")
+
+
+def build_generation_input(options:dict) -> tuple[str,dict]:
+    """Provider-schema-aware request construction with optional visual reference.
+
+    Pure and non-billable: callers can audit exact model and payload offline.
+    """
+    ratio=options.get("aspect_ratio","1:1")
+    quality=options.get("quality","fast")
+    if quality not in GENERATION_PROFILES:
+        raise VideoProviderError("Unsupported quality profile")
+    reference=options.get("reference_image")
+    if reference:
+        if quality=="fast":
+            raise VideoProviderError("Fast preview does not support reference-guided generation")
+        ref=image_input_uri(reference)
+        ratios=("match_input_image","1:1","16:9","9:16","4:3","3:4","3:2","2:3")
+        if ratio not in ratios:
+            raise VideoProviderError("Unsupported referenced image aspect ratio")
+    else:
+        if ratio not in ("1:1","16:9","9:16","4:3","3:4","3:2","2:3"):
+            raise VideoProviderError("Match-input ratio requires a selected reference image")
+        ref=None
+    # Fail on unrecognized inputs rather than silently dropping a reference.
+    payload={"prompt":options["prompt"].strip(),"output_format":"png"}
+    if quality=="fast":
+        payload.update({"aspect_ratio":ratio,"num_outputs":1,"num_inference_steps":4})
+    elif quality=="photoreal":
+        payload.update({"aspect_ratio":ratio,"resolution":"2 MP",
+                        "input_images":[ref] if ref else []})
+    else:
+        # Nano Banana Pro official schema has image_input, not input_images.
+        # No allow_fallback_model field: it is NOT in the published schema;
+        # identity is fixed by the endpoint itself.
+        payload.update({"aspect_ratio":ratio,"resolution":"2K",
+                        "image_input":[ref] if ref else []})
+    return GENERATION_PROFILES[quality]["model"],payload
+
+
 def image_input_uri(reference: str) -> str:
     """Accept only safe HTTPS references or bounded decoded, validated data URIs."""
     if not isinstance(reference, str) or not reference:
@@ -166,25 +260,8 @@ def submit_image(options:dict) -> dict:
     data={"prompt":prompt.strip(), "output_format":"png"}
     model=IMAGE_MODELS[operation]
     if operation=="generate":
-        ratio=options.get("aspect_ratio","1:1")
-        if ratio not in ("1:1","16:9","9:16","4:3","3:4","3:2","2:3"):
-            raise VideoProviderError("Unsupported image aspect ratio")
+        model,data=build_generation_input(options)
         quality=options.get("quality","fast")
-        if quality not in GENERATION_PROFILES:
-            raise VideoProviderError("Unsupported quality profile")
-        model=GENERATION_PROFILES[quality]["model"]
-        if quality=="fast":
-            data.update({"aspect_ratio":ratio,"num_outputs":1,
-                         "num_inference_steps":4})
-        elif quality=="photoreal":
-            # FLUX.2 Pro accepts resolution in megapixels and input_images.
-            data.update({"aspect_ratio":ratio, "resolution":"2 MP",
-                         "input_images":[]})
-        else:
-            # Nano Banana Pro uses image_input (not FLUX input_images) and
-            # supports 2K output with explicit no-fallback identity.
-            data.update({"aspect_ratio":ratio,"resolution":"2K",
-                         "image_input":[],"allow_fallback_model":False})
     elif operation=="edit":
         image=options.get("input_image")
         if not image:
@@ -214,6 +291,7 @@ def submit_image(options:dict) -> dict:
     reply["model"]=model
     if operation=="generate":
         reply["quality"]=quality
+        reply["reference_supplied"]=bool(options.get("reference_image"))
     reply["billing"]="external paid image generation"
     return reply
 

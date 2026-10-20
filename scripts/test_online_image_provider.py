@@ -17,10 +17,11 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"src"))
 os.environ.setdefault("QT_QPA_PLATFORM","offscreen")
 from PIL import Image
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication,QMessageBox
 from ttg_online_image_provider import (
     readiness,submit_image,image_status,image_cancel,download_image,
     VideoProviderError,APPROVAL,validate_public_https,
+    compact_reference_image, build_generation_input,
 )
 from ttg_online_image_dialog import OnlineImageDialog
 from ttg_creative_studio.engine.online_image_jobs import run_online_image_job
@@ -127,8 +128,44 @@ def main():
                     else:
                         check(payload["resolution"]=="2K"
                               and payload["image_input"]==[]
-                              and payload["allow_fallback_model"] is False,
-                              "Nano Banana Pro uses correct image_input and no fallback")
+                              and "allow_fallback_model" not in payload,
+                              "Nano Banana Pro uses published image_input schema, no invented fallback option")
+                fake.calls.clear()
+                reference_uri="https://replicate.delivery/ttg/reference.webp"
+                for selected, expected_key in (
+                    ("photoreal","input_images"),("brand_pro","image_input")
+                ):
+                    outcome=submit_image({
+                        "operation":"generate","quality":selected,
+                        "prompt":"Preserve TG signage geometry and wordmark",
+                        "reference_image":reference_uri,
+                        "aspect_ratio":"match_input_image","paid_approval":APPROVAL
+                    })
+                    sent=json.loads(fake.calls[-1][2])["input"]
+                    check(sent[expected_key]==[reference_uri]
+                          and sent["aspect_ratio"]=="match_input_image"
+                          and outcome["reference_supplied"],
+                          "Professional "+selected+" receives actual approved reference")
+                model,pure=build_generation_input({
+                    "quality":"brand_pro","prompt":"THETECHGUY sign",
+                    "reference_image":reference_uri,
+                    "aspect_ratio":"match_input_image"
+                })
+                check(model=="google/nano-banana-pro" and
+                      pure["image_input"]==[reference_uri],
+                      "Professional reference payload can be reviewed without network/billing")
+                denied(lambda:build_generation_input({
+                    "quality":"fast","prompt":"sign",
+                    "reference_image":reference_uri,
+                }),"does not support reference")
+                denied(lambda:build_generation_input({
+                    "quality":"brand_pro","prompt":"sign",
+                    "aspect_ratio":"match_input_image"
+                }),"requires a selected reference")
+                denied(lambda:build_generation_input({
+                    "quality":"brand_pro","prompt":"sign",
+                    "reference_image":"http://localhost/private.jpg"
+                }),"HTTPS")
                 denied(lambda:submit_image({
                     "operation":"generate","quality":"unsupported",
                     "prompt":"product","paid_approval":APPROVAL,
@@ -161,6 +198,25 @@ def main():
                 del prediction["output"]
                 check(image_cancel("abcdefghijkl0001")["status"]=="canceled",
                       "Cancel an individual image prediction")
+            # A photographic PNG larger than the old 235 KB inline limit
+            # must be usable as a downsampled visual guide, without mutation
+            # or provider upload.
+            import random
+            rng=random.Random(491)
+            pixels=rng.randbytes(1024*768*3)
+            sample=Path(temp)/"user-reference.png"
+            Image.frombytes("RGB",(1024,768),pixels).save(sample)
+            original_digest=hashlib.sha256(sample.read_bytes()).hexdigest()
+            check(sample.stat().st_size>235_000,"Large real-photo reference fixture")
+            prepared=compact_reference_image(sample)
+            check(prepared["source_sha256"]==original_digest
+                  and prepared["transmitted_bytes"]<=235_000
+                  and prepared["reference_compressed"]
+                  and hashlib.sha256(sample.read_bytes()).hexdigest()==original_digest,
+                  "Large reference safely compressed in memory; original retained")
+            from ttg_online_image_provider import image_input_uri
+            check(image_input_uri(prepared["uri"])==prepared["uri"],
+                  "Compressed photo validated as provider-accepted inline reference")
             check(all("fixture-only-no-real-account" not in str(url)
                       for method,url,payload in fake.calls),
                   "API token never placed into URLs or image receipts")
@@ -179,6 +235,35 @@ def main():
                   "Generation-only quality control re-enabled when appropriate")
             check("No provider token" in ui.ready.text(),
                   "Offline/no-token image UI indicates requirement")
+            ui.prepare_wall_sign_recreation()
+            check(ui.quality.currentData()=="brand_pro"
+                  and "THETECHGUY" in ui.prompt.toPlainText()
+                  and "DIGITAL SOLUTIONS" in ui.prompt.toPlainText()
+                  and "No provider called" in ui.log.toPlainText(),
+                  "Professional recreation preset prepares exact wordmark without billing")
+            with tempfile.TemporaryDirectory(prefix="studio-large-reference-ui-") as check_dir:
+                sample=Path(check_dir)/"photo.png"
+                Image.frombytes("RGB",(800,600),rng.randbytes(800*600*3)).save(sample)
+                with patch("PyQt6.QtWidgets.QFileDialog.getOpenFileName",
+                           return_value=(str(sample),"")):
+                    ui.select_local_source()
+            check(ui._source_manifest is not None
+                  and ui._local_source.startswith("data:image/webp;base64,"),
+                  "Image Lab accepts full-size local visual references without uploading")
+            with patch("ttg_online_image_dialog.readiness",
+                       return_value={"state":"configured"}), patch(
+                       "PyQt6.QtWidgets.QMessageBox.question",
+                       return_value=QMessageBox.StandardButton.Yes), patch.object(
+                       ui,"_start") as begin:
+                ui.consent.setChecked(True)
+                ui.prompt.setPlainText("THETECHGUY wall sign with silver TG")
+                ui.ratio.setCurrentText("match_input_image")
+                ui.generate()
+                sent=begin.call_args.kwargs["settings"]
+                check(sent["reference_image"]==ui._local_source and
+                      sent["quality"]=="brand_pro" and
+                      sent["input_image"]=="" and not ui.consent.isChecked(),
+                      "Explicit GUI paid confirmation carries chosen reference into generator")
             ui.close()
             desktop=CreativeWorkspace()
             check(hasattr(desktop,"open_online_image"),
@@ -207,14 +292,32 @@ def main():
                           "Cloud image saves inside current editable project by default")
                 assets.mkdir(parents=True,exist_ok=True)
                 Image.new("RGB",(64,48),(30,100,190)).save(expected)
-                cloud._completed("download",{"path":str(expected)})
+                cloud._completed("submit",{
+                    "prediction_id":"abcdefghijkl0001","model":"google/nano-banana-pro",
+                    "quality":"brand_pro","status":"starting",
+                    "reference_supplied":True,
+                })
+                cloud._completed("download",{
+                    "path":str(expected),"provider":"replicate",
+                    "prediction_id":"abcdefghijkl0001",
+                    "sha256":hashlib.sha256(expected.read_bytes()).hexdigest(),
+                    "width":64,"height":48,
+                })
+                receipt=editor.selected_layer().properties["online_generation_provenance"]
+                check(receipt["model"]=="google/nano-banana-pro"
+                      and receipt["model_identity_verified"]
+                      and receipt["prediction_id"]=="abcdefghijkl0001"
+                      and "prompt" not in receipt,
+                      "Exact provider prediction and model preserved on editable result")
                 check(editor.selected_layer() is not None and
                       editor.selected_layer().type=="image",
                       "Cloud result imports as an actual editable Studio image layer")
                 editor.save_project()
                 persisted=TTGProject.load(project_file)
-                check(persisted.layers and persisted.layers[0].type=="image",
-                      "Cloud-origin editable image survives save/reopen")
+                check(persisted.layers and persisted.layers[0].type=="image"
+                      and persisted.layers[0].properties[
+                          "online_generation_provenance"]["model_identity_verified"],
+                      "Cloud-origin editable image and provider receipt survive save/reopen")
                 cloud.close()
                 editor.close()
                 app.processEvents()

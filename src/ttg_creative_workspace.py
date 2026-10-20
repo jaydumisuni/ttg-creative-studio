@@ -525,7 +525,7 @@ class CreativeWorkspace(QWidget):
         dialog.show()
         self._image_lab_dialog = dialog
 
-    def import_image_lab_result(self, filename: str) -> None:
+    def import_image_lab_result(self, filename: str, provenance: dict | None = None) -> None:
         if self.project is None or self.project_path is None:
             return
         path = Path(filename).resolve()
@@ -534,6 +534,15 @@ class CreativeWorkspace(QWidget):
         self.remember("Import Image Lab result")
         relative = path.relative_to(self.project_path.parent.resolve()).as_posix()
         layer = self.action.add_image(self.project, relative, 80, 80, "Image Lab result")
+        if provenance is not None:
+            # Evidence belongs to the editable layer, not an untracked chat note.
+            # Do not store private reference bytes, tokens, prompts, or URLs.
+            allowed=("provider","prediction_id","model","quality","sha256",
+                     "width","height","reference_supplied","reference_sha256",
+                     "model_identity_verified")
+            layer.properties["online_generation_provenance"]={
+                key:provenance[key] for key in allowed if key in provenance
+            }
         self.selected_layer_id = layer.id
         self.refresh_all()
         self.autosave_snapshot()
