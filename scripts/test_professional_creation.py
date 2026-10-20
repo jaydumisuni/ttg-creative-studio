@@ -53,6 +53,23 @@ def main():
         modified=renderer.render(loaded,time=0).convert("RGB")
         test(ImageChops.difference(edited,modified).getbbox() is not None,
              "Editable metal lettering changes physical output")
+    # Material qualification uses observable pixels and unchanged source data.
+    from ttg_cinematic_renderer import _room, _metallic_shading
+    import numpy as np
+    brushed = _metallic_shading((256,256), seed=19, light_shift=0)
+    brushed_again = _metallic_shading((256,256), seed=19, light_shift=0)
+    test(np.array_equal(brushed, brushed_again),
+         "Brushed-metal anisotropy is deterministic for a frozen scene")
+    vertical = np.abs(np.diff(brushed.astype(np.int16), axis=0)).mean()
+    horizontal = np.abs(np.diff(brushed.astype(np.int16), axis=1)).mean()
+    test(vertical > horizontal * 1.10,
+         "Real brushed steel fine structure is directional, not a flat gradient")
+    lobby = np.asarray(_room(640, 480, 67, .55).convert("RGB"))
+    center_wall=lobby[160:255,280:440,:]
+    test(center_wall.std() > 5,
+         "Native plaster wall shows measured nonuniform material microtexture")
+    test(np.unique(lobby[410:470,320:430,:].reshape(-1,3),axis=0).shape[0] > 15,
+         "Native floor shows actual procedural stone detail")
     try:action.create_professional_wall_sign("Generate a random portrait of a person")
     except ValueError: checks.append("Unsupported arbitrary generative prompt rejected explicitly")
     else:raise AssertionError("Must not fake general text-to-image generation")
