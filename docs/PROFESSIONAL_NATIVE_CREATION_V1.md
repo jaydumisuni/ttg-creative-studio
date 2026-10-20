@@ -94,3 +94,40 @@ professional photoreal text-to-image or model-generated video will require
 an actually available authorized inference backend, an approved materials
 renderer capable of that quality, or further Studio-native engineering.
 Neither a paid provider nor a 92-GiB model is silently installed.
+
+
+## G6.2 native Studio resource selection and visual evidence (20 October 2026)
+
+Studio owns production. The new production director discovers candidate
+editable projects in explicitly approved catalog roots, verifies required
+asset SHA-256 hashes, chooses a supported route, invokes the existing
+Studio ExportService, checks its actual pixels, and writes a receipt.
+
+Two grounded routes: (1) exact reference re-composition using an existing
+matching editable multilayer Studio project with the original reference hidden,
+or (2) original native procedural office-wall signage through BananaActions
+and CinematicRenderer. Exact source-derived recomposition is NOT neural
+synthesis; the procedural scene family is not yet certified photorealism.
+
+An assistant may supply an instruction, and an approved Ptah workspace may
+execute the job, but Creative Studio is the renderer. Neither a paid
+provider nor a new checkpoint, Hunter connection, or Ptah Control admission
+is implied. Unsupported creative prompts, missing assets, checksum mismatch
+and destination overwrite fail closed.
+
+The existing generic Studio job interface now includes the studio_produce
+operation. CLI entry point: scripts/run_studio_production.py; supply
+--instruction, --catalog, --output-root, and optionally --exact --reference.
+
+If an editable project is exported to a different directory, Studio
+hardlinks verified assets when possible or copies them under a 128 MiB
+quota to produce a portable project without wasting storage.
+
+Physical KRATOS proof using the existing Ptah scratch reference workspace:
+Studio independently rendered 1448 x 1086 with zero differences from the
+provided THETECHGUY source photograph, retaining the original source as a
+hidden reference. A separate 1440 x 1080 from-scratch native Studio scene
+also rendered successfully but still requires visual quality acceptance.
+
+Tests: python -B scripts/test_studio_production_director.py. Windows and
+Linux qualification is specified in studio-production-director.yml.
