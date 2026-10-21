@@ -40,3 +40,7 @@ scripts/test_creative_instruction_bridge.py validates a native fresh scene, text
 The JSON job in examples/creative-instructions/ttg_scene_job_template.json
 is an executable *template* after a client replaces the placeholder paths
 with absolute paths in an authorized workspace.
+
+## Native language and measured correction extension
+
+The optional G7 bounded interpreter and real pixel-contribution correction are documented in [CREATIVE_INTELLIGENCE_BOUNDARY_2026-10-21.md](CREATIVE_INTELLIGENCE_BOUNDARY_2026-10-21.md). They do not supersede the strict assistant-authored scene schema or claim general semantic vision.

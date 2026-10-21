@@ -41,10 +41,12 @@ def main(argv: list[str] | None = None) -> int:
         schema=tool_catalog()
         schema["operations"].update({
             "creative_execute": {
-                "state": "bounded_native_available",
+                "state": "bounded_native_with_limited_natural_language",
                 "requires": ["options.schema", "options.mode", "options.instruction", "output"],
                 "modes": ["auto", "scene", "wall_sign", "edit_project", "campaign"],
                 "scene_schema": "ttg.studio.scene-spec.v1",
+                "natural_language": "admitted typographic posters and unambiguous project edits; unsupported requests require an assistant-authored Studio scene spec",
+                "auto_correct_layout": "opt-in bounded anchor corrections; does not certify photorealism or semantic quality",
                 "side_effects": "Create actual Studio project and image with pixel replay proof",
                 "description": ("Accept an AI-authored bounded scene packet or project edits; "
                                 "reuse existing Studio native rendering and campaign composer. "
