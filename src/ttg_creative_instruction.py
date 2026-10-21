@@ -26,6 +26,7 @@ from ttg_project_schema import Layer, TTGProject, Transform
 from ttg_visual_understanding import measure_image
 from ttg_creative_intent import interpret_creation, interpret_edit, correct_layout
 from ttg_creative_review import review_text_contribution
+from ttg_creative_acceptance import validate_acceptance, apply_expected_text, inspect_acceptance
 
 SCHEMA = "ttg.studio.creative-instruction.v1"
 SCENE_SCHEMA = "ttg.studio.scene-spec.v1"
@@ -293,13 +294,18 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
     if not isinstance(opts,dict) or opts.get("schema")!=SCHEMA:
         raise CreativeInstructionError("Creative instruction contract is required")
     _assert_keys(opts,{"schema","mode","instruction","scene","edits","campaign",
-                       "catalog_roots","dry_run","auto_correct_layout"},"options")
+                       "catalog_roots","dry_run","auto_correct_layout","acceptance","repair_expected_text"},"options")
     mode=opts.get("mode")
     if mode not in ("auto","scene","wall_sign","edit_project","campaign"):
         raise CreativeInstructionError("Unsupported creative instruction mode")
     instruction=_text(opts.get("instruction"),"instruction",1000)
     if type(opts.get("auto_correct_layout",False)) is not bool:
         raise CreativeInstructionError("auto_correct_layout must be boolean")
+    if type(opts.get("repair_expected_text",False)) is not bool:
+        raise CreativeInstructionError("repair_expected_text must be boolean")
+    expected = validate_acceptance(opts["acceptance"]) if "acceptance" in opts else None
+    if opts.get("repair_expected_text") and expected is None:
+        raise CreativeInstructionError("Spelling repair requires explicit expected text")
     natural_compile = "none"
     if mode == "auto":
         if opts.get("scene") is not None:
@@ -408,8 +414,10 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
             item["natural_language_compilation"]="bounded_native_edit"
         apply_edits(project,edits)
         source_root=src.parent
+    spelling_edits = apply_expected_text(project, expected) if opts.get("repair_expected_text") else []
     if opts.get("dry_run") is True:
-        return {**item,"state":"planned_not_rendered","layer_count":len(project.layers)}
+        return {**item,"state":"planned_not_rendered","layer_count":len(project.layers),
+                "spelling_repair_plan":spelling_edits}
     corrections=(correct_layout(project) if opts.get("auto_correct_layout",False)
                  else {"correction_count":0,"edits":[],
                        "structural_layout":"not_requested","semantic_visual_review":"required"})
@@ -434,6 +442,7 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
         replay=CanvasRenderer(RenderContext(root)).render(reopened).convert("RGBA")
         if replay.tobytes()!=pixels:
             raise CreativeInstructionError("Reopened Studio project does not reproduce emitted pixels")
+        acceptance_review = inspect_acceptance(reopened, root, target, expected) if expected else None
         item.update({"state":"rendered_visual_review_required","output":str(target),
                      "project":str(project_out),"layer_count":len(reopened.layers),
                      "dimensions":size,"render_sha256":_sha(target),
@@ -441,7 +450,9 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
                      "pixel_metrics":measure_image(target),
                      "bounded_layout_corrections":corrections,
                      "pixel_layer_review":pixel_review,
-                     "visual_acceptance":"structural_and_replay_only_semantic_review_pending"})
+                     "visual_acceptance":"structural_and_replay_only_semantic_review_pending",
+                     "declared_acceptance":acceptance_review,
+                     "bounded_spelling_repairs":spelling_edits})
         receipt_out.write_text(json.dumps(item,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
         return item
     except Exception:
