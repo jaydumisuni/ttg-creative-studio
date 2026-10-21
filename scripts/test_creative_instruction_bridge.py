@@ -102,6 +102,10 @@ def main():
         require(not_done["state"]=="needs_scene_compilation" and
                 not (root/"unknown_image.png").exists(),
                 "Unfamiliar natural language demands authored scene rather than fake pixels")
+        contract=not_done["supported_scene_contract"]
+        require("steel_text" in contract["scene"]["native_materials"] and
+                contract["acceptance"]["semantic_visual_quality"]=="separate qualified visual reviewer required",
+                "Unknown instruction returns executable Studio contract and independent review boundary")
         invented=packet("not_a_sign","wall_sign",root,
                         instruction="Make a portrait photo of a dog in a lobby")
         rejects(lambda:run_creative_instruction(invented),
@@ -109,6 +113,10 @@ def main():
         cli=ROOT/"src/ttg_creative_studio/cli.py"
         advertised=subprocess.run([sys.executable,"-B",str(cli),"--catalog"],capture_output=True,text=True,timeout=28)
         require(advertised.returncode==0 and "creative_execute" in json.loads(advertised.stdout)["operations"],"AI-facing tool discovery advertises real workflow")
+        metadata=json.loads(advertised.stdout)["operations"]["creative_execute"]
+        require("steel_polygon" in metadata["scene_capabilities"]["scene"]["native_materials"] and
+                metadata["scene_capabilities"]["execution"]["sergeant"]=="engineering review, not artistic approval",
+                "Tool catalog advertises renderer contract without granting workforce review authority")
         job=packet("from_cli","scene",root,scene=scene())
         (root/"job.json").write_text(json.dumps(job))
         cmd=subprocess.run([sys.executable,"-B",str(cli),"--job",str(root/"job.json"),"--result",str(root/"result.json")],capture_output=True,text=True,timeout=80)

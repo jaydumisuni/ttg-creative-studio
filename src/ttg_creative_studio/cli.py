@@ -14,7 +14,7 @@ from ttg_creative_studio.engine.video_jobs import VIDEO_TASKS, run_video_job, to
 from ttg_creative_studio.engine.online_image_jobs import ONLINE_IMAGE_TASKS, run_online_image_job
 from ttg_creative_studio.engine.image_jobs import CreativeJobError
 from ttg_production_director import ProductionDirector, ProductionError
-from ttg_creative_instruction import run_creative_instruction
+from ttg_creative_instruction import run_creative_instruction, creative_scene_contract
 from ttg_professional_image_production import ProfessionalImagePipeline, choose_quality
 
 
@@ -45,6 +45,7 @@ def main(argv: list[str] | None = None) -> int:
                 "requires": ["options.schema", "options.mode", "options.instruction", "output"],
                 "modes": ["auto", "scene", "wall_sign", "edit_project", "campaign"],
                 "scene_schema": "ttg.studio.scene-spec.v1",
+                "scene_capabilities": creative_scene_contract(),
                 "natural_language": "admitted typographic posters and unambiguous project edits; unsupported requests require an assistant-authored Studio scene spec",
                 "auto_correct_layout": "opt-in bounded anchor corrections; does not certify photorealism or semantic quality",
                 "acceptance_schema": "ttg.studio.creative-acceptance.v1",
@@ -189,7 +190,9 @@ def main(argv: list[str] | None = None) -> int:
 
         elif job.get("task") == "creative_execute":
             receipt=run_creative_instruction(job)
-            result={"ok":True,"jobId":str(job.get("jobId") or "creative_execution"),
+            result={"ok":receipt["state"] not in ("correction_required",
+                     "needs_scene_compilation", "needs_edit_compilation"),
+                     "jobId":str(job.get("jobId") or "creative_execution"),
                     "task":"creative_execute","status":receipt["state"],
                     "outputPath":receipt.get("output"),"meta":receipt}
 
