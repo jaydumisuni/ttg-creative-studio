@@ -41,6 +41,36 @@ class CreativeInstructionError(ValueError):
     """A request cannot be executed honestly within current Studio capabilities."""
 
 
+def creative_scene_contract() -> dict[str, Any]:
+    """Actual bounded Studio capabilities for an external assistant's scene plan."""
+    return {
+        "schema": SCENE_SCHEMA, "instruction_schema": SCHEMA,
+        "scene": {
+            "canvas": {"width": [320, 1920], "height": [240, 1440],
+                       "max_pixels": 2100000},
+            "layer_types": sorted(_ALLOWED_TYPES),
+            "native_materials": sorted(_ALLOWED_MATERIALS),
+            "max_layers": 60,
+            "shape_primitives": ["rectangle", "ellipse"],
+            "material_parameters": {
+                "architectural_lobby": ["seed", "warmth"],
+                "steel_polygon": ["points", "depth", "seed"],
+                "steel_text": ["text", "size", "depth", "seed"],
+                "neon": ["points", "width", "terminals", "led_color"]}},
+        "edits": ["replace_text", "move_layer", "set_neon_color"],
+        "acceptance": {
+            "schema": "ttg.studio.creative-acceptance.v1",
+            "verified": ["text", "materials", "rendered_pixel_visibility",
+                         "exact_project_replay"],
+            "semantic_visual_quality": "separate qualified visual reviewer required"},
+        "execution": {"owner": "TTG Creative Studio", "overwrite": False,
+            "unknown_instruction": "assistant compiles bounded scene or selects specialist",
+            "tenfold": "approved complex campaigns only",
+            "cookpit": "optional recovery and evidence",
+            "sergeant": "engineering review, not artistic approval"},
+    }
+
+
 def _text(value: Any, label: str, limit: int = 160) -> str:
     if not isinstance(value, str) or not 1 <= len(value.strip()) <= limit:
         raise CreativeInstructionError(f"{label} requires 1-{limit} characters")
@@ -355,6 +385,7 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
     if mode=="needs_scene_spec":
         return {**item,"state":"needs_scene_compilation",
                 "required_scene_schema":SCENE_SCHEMA,
+                "supported_scene_contract":creative_scene_contract(),
                 "instruction_parse":"not falsely represented as understood",
                 "next":"An authorized assistant must translate this request into a scene spec or select an approved specialist"}
     if mode=="campaign":
@@ -443,7 +474,10 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
         if replay.tobytes()!=pixels:
             raise CreativeInstructionError("Reopened Studio project does not reproduce emitted pixels")
         acceptance_review = inspect_acceptance(reopened, root, target, expected) if expected else None
-        item.update({"state":"rendered_visual_review_required","output":str(target),
+        acceptance_failed = (acceptance_review is not None and
+                             acceptance_review["state"] != "pass")
+        item.update({"state":("correction_required" if acceptance_failed else
+                              "rendered_visual_review_required"),"output":str(target),
                      "project":str(project_out),"layer_count":len(reopened.layers),
                      "dimensions":size,"render_sha256":_sha(target),
                      "reopened_project_exact_pixels":True,
@@ -452,6 +486,7 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
                      "pixel_layer_review":pixel_review,
                      "visual_acceptance":"structural_and_replay_only_semantic_review_pending",
                      "declared_acceptance":acceptance_review,
+                     "declared_acceptance_passed":(not acceptance_failed if acceptance_review else None),
                      "bounded_spelling_repairs":spelling_edits})
         receipt_out.write_text(json.dumps(item,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
         return item

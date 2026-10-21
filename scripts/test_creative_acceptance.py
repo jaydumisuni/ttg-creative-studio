@@ -40,9 +40,13 @@ def main():
         check(review["independent_semantic_review"]=="not_performed" and review["photorealism_certification"] is False,"Pixel test never claims independent semantic or photographic review")
         wrong=run_creative_instruction(job(p,"wrong","DESIGN WITH PROPOSE",acceptance=a))
         check(wrong["declared_acceptance"]["state"]=="correction_required","Wrong spelling fails even with valid visible PNG")
+        check(wrong["state"]=="correction_required" and wrong["declared_acceptance_passed"] is False,
+              "Unmet declared acceptance cannot be reported as a finished render")
         check(wrong["declared_acceptance"]["findings"][0]["reason"]=="declared_element_mismatch","Diagnostic identifies specifically incorrect source wording")
         fixed=run_creative_instruction(job(p,"fixed","DESIGN WITH PROPOSE",acceptance=a,repair_expected_text=True))
         check(fixed["declared_acceptance"]["state"]=="pass" and len(fixed["bounded_spelling_repairs"])==1,"Explicit trusted wording repairs native source")
+        check(fixed["state"]=="rendered_visual_review_required" and fixed["declared_acceptance_passed"] is True,
+              "Passing checks still requires separate semantic visual review")
         check(TTGProject.load(fixed["project"]).layers[-1].properties["text"]=="DESIGN WITH PURPOSE" and fixed["reopened_project_exact_pixels"] and fixed["render_sha256"]!=wrong["render_sha256"],"Correction changes pixels and editable project reopens exactly")
         legacy=run_creative_instruction(job(p,"legacy","NORMAL"))
         check(legacy["declared_acceptance"] is None and legacy["reopened_project_exact_pixels"],"Previous schema remains backward-compatible")
@@ -59,6 +63,18 @@ def main():
         wall_proof=run_creative_instruction(wall)
         check(wall_proof["declared_acceptance"]["state"]=="pass" and wall_proof["declared_acceptance"]["visible_checks"]==3,
               "Existing premium wall sign satisfies native material and branded-text visibility requirements")
+        import subprocess
+        cli=ROOT/"src/ttg_creative_studio/cli.py"
+        cli_job=job(p,"climismatch","WRONG SOURCE TEXT",acceptance=a)
+        (p/"cli_request.json").write_text(json.dumps(cli_job))
+        proc=subprocess.run([sys.executable,"-B",str(cli),"--job",str(p/"cli_request.json"),
+                             "--result",str(p/"cli_response.json")],capture_output=True,
+                            text=True,timeout=60)
+        response=json.loads((p/"cli_response.json").read_text())
+        check(proc.returncode==0 and response["ok"] is False and
+              response["status"]=="correction_required" and
+              response["meta"]["declared_acceptance_passed"] is False,
+              "Assistant-facing CLI exposes failed acceptance without claiming job success")
         denied(lambda:validate_acceptance({"schema":AS}),"Empty acceptance cannot certify")
         denied(lambda:validate_acceptance({**a,"skip_review":True}),"Unapproved acceptance fields rejected")
         denied(lambda:validate_acceptance({"schema":AS,"text":[{"layer_id":"headline","value":"one"},{"layer_id":"headline","value":"two"}]}),"Repeated target rejected")
