@@ -14,6 +14,7 @@ from ttg_creative_studio.engine.video_jobs import VIDEO_TASKS, run_video_job, to
 from ttg_creative_studio.engine.online_image_jobs import ONLINE_IMAGE_TASKS, run_online_image_job
 from ttg_creative_studio.engine.image_jobs import CreativeJobError
 from ttg_production_director import ProductionDirector, ProductionError
+from ttg_creative_instruction import run_creative_instruction
 from ttg_professional_image_production import ProfessionalImagePipeline, choose_quality
 
 
@@ -39,6 +40,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.catalog:
         schema=tool_catalog()
         schema["operations"].update({
+            "creative_execute": {
+                "state": "bounded_native_available",
+                "requires": ["options.schema", "options.mode", "options.instruction", "output"],
+                "modes": ["auto", "scene", "wall_sign", "edit_project", "campaign"],
+                "scene_schema": "ttg.studio.scene-spec.v1",
+                "side_effects": "Create actual Studio project and image with pixel replay proof",
+                "description": ("Accept an AI-authored bounded scene packet or project edits; "
+                                "reuse existing Studio native rendering and campaign composer. "
+                                "Unsupported instructions and unapproved assets fail closed; "
+                                "no Tenfold/Cookpit execution is implied by this contract."),
+            },
             "studio_produce": {
                 "state": "native_available",
                 "requires": ["options.instruction", "options.catalog_roots",
@@ -169,6 +181,12 @@ def main(argv: list[str] | None = None) -> int:
                     "task":"studio_produce","status":receipt["state"],
                     "outputPath":output_path,
                     "meta":{"selected_route":decision["route"],**receipt}}
+
+        elif job.get("task") == "creative_execute":
+            receipt=run_creative_instruction(job)
+            result={"ok":True,"jobId":str(job.get("jobId") or "creative_execution"),
+                    "task":"creative_execute","status":receipt["state"],
+                    "outputPath":receipt.get("output"),"meta":receipt}
 
         elif job.get("task") in VIDEO_TASKS:
             result=run_video_job(job)
