@@ -47,6 +47,9 @@ def main(argv: list[str] | None = None) -> int:
                 "scene_schema": "ttg.studio.scene-spec.v1",
                 "natural_language": "admitted typographic posters and unambiguous project edits; unsupported requests require an assistant-authored Studio scene spec",
                 "auto_correct_layout": "opt-in bounded anchor corrections; does not certify photorealism or semantic quality",
+                "acceptance_schema": "ttg.studio.creative-acceptance.v1",
+                "acceptance_checks": "exact text/material values and actual per-layer visible pixel contribution",
+                "repair_expected_text": "opt-in constrained edits based on explicit assistant/user expectation; semantic/photographic review remains separate",
                 "side_effects": "Create actual Studio project and image with pixel replay proof",
                 "description": ("Accept an AI-authored bounded scene packet or project edits; "
                                 "reuse existing Studio native rendering and campaign composer. "
