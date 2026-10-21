@@ -1,0 +1,116 @@
+{
+  "jobId": "studio_demo_01",
+  "task": "creative_execute",
+  "output": "/ABSOLUTE/APPROVED/WORKSPACE/studio_demo_01.png",
+  "options": {
+    "schema": "ttg.studio.creative-instruction.v1",
+    "mode": "auto",
+    "instruction": "Create an original THETECHGUY studio wall sign with metallic lettering and blue light",
+    "catalog_roots": [
+      "/ABSOLUTE/APPROVED/WORKSPACE"
+    ],
+    "scene": {
+      "schema": "ttg.studio.scene-spec.v1",
+      "name": "THETECHGUY premium scene",
+      "canvas": {
+        "width": 640,
+        "height": 480,
+        "background": "#0B111A"
+      },
+      "layers": [
+        {
+          "id": "room",
+          "name": "Original architecture",
+          "type": "shape",
+          "properties": {
+            "cinematic_material": "architectural_lobby",
+            "seed": 39,
+            "warmth": 0.65
+          }
+        },
+        {
+          "id": "badge",
+          "name": "Metal tag",
+          "type": "shape",
+          "x": 182,
+          "y": 90,
+          "properties": {
+            "cinematic_material": "steel_polygon",
+            "points": [
+              [
+                0,
+                0
+              ],
+              [
+                110,
+                0
+              ],
+              [
+                110,
+                55
+              ],
+              [
+                0,
+                55
+              ]
+            ],
+            "depth": 8,
+            "seed": 42
+          }
+        },
+        {
+          "id": "wordmark",
+          "name": "Exact metallic type",
+          "type": "text3d",
+          "x": 140,
+          "y": 235,
+          "properties": {
+            "cinematic_material": "steel_text",
+            "text": "THETECHGUY",
+            "size": 55,
+            "depth": 5
+          }
+        },
+        {
+          "id": "neon",
+          "name": "LED circuit",
+          "type": "shape",
+          "x": 265,
+          "y": 158,
+          "properties": {
+            "cinematic_material": "neon",
+            "points": [
+              [
+                0,
+                0
+              ],
+              [
+                100,
+                0
+              ],
+              [
+                100,
+                28
+              ]
+            ],
+            "width": 4,
+            "led_color": "blue",
+            "terminals": true
+          }
+        },
+        {
+          "id": "subtitle",
+          "name": "Tagline",
+          "type": "text",
+          "x": 140,
+          "y": 338,
+          "properties": {
+            "text": "ONE BRAND. ALL SOLUTIONS.",
+            "size": 26,
+            "color": "#C8DEEA"
+          }
+        }
+      ]
+    }
+  }
+}

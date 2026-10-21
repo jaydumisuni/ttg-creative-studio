@@ -22,9 +22,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install renderer dependency
-        run: python -m pip install Pillow==11.3.0
+      - name: Install existing native renderer dependencies
+        run: python -m pip install Pillow==11.3.0 numpy==1.26.4
       - name: Verify Studio-owned production
         run: python -B scripts/test_studio_production_director.py
+      - name: Verify assistant scene/edit/campaign execution
+        run: python -B scripts/test_creative_instruction_bridge.py
       - name: Verify shared Studio registry
         run: python -B src/ttg_creative_studio/cli.py --catalog
