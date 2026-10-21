@@ -24,6 +24,8 @@ from ttg_export_service import ExportService
 from ttg_production_director import ProductionDirector
 from ttg_project_schema import Layer, TTGProject, Transform
 from ttg_visual_understanding import measure_image
+from ttg_creative_intent import interpret_creation, interpret_edit, correct_layout
+from ttg_creative_review import review_text_contribution
 
 SCHEMA = "ttg.studio.creative-instruction.v1"
 SCENE_SCHEMA = "ttg.studio.scene-spec.v1"
@@ -291,18 +293,26 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
     if not isinstance(opts,dict) or opts.get("schema")!=SCHEMA:
         raise CreativeInstructionError("Creative instruction contract is required")
     _assert_keys(opts,{"schema","mode","instruction","scene","edits","campaign",
-                       "catalog_roots","dry_run"},"options")
+                       "catalog_roots","dry_run","auto_correct_layout"},"options")
     mode=opts.get("mode")
     if mode not in ("auto","scene","wall_sign","edit_project","campaign"):
         raise CreativeInstructionError("Unsupported creative instruction mode")
     instruction=_text(opts.get("instruction"),"instruction",1000)
+    if type(opts.get("auto_correct_layout",False)) is not bool:
+        raise CreativeInstructionError("auto_correct_layout must be boolean")
+    natural_compile = "none"
     if mode == "auto":
         if opts.get("scene") is not None:
             mode="scene"
         elif opts.get("campaign") is not None:
             mode="campaign"
-        elif opts.get("edits") is not None and (job.get("input") or job.get("inputPath")):
+        elif (job.get("input") or job.get("inputPath")):
             mode="edit_project"
+        elif (native_scene := interpret_creation(instruction)) is not None:
+            opts=dict(opts)
+            opts["scene"]=native_scene
+            mode="scene"
+            natural_compile="bounded_native_typography"
         else:
             # Use Studio's actual admission logic rather than treating any
             # incidental word "lobby" as permission to produce a TTG logo.
@@ -334,7 +344,8 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
           "render_owner":"TTG Creative Studio","model_inference_used":False,
           "paid_provider_used":False,"tenfold_executed":False,
           "cookpit_executed":False,"sergeant_visual_approval":False,
-          "semantic_visual_review":"required"}
+          "semantic_visual_review":"required",
+          "natural_language_compilation":natural_compile}
     if mode=="needs_scene_spec":
         return {**item,"state":"needs_scene_compilation",
                 "required_scene_schema":SCENE_SCHEMA,
@@ -387,15 +398,33 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
             not 1 <= project.canvas.height <= 1440 or
             project.canvas.width * project.canvas.height > 2_100_000):
             raise CreativeInstructionError("Source project exceeds bounded edit-render canvas limits")
-        apply_edits(project,opts.get("edits"))
+        edits=opts.get("edits")
+        if edits is None:
+            edits=interpret_edit(instruction,project)
+            if edits is None:
+                return {**item,"state":"needs_edit_compilation",
+                        "instruction_parse":"not falsely represented as understood",
+                        "next":"Provide one unambiguous natural edit or an approved explicit edit packet"}
+            item["natural_language_compilation"]="bounded_native_edit"
+        apply_edits(project,edits)
         source_root=src.parent
     if opts.get("dry_run") is True:
         return {**item,"state":"planned_not_rendered","layer_count":len(project.layers)}
+    corrections=(correct_layout(project) if opts.get("auto_correct_layout",False)
+                 else {"correction_count":0,"edits":[],
+                       "structural_layout":"not_requested","semantic_visual_review":"required"})
     portable=None
     try:
         portable=_portable_assets(project,source_root,root,target.stem) if mode=="edit_project" else None
         project.save(project_out)
         ExportService(root).export_png(project,target)
+        pixel_review={"state":"not_requested","semantic_review":"required"}
+        if opts.get("auto_correct_layout",False):
+            pixel_review=review_text_contribution(project,root,target,auto_repair=True)
+            image=pixel_review.pop("corrected_image",None)
+            if image is not None:
+                image.save(target)
+                project.save(project_out)
         with Image.open(target) as im:
             size=[im.width,im.height]
             if size!=[project.canvas.width,project.canvas.height]:
@@ -409,7 +438,10 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
                      "project":str(project_out),"layer_count":len(reopened.layers),
                      "dimensions":size,"render_sha256":_sha(target),
                      "reopened_project_exact_pixels":True,
-                     "pixel_metrics":measure_image(target)})
+                     "pixel_metrics":measure_image(target),
+                     "bounded_layout_corrections":corrections,
+                     "pixel_layer_review":pixel_review,
+                     "visual_acceptance":"structural_and_replay_only_semantic_review_pending"})
         receipt_out.write_text(json.dumps(item,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
         return item
     except Exception:

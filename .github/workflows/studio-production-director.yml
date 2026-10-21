@@ -28,5 +28,7 @@ jobs:
         run: python -B scripts/test_studio_production_director.py
       - name: Verify assistant scene/edit/campaign execution
         run: python -B scripts/test_creative_instruction_bridge.py
+      - name: Verify native instruction planning and bounded pixel correction
+        run: python -B scripts/test_creative_intelligence.py
       - name: Verify shared Studio registry
         run: python -B src/ttg_creative_studio/cli.py --catalog
