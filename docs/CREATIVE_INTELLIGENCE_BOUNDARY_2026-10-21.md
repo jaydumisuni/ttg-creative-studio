@@ -33,3 +33,24 @@ The GitHub Actions workflow \`.github/workflows/studio-production-director.yml\`
 ## What is not yet qualified
 
 General open-domain intent parsing, unknown-scene photo realism, independently observed semantic vision-model correction, and Tenfold/Cookpit production dispatch for complex multi-job creative campaigns. Keep these explicit until real executed evidence exists.
+
+## Regression qualification: cinematic material design-space preservation — 2026-10-21
+
+Visual inspection of a real auto-reviewed native wall-sign image exposed an
+incorrect automatic layout repair. The existing \`BananaActions\` template
+stores cinematic \`steel_text\` transforms in a **1440×1080 authored space**,
+which \`CanvasRenderer\` scales at draw time. The first correction implementation
+mistakenly clamped such authored coordinates to the **640×480 output canvas**,
+moving distinct wordmark and subtitle anchors onto a shared baseline. Both
+layers still contributed pixels, so the first pixel-differential visibility
+check did not expose the overlap.
+
+The corrected bounded repair uses **material-native design bounds** for
+\`cinematic_material=steel_text\`, while retaining output-canvas bounds for
+ordinary text. No new renderer, new scene geometry, or image model is added.
+
+Acceptance requires a *real native* image exported with and without opt-in
+layout review to have **identical SHA-256** when its material scene is already
+valid, and its authored text anchors must remain \`594\` (THETECHGUY) and
+\`729\` (DIGITAL SOLUTIONS) on the tested 640×480 wall-sign scene.
+The broader independent semantic/artistic acceptance remains open.
