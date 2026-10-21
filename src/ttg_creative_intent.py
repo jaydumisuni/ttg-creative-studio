@@ -111,8 +111,16 @@ def correct_layout(project:TTGProject, *,maximum: int=2) -> dict[str,Any]:
             if layer.locked or layer.type not in ("text","text3d"):
                 continue
             x=float(layer.transform.x);y=float(layer.transform.y)
-            newx=min(max(x,margin),project.canvas.width-margin)
-            newy=min(max(y,margin),project.canvas.height-margin)
+            # The existing cinematic steel-text renderer interprets geometry
+            # in its 1440x1080 authored design space, scaling it to the canvas
+            # only when drawing. Clamping to the 640x480 output canvas collapses
+            # otherwise valid wordmark/subtitle spacing and corrupts the scene.
+            if layer.properties.get("cinematic_material")=="steel_text":
+                design_w,design_h=1440,1080
+            else:
+                design_w,design_h=project.canvas.width,project.canvas.height
+            newx=min(max(x,margin),design_w-margin)
+            newy=min(max(y,margin),design_h-margin)
             if x==newx and y==newy:continue
             layer.transform.x=newx;layer.transform.y=newy;changed=True
             changes.append({"iteration":iteration+1,"layer_id":layer.id,"op":"move_layer",

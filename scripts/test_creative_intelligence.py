@@ -77,6 +77,22 @@ def main():
         check(restored["pixel_layer_review"]["state"]=="pixel_layer_visibility_pass","Independent real-pixel test validates repaired text visibility")
         check(restored["pixel_layer_review"]["corrections"] and restored["reopened_project_exact_pixels"],"Occluded label raised above blocker and corrected project persists")
         check(TTGProject.load(restored["project"]).layers[-1].id=="heading","Verified correction is editable, not a flattened patch")
+        # Regression: material-layer transforms live in a 1440x1080 authored
+        # design space even when the native image is exported at 640x480.
+        # Automatic correction must not collapse separate branded text lines.
+        sign_prompt="Make a professional THETECHGUY office wall sign with blue lighting"
+        native_sign=run_creative_instruction(job(root,"wall_baseline",sign_prompt,mode="wall_sign"))
+        reviewed_sign=run_creative_instruction(job(root,"wall_reviewed",sign_prompt,
+                                                   mode="wall_sign",auto_correct_layout=True))
+        check(native_sign["render_sha256"]==reviewed_sign["render_sha256"],
+              "Opt-in layout inspector cannot corrupt intact material-native wall signs")
+        sign_project=TTGProject.load(reviewed_sign["project"])
+        metal_text=[l for l in sign_project.layers if l.properties.get("cinematic_material")=="steel_text"]
+        check([int(l.transform.y) for l in metal_text]==[594,729],
+              "Material-native wordmark/subtitle spacing remains in 1440x1080 design coordinates")
+        check(reviewed_sign["bounded_layout_corrections"]["correction_count"]==0 and
+              reviewed_sign["pixel_layer_review"]["state"]=="pixel_layer_visibility_pass",
+              "Normal wall-sign render requires no invented text corrections")
         no_auto=run_creative_instruction(job(root,"still_hidden","Keep hidden text",mode="scene",scene=scene))
         check(no_auto["bounded_layout_corrections"]["correction_count"]==0,"Correction never runs without explicit opt-in")
         blocked=job(root,"outside",'Move headline to (200,200)')
