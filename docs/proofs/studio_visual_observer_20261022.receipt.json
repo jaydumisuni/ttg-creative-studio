@@ -1,0 +1,83 @@
+{
+  "schema": "ttg.studio.creative-instruction.v1",
+  "mode": "wall_sign",
+  "instruction": "Make a professional THETECHGUY office wall sign with blue lighting",
+  "render_owner": "TTG Creative Studio",
+  "model_inference_used": false,
+  "paid_provider_used": false,
+  "tenfold_executed": false,
+  "cookpit_executed": false,
+  "sergeant_visual_approval": false,
+  "semantic_visual_review": "required",
+  "natural_language_compilation": "none",
+  "state": "visual_observer_unavailable",
+  "output": "/home/kratos/projects/TTG-Creative-Studio/.workspace/worktrees/studio-open-domain-visual-20261022/docs/proofs/studio_visual_observer_20261022.png",
+  "project": "/home/kratos/projects/TTG-Creative-Studio/.workspace/worktrees/studio-open-domain-visual-20261022/docs/proofs/studio_visual_observer_20261022.ttgstudio.json",
+  "layer_count": 10,
+  "dimensions": [
+    640,
+    480
+  ],
+  "render_sha256": "87f76869a62aeee8e4780250e4ba90d3bfa1ed9cd1ce05888972bf4229b1a50d",
+  "reopened_project_exact_pixels": true,
+  "pixel_metrics": {
+    "source": "/home/kratos/projects/TTG-Creative-Studio/.workspace/worktrees/studio-open-domain-visual-20261022/docs/proofs/studio_visual_observer_20261022.png",
+    "source_sha256": "87f76869a62aeee8e4780250e4ba90d3bfa1ed9cd1ce05888972bf4229b1a50d",
+    "dimensions": [
+      640,
+      480
+    ],
+    "orientation": "landscape",
+    "luminance_mean_0_255": 47.08,
+    "luminance_stddev_0_255": 41.65,
+    "edge_energy_0_255": 16.67,
+    "has_transparency": false,
+    "dominant_colors": [
+      {
+        "color": "#171E25",
+        "share": 0.314
+      },
+      {
+        "color": "#23272C",
+        "share": 0.239
+      },
+      {
+        "color": "#0F1318",
+        "share": 0.181
+      },
+      {
+        "color": "#30363A",
+        "share": 0.157
+      },
+      {
+        "color": "#878C91",
+        "share": 0.109
+      }
+    ],
+    "measurement_method": "Pillow pixel samples; no semantic object detection"
+  },
+  "bounded_layout_corrections": {
+    "correction_count": 0,
+    "edits": [],
+    "structural_layout": "not_requested",
+    "semantic_visual_review": "required"
+  },
+  "pixel_layer_review": {
+    "state": "not_requested",
+    "semantic_review": "required"
+  },
+  "visual_acceptance": "structural_and_replay_only_semantic_review_pending",
+  "declared_acceptance": null,
+  "independent_visual_observation": {
+    "schema": "ttg.studio.visual-observer.v1",
+    "image_sha256": "87f76869a62aeee8e4780250e4ba90d3bfa1ed9cd1ce05888972bf4229b1a50d",
+    "model": "owner-installed-image-model",
+    "endpoint": "http://127.0.0.1:8000",
+    "state": "visual_observer_unavailable",
+    "acceptance_authority": false,
+    "auto_edits_allowed": false,
+    "reason": "URLError"
+  },
+  "declared_acceptance_passed": null,
+  "bounded_spelling_repairs": []
+}
