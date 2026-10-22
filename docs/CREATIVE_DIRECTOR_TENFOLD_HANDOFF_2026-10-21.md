@@ -58,3 +58,18 @@ replace product-specific artistic acceptance.
 - Actual paid-model provider G6.3/G6.6 testing remains a separate
   credentials/admission and visual-acceptance boundary.
 - Hunter integration remains deferred.
+
+
+## Bounded actual-image correction proof — 22 October 2026
+
+The real PR #52 wall-sign PNG was retrieved from KRATOS through Oracle's
+SHA-bound workstation proof path for assistant visual examination. The assistant
+identified crowded subtitle positioning and inadequate legibility. Using the
+existing Studio native edit/render workflow it moved the subtitle and footer
+rules, then used the newly bounded `set_text_size` edit to change the metal-text
+subtitle from 30 to 40, rerendered, and independently checked a reopened-project
+exact-pixel replay. Final verified render:
+`docs/proofs/studio_typography_correction_20261022.png`; paired editable source
+and receipt are alongside it. This is **assistant-in-the-loop visual correction**,
+not independent model inference, universal design judgment, or fully unattended
+semantic correction. The original PR #52 proof was preserved.
