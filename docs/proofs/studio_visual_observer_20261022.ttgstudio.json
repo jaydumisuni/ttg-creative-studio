@@ -1,0 +1,505 @@
+{
+  "version": "0.1.0",
+  "project_type": "motion",
+  "name": "Professional office-wall identity | instruction-created",
+  "canvas": {
+    "width": 640,
+    "height": 480,
+    "fps": 12,
+    "duration": 1,
+    "background": "#101318"
+  },
+  "brand": {
+    "id": "ttg_default",
+    "name": "THETECHGUY DIGITAL SOLUTIONS",
+    "website": "thetechguyds.com",
+    "slogan": "Fairytale Business \u2014 Make a wish, we sort it.",
+    "pillars": [
+      "SYSTEMS",
+      "TOOLS",
+      "ISP",
+      "WEB"
+    ],
+    "colors": {
+      "black": "#050614",
+      "cyan": "#00E5FF",
+      "purple": "#BC13FE",
+      "white": "#F7FAFF"
+    },
+    "locked_assets": {}
+  },
+  "assets": [],
+  "layers": [
+    {
+      "id": "pro_scene_001",
+      "type": "shape",
+      "name": "Original architectural lobby \u00b7 procedural surface",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "cinematic_material": "architectural_lobby",
+        "seed": 18744,
+        "warmth": 0.55
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "pro_scene_002",
+      "type": "shape",
+      "name": "Raised stainless-steel T \u00b7 editable polygon",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 430,
+        "y": 192,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "cinematic_material": "steel_polygon",
+        "depth": 12,
+        "seed": 11,
+        "points": [
+          [
+            0,
+            5
+          ],
+          [
+            415,
+            0
+          ],
+          [
+            390,
+            64
+          ],
+          [
+            257,
+            70
+          ],
+          [
+            249,
+            361
+          ],
+          [
+            185,
+            361
+          ],
+          [
+            183,
+            77
+          ],
+          [
+            45,
+            77
+          ]
+        ]
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "pro_scene_003",
+      "type": "shape",
+      "name": "Raised stainless-steel G \u00b7 editable polygon",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 480,
+        "y": 194,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "cinematic_material": "steel_polygon",
+        "depth": 13,
+        "seed": 18,
+        "points": [
+          [
+            263,
+            5
+          ],
+          [
+            494,
+            5
+          ],
+          [
+            540,
+            82
+          ],
+          [
+            319,
+            87
+          ],
+          [
+            267,
+            129
+          ],
+          [
+            267,
+            230
+          ],
+          [
+            398,
+            230
+          ],
+          [
+            398,
+            184
+          ],
+          [
+            505,
+            184
+          ],
+          [
+            505,
+            335
+          ],
+          [
+            455,
+            372
+          ],
+          [
+            246,
+            372
+          ],
+          [
+            206,
+            323
+          ],
+          [
+            205,
+            103
+          ]
+        ]
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "pro_scene_004",
+      "type": "shape",
+      "name": "T/G circuit connector, illuminated",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 745,
+        "y": 281,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "cinematic_material": "neon",
+        "width": 6,
+        "terminals": true,
+        "led_color": "blue",
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            49,
+            -51
+          ],
+          [
+            145,
+            -52
+          ],
+          [
+            189,
+            -118
+          ]
+        ]
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "pro_scene_005",
+      "type": "shape",
+      "name": "Central microcircuit track",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 684,
+        "y": 352,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "cinematic_material": "neon",
+        "width": 5,
+        "terminals": true,
+        "led_color": "blue",
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            123
+          ],
+          [
+            46,
+            170
+          ],
+          [
+            101,
+            173
+          ]
+        ]
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "pro_scene_006",
+      "type": "shape",
+      "name": "G terminal illumination",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 742,
+        "y": 488,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "cinematic_material": "neon",
+        "width": 5,
+        "terminals": true,
+        "led_color": "blue",
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            52,
+            -59
+          ],
+          [
+            156,
+            -60
+          ]
+        ]
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "pro_scene_007",
+      "type": "text3d",
+      "name": "THETECHGUY \u00b7 brushed stainless exact wordmark",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 292,
+        "y": 594,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "cinematic_material": "steel_text",
+        "text": "THETECHGUY",
+        "size": 130,
+        "depth": 10,
+        "seed": 32,
+        "font_path": "/usr/share/fonts/truetype/lato/Lato-Heavy.ttf"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "pro_scene_008",
+      "type": "text3d",
+      "name": "DIGITAL SOLUTIONS \u00b7 raised letterform",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 463,
+        "y": 729,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "cinematic_material": "steel_text",
+        "text": "D I G I T A L    S O L U T I O N S",
+        "size": 30,
+        "depth": 5,
+        "seed": 13,
+        "font_path": "/usr/share/fonts/truetype/lato/Lato-Medium.ttf"
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "pro_scene_009",
+      "type": "shape",
+      "name": "Left steel footer line",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 295,
+        "y": 748,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "cinematic_material": "steel_polygon",
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            110,
+            0
+          ],
+          [
+            109,
+            3
+          ],
+          [
+            0,
+            3
+          ]
+        ],
+        "depth": 1
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    },
+    {
+      "id": "pro_scene_010",
+      "type": "shape",
+      "name": "Right steel footer line",
+      "visible": true,
+      "locked": false,
+      "transform": {
+        "x": 1040,
+        "y": 748,
+        "z": 0,
+        "scale_x": 1,
+        "scale_y": 1,
+        "scale_z": 1,
+        "rotation_x": 0,
+        "rotation_y": 0,
+        "rotation_z": 0,
+        "opacity": 1
+      },
+      "properties": {
+        "cinematic_material": "steel_polygon",
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            132,
+            0
+          ],
+          [
+            131,
+            3
+          ],
+          [
+            0,
+            3
+          ]
+        ],
+        "depth": 1
+      },
+      "effects": [],
+      "keyframes": {},
+      "children": []
+    }
+  ],
+  "audio_markers": [],
+  "export": {
+    "format": "mp4",
+    "quality": "1080p",
+    "codec": "h264",
+    "professional_creation": {
+      "input_instruction": "Make a professional THETECHGUY office wall sign with blue lighting",
+      "renderer": "native-canvas-cinematic-materials",
+      "model_inference": false,
+      "reference_image_count": 0,
+      "scope": "authored office-wall signage scene family",
+      "seed": 18744,
+      "accent_palette": "blue",
+      "intent": "premium photorealistic architectural office sign, branded video"
+    }
+  }
+}

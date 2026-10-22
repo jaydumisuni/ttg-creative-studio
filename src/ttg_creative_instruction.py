@@ -27,6 +27,7 @@ from ttg_visual_understanding import measure_image
 from ttg_creative_intent import interpret_creation, interpret_edit, correct_layout
 from ttg_creative_review import review_text_contribution
 from ttg_creative_acceptance import validate_acceptance, apply_expected_text, inspect_acceptance
+from ttg_semantic_visual_gate import validate_observer, observe_render, SCHEMA as VISUAL_SCHEMA
 
 SCHEMA = "ttg.studio.creative-instruction.v1"
 SCENE_SCHEMA = "ttg.studio.scene-spec.v1"
@@ -63,6 +64,9 @@ def creative_scene_contract() -> dict[str, Any]:
             "verified": ["text", "materials", "rendered_pixel_visibility",
                          "exact_project_replay"],
             "semantic_visual_quality": "separate qualified visual reviewer required"},
+        "visual_observer": {"schema":"ttg.studio.visual-observer.v1",
+             "endpoint":"owner-controlled local HTTP only",
+             "result":"SHA-bound advisory or explicit unavailable; never automatic approval"},
         "execution": {"owner": "TTG Creative Studio", "overwrite": False,
             "unknown_instruction": "assistant compiles bounded scene or selects specialist",
             "tenfold": "approved complex campaigns only",
@@ -324,7 +328,7 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
     if not isinstance(opts,dict) or opts.get("schema")!=SCHEMA:
         raise CreativeInstructionError("Creative instruction contract is required")
     _assert_keys(opts,{"schema","mode","instruction","scene","edits","campaign",
-                       "catalog_roots","dry_run","auto_correct_layout","acceptance","repair_expected_text"},"options")
+                       "catalog_roots","dry_run","auto_correct_layout","acceptance","repair_expected_text","visual_observer"},"options")
     mode=opts.get("mode")
     if mode not in ("auto","scene","wall_sign","edit_project","campaign"):
         raise CreativeInstructionError("Unsupported creative instruction mode")
@@ -334,6 +338,7 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
     if type(opts.get("repair_expected_text",False)) is not bool:
         raise CreativeInstructionError("repair_expected_text must be boolean")
     expected = validate_acceptance(opts["acceptance"]) if "acceptance" in opts else None
+    observer = validate_observer(opts["visual_observer"]) if "visual_observer" in opts else None
     if opts.get("repair_expected_text") and expected is None:
         raise CreativeInstructionError("Spelling repair requires explicit expected text")
     natural_compile = "none"
@@ -357,6 +362,8 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
                 mode="wall_sign"
             else:
                 mode="needs_scene_spec"
+    if mode=="campaign" and observer is not None:
+        raise CreativeInstructionError("Visual observer is admitted only for rendered scene, wall sign or project edit")
     output=job.get("output") or job.get("outputPath")
     if not isinstance(output,str):
         raise CreativeInstructionError("An absolute output PNG is required")
@@ -474,9 +481,13 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
         if replay.tobytes()!=pixels:
             raise CreativeInstructionError("Reopened Studio project does not reproduce emitted pixels")
         acceptance_review = inspect_acceptance(reopened, root, target, expected) if expected else None
+        semantic_observation = observe_render(target, observer) if observer else None
         acceptance_failed = (acceptance_review is not None and
                              acceptance_review["state"] != "pass")
+        observer_unavailable = bool(semantic_observation and
+                                    semantic_observation["state"] != "semantic_observation_returned_unverified")
         item.update({"state":("correction_required" if acceptance_failed else
+                              "visual_observer_unavailable" if observer_unavailable else
                               "rendered_visual_review_required"),"output":str(target),
                      "project":str(project_out),"layer_count":len(reopened.layers),
                      "dimensions":size,"render_sha256":_sha(target),
@@ -486,6 +497,7 @@ def run_creative_instruction(job: dict[str,Any]) -> dict[str,Any]:
                      "pixel_layer_review":pixel_review,
                      "visual_acceptance":"structural_and_replay_only_semantic_review_pending",
                      "declared_acceptance":acceptance_review,
+                      "independent_visual_observation":semantic_observation,
                      "declared_acceptance_passed":(not acceptance_failed if acceptance_review else None),
                      "bounded_spelling_repairs":spelling_edits})
         receipt_out.write_text(json.dumps(item,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")

@@ -50,6 +50,7 @@ def main(argv: list[str] | None = None) -> int:
                 "auto_correct_layout": "opt-in bounded anchor corrections; does not certify photorealism or semantic quality",
                 "acceptance_schema": "ttg.studio.creative-acceptance.v1",
                 "acceptance_checks": "exact text/material values and actual per-layer visible pixel contribution",
+                "visual_observer": "opt-in explicit local vision model, evidence-bound to rendered pixels; advisory only, no model means unavailable",
                 "repair_expected_text": "opt-in constrained edits based on explicit assistant/user expectation; semantic/photographic review remains separate",
                 "side_effects": "Create actual Studio project and image with pixel replay proof",
                 "description": ("Accept an AI-authored bounded scene packet or project edits; "
@@ -191,7 +192,7 @@ def main(argv: list[str] | None = None) -> int:
         elif job.get("task") == "creative_execute":
             receipt=run_creative_instruction(job)
             result={"ok":receipt["state"] not in ("correction_required",
-                     "needs_scene_compilation", "needs_edit_compilation"),
+                     "needs_scene_compilation", "needs_edit_compilation", "visual_observer_unavailable"),
                      "jobId":str(job.get("jobId") or "creative_execution"),
                     "task":"creative_execute","status":receipt["state"],
                     "outputPath":receipt.get("output"),"meta":receipt}
