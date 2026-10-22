@@ -58,7 +58,7 @@ def creative_scene_contract() -> dict[str, Any]:
                 "steel_polygon": ["points", "depth", "seed"],
                 "steel_text": ["text", "size", "depth", "seed"],
                 "neon": ["points", "width", "terminals", "led_color"]}},
-        "edits": ["replace_text", "move_layer", "set_neon_color"],
+        "edits": ["replace_text", "move_layer", "set_text_size", "set_neon_color", "set_fill"],
         "acceptance": {
             "schema": "ttg.studio.creative-acceptance.v1",
             "verified": ["text", "materials", "rendered_pixel_visibility",
@@ -267,6 +267,13 @@ def apply_edits(project: TTGProject, operations: list[dict[str,Any]]) -> None:
                 raise CreativeInstructionError("Move requires x and y")
             layer.transform.x=_finite(op["x"],"move.x",-2*project.canvas.width,2*project.canvas.width)
             layer.transform.y=_finite(op["y"],"move.y",-2*project.canvas.height,2*project.canvas.height)
+        elif kind=="set_text_size":
+            if layer.type not in ("text","text3d"):
+                raise CreativeInstructionError("Text-size edit requires a text layer")
+            value=op.get("value")
+            if type(value) is not int or not 10<=value<=230:
+                raise CreativeInstructionError("Text size must be an integer between 10 and 230")
+            layer.properties["size"]=value
         elif kind=="set_neon_color":
             if layer.properties.get("cinematic_material")!="neon" or op.get("value") not in _COLORS:
                 raise CreativeInstructionError("Neon color change requires a qualified neon layer")

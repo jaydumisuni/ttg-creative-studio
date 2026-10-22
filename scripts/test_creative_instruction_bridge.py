@@ -62,6 +62,23 @@ def main():
         before=TTGProject.load(made["project"]);after=TTGProject.load(revised["project"])
         require(before.layers[-1].properties["text"]=="ONE BRAND. ALL SOLUTIONS." and after.layers[-1].properties["text"]=="REPAIR. BUILD. CREATE.","Edits preserve original")
         require(after.layers[3].properties["led_color"]=="purple","Material edits persist")
+        resized=packet("resize","edit_project",root,edits=[
+            {"op":"set_text_size","layer_id":"wordmark","value":80}])
+        resized["input"]=made["project"]
+        large=run_creative_instruction(resized)
+        require(large["render_sha256"]!=made["render_sha256"] and large["reopened_project_exact_pixels"],
+                "Font-size edit changes physical rendered pixels and replays identically")
+        changed=TTGProject.load(large["project"])
+        require(changed.layers[2].properties["size"]==80 and before.layers[2].properties["size"]==55,
+                "Editable text sizing is source-owned and preserves the original")
+        for size in (0,231,-1,30.5,True,float("nan")):
+            bad=copy.deepcopy(resized)
+            bad["output"]=str(root/("invalid_size_"+str(size).replace(".","_")+".png"))
+            bad["options"]["edits"]=[{"op":"set_text_size","layer_id":"wordmark","value":size}]
+            rejects(lambda item=bad:run_creative_instruction(item),"Invalid text size denied "+str(size))
+        bad=copy.deepcopy(resized);bad["output"]=str(root/"nontxt.png")
+        bad["options"]["edits"]=[{"op":"set_text_size","layer_id":"room","value":40}]
+        rejects(lambda:run_creative_instruction(bad),"Non-text geometry cannot receive font-size edits")
         rejects(lambda:run_creative_instruction(source),"Overwrite denied")
         bad=scene();bad["layers"][1]["properties"]["cinematic_material"]="external_shell"
         rejects(lambda:compile_scene(bad),"Unadmitted renderer/command rejected")

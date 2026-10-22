@@ -23,6 +23,12 @@ write a bounded scene specification or recognize an unsupported request.
 4. Failed text/material/pixel acceptance produces correction_required with
    CLI ok=false: a valid PNG alone is not completion.
 5. Only approved source-wording or bounded layout corrections are applied.
+   The `set_text_size` native edit now permits a verified integer font size
+   (10–230) only on unlocked text/text3d layers. It changes the saved project
+   and rendered pixels, including the existing brushed-metal text material.
+   External artistic observations still require an authorized assistant or
+   qualified image-capable model to create an explicit edit packet; Studio
+   cannot infer aesthetic defects from pixel visibility checks alone.
    The corrected native render and saved-project replay are verified.
 6. Passed deterministic checks produce rendered_visual_review_required,
    not semantic or photorealistic approval. Inspect the real image for
