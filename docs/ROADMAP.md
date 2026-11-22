@@ -93,3 +93,7 @@ Hunter should create or edit `.ttgstudio` project JSON and call app actions:
 - export final
 
 AI is the operator. The editor is the engine.
+
+## 2026-11-23 — Storytold + Vork specialist donor intake
+
+**Discovery only — no engine/release status change.** Read [STORYTOLD_VORK_DONOR_INTAKE_2026-11-23.md](STORYTOLD_VORK_DONOR_INTAKE_2026-11-23.md) before adding another editor, renderer, model provider or workflow. Compare PhotoCraft/FilmCraft/EffectCraft/Vork/ArtCraft/MaterialCraft/TextureCraft **against each other and the incumbent Studio engines**. Studio keeps the editable project, Director and output receipts. Begin with isolated PSD, timeline, PBR and same-scene Vork-vs-Blender fidelity probes; require permission, license/source pins, deterministic fallback and independent visual proof before adaptation. **No donor capabilities are implemented or admitted by this note.**
