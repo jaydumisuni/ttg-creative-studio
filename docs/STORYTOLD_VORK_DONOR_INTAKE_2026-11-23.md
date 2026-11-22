@@ -36,3 +36,22 @@ Studio already has PyQt layered canvas, `.ttgstudio.json` source/project model, 
 6. **Review:** independent Sergeant/Patrol/Studio owner acceptance under registered roots; only then add an optional capability entry with tool contract, pinned hashes and rollback. Existing paths stay default until proven.
 
 **Unchanged gates:** paid AI consent, actual semantic visual acceptance, Hunter→Studio real handoff, physical installer/signing and release decision all remain separate. **No integration or performance win is claimed by this document.**
+
+## Existing roadmap stage coverage and retirement (2026-11-23)
+
+See [Studio's phase definitions](ROADMAP.md) and the private ecosystem `docs/STORYTOLD_VORK_ROADMAP_CLOSURE_MATRIX_2026-11-23.md`. Donor admission closes **requirements**, not phases by declaration:
+
+| Studio phase/gate | Donor coverage candidate | What still controls the whole exit |
+| --- | --- | --- |
+| **P0 source/packs** | Craft packaging ideas only | Clean installer/source/optional asset pack and physical release checks; no direct closure |
+| **P1 editor** | PhotoCraft PSD/layer/masks, LightCraft RAW, VectorCraft | Existing project/undo/render correctness retained; new layer/PSD fidelity and honest unsupported behavior; don't redo native source model |
+| **P2 motion** | FilmCraft timeline/audio, EffectCraft VFX, AniCraft animation, SoundCraft audio | Real keyframe/track/preview/FFmpeg MP4 source fidelity, A/V sync, exact replay and failure tests |
+| **P3 packs** | Candidate optional donor engines/assets | Versioned optional pack install/uninstall/rollback, offline/no-forced-weight behavior, clean-clone receipts; donor source is not a pack manager |
+| **P4 diagrams** | VectorCraft lines/symbols, CADCraft drafting exchange | Snap, connector/callout/measurement/PCB-style *presentation* export and editable Studio project; not Hardware Studio engineering authority |
+| **P5 cinematic 3D** | Vork renders/compute; MaterialCraft+TextureCraft surfaces; EffectCraft composite; FilmCraft+SoundCraft final | Authored 3D text, bevel, neon, camera, particles, service cards, sound markers, final MP4, editable/replayable scene, actual matched-quality GPU/fallback proof. Keep optional Blender for gaps not proven replaced |
+| **P6 Hunter** | CLI/MCP/typed interface patterns and Vork sessions | Actual admitted Hunter→Studio job/lease/file custody/authorization/fence, result/undo/replay and independent review; no direct donor shell authority |
+| **G6.3/G6.6 image quality** | ArtCraft provider/asset workflow only | Consented real generated images and ten independent unseen photographic acceptances, separately from basic image editing |
+| **G7 visual semantics** | Donors may edit defects, not certify independent understanding | A real semantic observer and bounded correction loop; preserve already proven G7.1 text/pixel source requirements |
+| **G0–G5 final release** | No direct donor closure | Existing installer, physical UI, signing and owner release gates remain independent |
+
+**Retirement:** only mark a phase `CLOSED` when all its own mandatory outputs pass exact-head regressions, fixture+negative case, Studio project replay and appropriate independent/owner review; update Studio roadmap + progress. After qualifying a subfeature, mark `PARTIAL` with remaining items, not a percentage. **All new donor integrations are currently CANDIDATE.**
