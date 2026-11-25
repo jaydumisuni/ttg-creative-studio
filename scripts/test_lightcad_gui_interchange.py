@@ -21,7 +21,8 @@ def main():
     app=QApplication.instance() or QApplication([])
     def no_warning(_parent,title,message,*args,**kw):
         raise AssertionError(f"Unexpected LightCraft/CADCraft warning: {title}: {message}")
-    with TemporaryDirectory() as tmp, (
+    with (
+        TemporaryDirectory() as tmp,
         patch.object(QMessageBox,"warning",side_effect=no_warning),
         patch.object(QMessageBox,"information",return_value=QMessageBox.StandardButton.Ok),
     ):
