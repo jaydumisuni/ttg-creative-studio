@@ -109,6 +109,54 @@ class NativeAudioFades(unittest.TestCase):
             self.assertLess(begin,center*.5)
             self.assertLess(end,center*.5)
 
+    def test_existing_studio_tools_dialog_edits_real_audio_fades(self):
+        import importlib.util
+        if importlib.util.find_spec("PyQt6") is None:
+            self.skipTest("Qt not installed on this host; qualified in Windows GUI run")
+        import os
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        from PyQt6.QtWidgets import QApplication, QDialog, QDoubleSpinBox, QToolButton
+        from PyQt6.QtCore import QTimer
+        from ttg_creative_workspace import CreativeWorkspace
+        app = QApplication.instance() or QApplication([])
+        with TemporaryDirectory() as t:
+            root = Path(t)
+            real_wave(root/"tone.wav")
+            p = TTGProject(name="Editable audio fades",project_type="motion")
+            p.canvas = CanvasSpec(width=32,height=24,duration=3,fps=25)
+            p.audio_markers=[{"path":"tone.wav","start":0.1,
+                              "duration":1.,"volume":.8}]
+            project_path = root/"gui.ttgstudio.json"
+            p.save(project_path)
+            workspace = CreativeWorkspace(project_root=root)
+            workspace.project = p
+            workspace.project_path = project_path
+            menus = [
+                item.text() for button in workspace.findChildren(QToolButton)
+                if button.menu() for item in button.menu().actions()
+            ]
+            self.assertIn("Edit Audio Fades",menus)
+            workspace.autosave_snapshot = lambda: None
+            def approve() -> None:
+                dialogs = [q for q in QApplication.topLevelWidgets()
+                           if isinstance(q,QDialog)
+                           and q.windowTitle()=="Edit Audio Envelope"]
+                self.assertEqual(len(dialogs),1)
+                controls = dialogs[0].findChildren(QDoubleSpinBox)
+                self.assertEqual(len(controls),2)
+                controls[0].setValue(.2)
+                controls[1].setValue(.3)
+                dialogs[0].accept()
+            QTimer.singleShot(0, approve)
+            workspace.edit_audio_fades()
+            self.assertEqual(p.audio_markers[0]["fade_in"],.2)
+            self.assertEqual(p.audio_markers[0]["fade_out"],.3)
+            _,filters,_=MotionExporter(RenderContext(root))._audio_inputs(p)
+            self.assertIn("afade=t=in:st=0:d=0.200",filters[0])
+            self.assertIn("afade=t=out:st=0.700:d=0.300",filters[0])
+            workspace.close()
+            app.processEvents()
+
     def test_fade_metadata_survives_real_otio_source_roundtrip(self):
         with TemporaryDirectory() as t:
             root=Path(t)
