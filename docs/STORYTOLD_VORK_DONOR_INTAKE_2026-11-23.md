@@ -1,6 +1,6 @@
 # Creative Studio — Storytold + Vork donor intake (2026-11-23)
 
-**Status:** PLANNED / SOURCE-REVIEWED / NO INTEGRATION PROOF. Internal engineering acceleration; no replacement of the Studio app or of verified behavior. Ecosystem register: private `TTG-ecosystem/docs/DONOR_COHORT_STORYTOLD_VORK_2026-11-23.md`.
+**Status:** PARTIAL TTG-NATIVE MOTION/LAYER INTEGRATION VERIFIED; FULL DONOR INTEROPERABILITY PENDING. Internal engineering acceleration; no replacement of the Studio app or of verified behavior. Ecosystem register: private `TTG-ecosystem/docs/DONOR_COHORT_STORYTOLD_VORK_2026-11-23.md`.
 
 ## Protect the existing implementation
 
@@ -55,3 +55,16 @@ See [Studio's phase definitions](ROADMAP.md) and the private ecosystem `docs/STO
 | **G0–G5 final release** | No direct donor closure | Existing installer, physical UI, signing and owner release gates remain independent |
 
 **Retirement:** record per-feature acceptance as evidence during implementation. **Defer the aggregate roadmap-closure measurement until after the selected donor-feature integrations and combined regressions are complete.** Only mark a phase `CLOSED` when its pre-existing exit contract and independent owner review pass. Keep Blender untouched and Vork deferred until that audit. Initial actual code candidate: [Studio PR #55](https://github.com/jaydumisuni/ttg-creative-studio/pull/55), TTG-native hold and Bézier motion curves; 11/11 targeted KRATOS tests and real frame replay passed, GUI and PR admission not yet proven.
+
+## Native donor-integration qualification update — 2026-11-25
+
+Two existing donor-informed Studio requirements are now integrated and verified together in the TTG-native engine, not by embedding donor executables. This supersedes the earlier blanket no-integration-proof status for only these native slices.
+
+- Motion / P2 subset: hold and cubic-Bezier keyframes with stored-project replay and actual motion pixels, behavior referenced to EffectCraft.
+- Layer canvas / P1 subset: Multiply and Screen with backdrop/source alpha, TTG layer properties and saved-project pixel replay, behavior referenced to PhotoCraft.
+- Joint source: integration/storytold-motion-blend-20261125 at bca3f5d8d7d7dc82593456a8e93bcc98783c5ef9. The existing independent PR #55 and PR #56 remain intact.
+- Exact changed-file Sergeant source review: APPROVE, zero required actions, using repository-relative paths.
+- Actual KRATOS headless tests: 23 passes plus 34 subtests. ATHENA PyQt6 tests: 23 passes plus 34 subtests; offscreen GUI smoke and canvas wiring PASS; 29 Studio completion checks PASS; 25 real standalone video/timeline/export checks PASS. Two source-bound GitHub workflows passed.
+- Private source-bound evidence: TTG-Creative-Studio/.workspace/evidence/donor-combined-20261125/DONOR_MOTION_BLEND_COMBINED_FREEZE_20261125.json, SHA-256 a47722665853d10c5fb819ac6caa330e1079ad2b0b6b3cb777287e759435c4bc.
+
+Do not mark the full P1 or P2 phase CLOSED from this subset. Actual PhotoCraft layered PSD roundtrips, FilmCraft/EffectCraft donor interchange and paid ArtCraft production model outputs are not qualified. The pinned PhotoCraft CLI source documents info, convert and run, but no donor executable was found on KRATOS; layer blending is NOT PSD interoperability. Vork stays deferred, Blender unchanged, and source/release main retains existing owner authority.
