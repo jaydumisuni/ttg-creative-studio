@@ -103,6 +103,27 @@ def donor_interchange(args) -> int:
     elif args.operation == "import-svg":
         from ttg_vectorcraft_svg_bridge import import_svg_shapes
         result = import_svg_shapes(args.source, args.output)
+    elif args.operation == "import-lightcraft-raw":
+        from ttg_lightcraft_raw_bridge import import_developed_raw
+        result = import_developed_raw(args.source, args.preview_png, args.output)
+    elif args.operation == "develop-lightcraft-raw":
+        from ttg_lightcraft_raw_bridge import develop_with_lightcraft
+        result = develop_with_lightcraft(
+            args.source, args.output, lightcraft_cli=args.lightcraft_cli,
+            exposure=args.exposure,
+        )
+    elif args.operation == "import-dxf":
+        from ttg_cadcraft_dxf_bridge import import_dxf
+        result = import_dxf(
+            args.source, args.output,
+            canvas_width=args.width, canvas_height=args.height,
+            units=args.units,
+        )
+    elif args.operation == "export-dxf":
+        from ttg_cadcraft_dxf_bridge import export_dxf
+        result = export_dxf(
+            TTGProject.load(args.project), args.output, units=args.units,
+        )
     elif args.operation == "import-pbr":
         from ttg_material_texture_bridge import import_pbr_export_maps
         result = import_pbr_export_maps(
@@ -175,6 +196,33 @@ def main() -> int:
     sp.add_argument("output")
     sp.add_argument("--material-name", required=True)
     sp.set_defaults(func=donor_interchange, operation="import-pbr")
+
+    sp = sub.add_parser("import-lightcraft-raw", help="Import real developed PNG and original RAW as editable Studio source")
+    sp.add_argument("source", help="Original camera RAW (preserved unchanged)")
+    sp.add_argument("preview_png", help="Actual developed PNG from LightCraft")
+    sp.add_argument("output", help="New .ttgstudio.json project")
+    sp.set_defaults(func=donor_interchange, operation="import-lightcraft-raw")
+
+    sp = sub.add_parser("develop-lightcraft-raw", help="Run explicitly selected installed offline LightCraft CLI")
+    sp.add_argument("source", help="Original camera RAW")
+    sp.add_argument("output", help="New .ttgstudio.json project")
+    sp.add_argument("--lightcraft-cli", required=True, help="Exact installed LightCraft CLI executable path")
+    sp.add_argument("--exposure", type=float)
+    sp.set_defaults(func=donor_interchange, operation="develop-lightcraft-raw")
+
+    sp = sub.add_parser("import-dxf", help="Import bounded CADCraft ASCII 2D DXF")
+    sp.add_argument("source")
+    sp.add_argument("output")
+    sp.add_argument("--width", required=True, type=int)
+    sp.add_argument("--height", required=True, type=int)
+    sp.add_argument("--units", required=True, choices=["mm", "inch", "unitless"])
+    sp.set_defaults(func=donor_interchange, operation="import-dxf")
+
+    sp = sub.add_parser("export-dxf", help="Export bounded native 2D drawing as CADCraft ASCII DXF")
+    sp.add_argument("project")
+    sp.add_argument("output")
+    sp.add_argument("--units", required=True, choices=["mm", "inch", "unitless"])
+    sp.set_defaults(func=donor_interchange, operation="export-dxf")
 
     args = parser.parse_args()
     return args.func(args)

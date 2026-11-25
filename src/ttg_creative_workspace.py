@@ -151,6 +151,8 @@ class CreativeWorkspace(QWidget):
             ("Import EffectCraft Lottie", self.import_lottie),
             ("Import MaterialCraft / TextureCraft PBR", self.import_pbr_maps),
             ("Import VectorCraft SVG shapes", self.import_vector_svg),
+            ("Import LightCraft developed RAW", self.import_lightcraft_render),
+            ("Import CADCraft DXF drawing", self.import_cadcraft_dxf),
         ]))
         toolbar.addWidget(self._menu_button("Templates", [
             ("New Campaign Designer", self.design_campaign),
@@ -224,6 +226,7 @@ class CreativeWorkspace(QWidget):
             ("Export FilmCraft OTIO", self.export_otio),
             ("Export EffectCraft Lottie", self.export_lottie),
             ("Export VectorCraft SVG shapes", self.export_vector_svg),
+            ("Export CADCraft DXF drawing", self.export_cadcraft_dxf),
         ]))
         toolbar.addStretch()
         self.toolbar_scroll = QScrollArea()
@@ -880,6 +883,71 @@ class CreativeWorkspace(QWidget):
         self._donor_import_dialog("VectorCraft SVG", "SVG Images (*.svg)",
                                   ".svg", import_svg_shapes)
 
+    def import_lightcraft_render(self) -> None:
+        from ttg_lightcraft_raw_bridge import import_developed_raw
+        raw, _ = QFileDialog.getOpenFileName(
+            self, "LightCraft RAW original", "",
+            "Camera RAW (*.dng *.cr2 *.cr3 *.arw *.nef *.raf *.rw2 *.orf *.pef *.srw)",
+        )
+        if not raw:
+            return
+        png, _ = QFileDialog.getOpenFileName(
+            self, "Select the developed LightCraft PNG", "", "PNG image (*.png)",
+        )
+        if not png:
+            return
+        output, _ = QFileDialog.getSaveFileName(
+            self, "Save imported RAW as editable Studio project",
+            str(Path(raw).with_name(Path(raw).stem + "-developed.ttgstudio.json")),
+            "TTG Studio (*.ttgstudio.json)",
+        )
+        if not output:
+            return
+        try:
+            import_developed_raw(raw, png, output)
+            self._load_donor_import(Path(output), "LightCraft developed RAW")
+        except Exception as exc:
+            QMessageBox.warning(self, "LightCraft RAW intake", str(exc))
+
+    def import_cadcraft_dxf(self) -> None:
+        from ttg_cadcraft_dxf_bridge import import_dxf
+        source, _ = QFileDialog.getOpenFileName(
+            self, "CADCraft ASCII DXF drawing", "", "CAD DXF (*.dxf)",
+        )
+        if not source:
+            return
+        width, ok = QInputDialog.getInt(
+            self, "DXF Canvas", "Width in drawing units:", 512, 1, 4096
+        )
+        if not ok:
+            return
+        height, ok = QInputDialog.getInt(
+            self, "DXF Canvas", "Height in drawing units:", 512, 1, 4096
+        )
+        if not ok:
+            return
+        units, ok = QInputDialog.getItem(
+            self, "DXF Units", "CAD drawing units:",
+            ["mm", "inch", "unitless"], 0, False,
+        )
+        if not ok:
+            return
+        output, _ = QFileDialog.getSaveFileName(
+            self, "Save editable CAD drawing",
+            str(Path(source).with_name(Path(source).stem + "-studio.ttgstudio.json")),
+            "TTG Studio (*.ttgstudio.json)",
+        )
+        if not output:
+            return
+        try:
+            import_dxf(
+                source, output, canvas_width=width, canvas_height=height,
+                units=units,
+            )
+            self._load_donor_import(Path(output), "CADCraft DXF")
+        except Exception as exc:
+            QMessageBox.warning(self, "CADCraft DXF intake", str(exc))
+
     def import_pbr_maps(self) -> None:
         from ttg_material_texture_bridge import import_pbr_export_maps
         manifest, _ = QFileDialog.getOpenFileName(
@@ -963,6 +1031,25 @@ class CreativeWorkspace(QWidget):
         self._donor_export_dialog(
             "Export VectorCraft SVG", "SVG Images (*.svg)", ".svg",
             export_svg_shapes,
+        )
+
+    def export_cadcraft_dxf(self) -> None:
+        from ttg_cadcraft_dxf_bridge import export_dxf
+        if self.project is None:
+            QMessageBox.information(self, "CADCraft DXF", "Open an editable drawing first.")
+            return
+        metadata = self.project.export.get("cadcraft_dxf", {})
+        initial = metadata.get("units", "mm")
+        choices = ["mm", "inch", "unitless"]
+        index = choices.index(initial) if initial in choices else 0
+        units, ok = QInputDialog.getItem(
+            self, "CADCraft DXF", "Drawing units:", choices, index, False
+        )
+        if not ok:
+            return
+        self._donor_export_dialog(
+            "Export CADCraft DXF", "CAD DXF (*.dxf)", ".dxf",
+            lambda project, output: export_dxf(project, output, units=units),
         )
 
     def import_ad_zip(self) -> None:
