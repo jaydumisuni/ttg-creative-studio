@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from io import BytesIO
 from tempfile import TemporaryDirectory
 import unittest
 from xml.etree import ElementTree as ET
@@ -49,7 +50,7 @@ class OpenRasterBridgeTests(unittest.TestCase):
                 self.assertEqual([x.get("name") for x in stack],
                                  ["Photo overlay", "Photo background", "TTG Canvas Background"])
                 self.assertEqual(stack[0].get("composite-op"), "svg:multiply")
-                with Image.open(z.open("mergedimage.png")) as saved:
+                with Image.open(BytesIO(z.read("mergedimage.png"))) as saved:
                     self.assertEqual(expected.tobytes(), saved.convert("RGBA").tobytes())
             imported_path = root / "photo-reimport.ttgstudio.json"
             importer = import_openraster(ora, imported_path)

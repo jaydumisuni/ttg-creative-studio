@@ -20,7 +20,15 @@ def main() -> int:
     from ttg_project_schema import CanvasSpec, Layer, TTGProject
 
     app = QApplication.instance() or QApplication([])
-    with TemporaryDirectory() as d:
+    def _fail_warning(_parent, title, message, *args, **kwargs):
+        raise AssertionError(f"Unexpected Studio warning during GUI proof: {title}: {message}")
+    # The real application intentionally presents import/export warnings.
+    # During unattended proof, capture those dialogs instead of blocking the runner.
+    from unittest.mock import patch
+    with patch.object(QMessageBox, "warning", side_effect=_fail_warning), (
+         patch.object(QMessageBox, "information",
+                      return_value=QMessageBox.StandardButton.Ok)
+    ), TemporaryDirectory() as d:
         root = Path(d)
         project = TTGProject(name="donor GUI source",project_type="image")
         project.canvas = CanvasSpec(width=100,height=70,background="#0F1234")
