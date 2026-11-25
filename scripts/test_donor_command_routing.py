@@ -19,7 +19,12 @@ class DonorJobRouting(unittest.TestCase):
             root=Path(d)
             src=ROOT/"tests/fixtures/effectcraft_bouncing_ball.json"
             output=root/"actual.ttgstudio.json"
-            self.assertEqual(len(DONOR_TASKS),9)
+            self.assertTrue({
+                "studio_export_openraster", "studio_import_openraster",
+                "studio_export_otio", "studio_import_otio",
+                "studio_export_lottie", "studio_import_lottie",
+                "studio_import_pbr_maps", "studio_export_svg", "studio_import_svg",
+            }.issubset(DONOR_TASKS))
             receipt=run_donor_interchange_job({
                 "task":"studio_import_lottie", "input":str(src.resolve()),
                 "output":str(output.resolve()), "jobId":"donor-prove-1",

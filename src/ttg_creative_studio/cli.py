@@ -25,6 +25,8 @@ DONOR_TASKS = frozenset({
     "studio_export_lottie", "studio_import_lottie",
     "studio_import_pbr_maps",
     "studio_export_svg", "studio_import_svg",
+    "studio_import_lightcraft_raw", "studio_develop_lightcraft_raw",
+    "studio_import_dxf", "studio_export_dxf",
 })
 
 
@@ -77,6 +79,31 @@ def run_donor_interchange_job(job: dict[str, Any]) -> dict[str, Any]:
     elif task == "studio_import_lottie":
         from ttg_effectcraft_lottie_bridge import import_lottie
         result = import_lottie(source, output)
+    elif task == "studio_import_lightcraft_raw":
+        from ttg_lightcraft_raw_bridge import import_developed_raw
+        preview = options.get("preview_png")
+        if not isinstance(preview, str) or not Path(preview).is_absolute():
+            raise CreativeJobError("LightCraft RAW intake requires absolute options.preview_png")
+        result = import_developed_raw(source, Path(preview), output)
+    elif task == "studio_develop_lightcraft_raw":
+        from ttg_lightcraft_raw_bridge import develop_with_lightcraft
+        binary = options.get("lightcraft_cli")
+        if not isinstance(binary, str) or not Path(binary).is_absolute():
+            raise CreativeJobError("RAW development requires explicit absolute options.lightcraft_cli")
+        result = develop_with_lightcraft(
+            source, output, lightcraft_cli=binary, exposure=options.get("exposure"),
+        )
+    elif task == "studio_import_dxf":
+        from ttg_cadcraft_dxf_bridge import import_dxf
+        result = import_dxf(
+            source, output,
+            canvas_width=options.get("width"),
+            canvas_height=options.get("height"),
+            units=options.get("units"),
+        )
+    elif task == "studio_export_dxf":
+        from ttg_cadcraft_dxf_bridge import export_dxf
+        result = export_dxf(TTGProject.load(source), output, units=options.get("units"))
     else:
         from ttg_material_texture_bridge import import_pbr_export_maps
         result = import_pbr_export_maps(
@@ -168,7 +195,8 @@ def main(argv: list[str] | None = None) -> int:
                 "description": (
                     "PhotoCraft OpenRaster layers; FilmCraft OTIO clips; "
                     "EffectCraft Lottie shapes; VectorCraft SVG primitives; "
-                    "or exported PBR texture mapset "
+                     "or exported PBR texture mapset; LightCraft developed RAW source "
+                    "and CADCraft bounded ASCII DXF presentation exchange "
                     "intake into the existing Studio project. Only explicitly "
                     "supported structures are admitted; no donor runtime, "
                     "model license or production authority is inferred."

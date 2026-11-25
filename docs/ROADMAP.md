@@ -118,3 +118,8 @@ Continuing the already-approved Storytold donor approach, the existing TTG Studi
 ## 2026-11-26 — Layer group and SVG multi-point donor nextwave
 
 An additional qualified Tenfold Gen 1 two-lane construction cycle extends the **existing** PhotoCraft-compatible OpenRaster and VectorCraft-compatible SVG adapters: neutral nested OpenRaster group structure is preserved in editable TTG layers, and two-to-128-point SVG polylines roundtrip through native diagram connectors with rendered-pixel proof. Details, explicit unsupported effects, source proof and owner-stage limits are in `docs/STORYTOLD_VORK_DONOR_INTAKE_2026-11-23.md`. This is not full PhotoCraft/PSD or VectorCraft editor capability; P1/P4 whole-stage gates remain unchanged.
+
+
+### 2026-11-26 — Independent donor bridge: LightCraft/CADCraft
+
+The existing Storytold donor campaign extends Studio's native editable project through LightCraft developed-RAW PNG intake and bounded CADCraft ASCII DXF drawing exchange. Both reuse the existing Studio File/Export UI, manual CLI and typed Hunter job entrypoint. Each is an independently tested, Tenfold-isolated new subfeature; not full RAW development or CAD/DWG/hardware-design equivalence. See the existing STORYTOLD_VORK_DONOR_INTAKE_2026-11-23.md for exact source and proof. Existing P1/P4 owner exit gates, Vork deferral and Blender remain unchanged.
