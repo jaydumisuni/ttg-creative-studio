@@ -88,3 +88,5 @@ All five new exact interchange subsets are available through existing Studio **F
 The included test file 'tests/fixtures/effectcraft_bouncing_ball.json' and its attribution came from EffectCraft at the previously pinned donor source revision, MIT OR Apache-2.0.
 
 **Retirement discipline:** These are qualified implementation candidates for specific P1/P2/P4/P5 source-interchange requirements, not closure of full phases or complete direct donor runtime interoperability. Independent owner review, OS-specific GUI tests, CLI tests and real source-file interchange remain requirements. Vork intentionally deferred; Blender left unchanged.
+
+**2026-11-26 source correction:** FilmCraft OTIO Audio tracks now map into Studio's existing `audio_markers` mix graph, preserving start/trim/duration/volume and rejecting unsupported private FilmCraft grade/DSP metadata. Imported OTIO still-image clips are time-bounded in the existing frame renderer; ordinary untagged Studio image layers are unchanged. Windows file identity validation accounts for valid short/long path aliases. All source changes remain in the same integration branch and shared editor/CLI workflow.

@@ -100,6 +100,18 @@ class CanvasRenderer:
             draw_native_material(canvas, layer, time)
             return
         if layer.type == "image":
+            # OTIO still clips have authored in/out points. Normal Studio
+            # canvas image layers remain timeless; only tagged imported
+            # timeline clips participate in start/duration gating.
+            if layer.properties.get("clip_timing_enabled") is True:
+                import math
+                start = float(layer.properties.get("start", 0))
+                duration = float(layer.properties.get("duration", 0))
+                if (not math.isfinite(start) or not math.isfinite(duration)
+                        or start < 0 or duration <= 0):
+                    raise ValueError("Imported still clip timing is invalid")
+                if not start <= time < start + duration:
+                    return
             self._draw_image_layer(canvas, layer)
         elif layer.type in {"text", "text3d"}:
             self._draw_text_layer(canvas, layer)

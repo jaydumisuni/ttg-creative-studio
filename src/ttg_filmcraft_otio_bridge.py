@@ -141,6 +141,8 @@ def export_otio(project: TTGProject, destination: str | Path,
                 raise ValueError("OTIO retime requires a qualified native timewarp adapter")
             clip_duration = source_out - source_in
         else:
+            if layer.type == "image" and source_in != 0:
+                raise ValueError("Still-image OTIO source trim is unsupported")
             clip_duration = _finite(layer.properties.get("duration", project_duration - start),
                                     "clip duration")
         if clip_duration <= 0 or start + clip_duration > project_duration + 1e-4:
@@ -394,6 +396,10 @@ def import_otio(source: str | Path, destination: str | Path) -> dict:
         elif layer.type not in {"audio", "image"}:
             raise ValueError("OTIO media layer kind not supported")
         else:
+            if layer.type == "image":
+                if source_in != 0:
+                    raise ValueError("Still-image source trim is not supported")
+                layer.properties["clip_timing_enabled"] = True
             layer.properties["duration"] = duration
         project.layers.append(layer)
         if layer.type == "audio":

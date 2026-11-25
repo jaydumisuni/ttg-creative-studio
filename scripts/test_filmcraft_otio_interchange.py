@@ -109,6 +109,40 @@ class FilmCraftInteropTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "local file URL"):
                 import_otio(root / "bad.otio", root / "bad.ttgstudio.json")
 
+    def test_still_clip_replays_real_frames_only_inside_authored_range(self):
+        from PIL import Image
+        from ttg_canvas_engine import CanvasRenderer, RenderContext
+        from ttg_motion_exporter import MotionExporter
+        with TemporaryDirectory() as d:
+            root = Path(d)
+            Image.new("RGBA", (12, 10), (200, 40, 60, 255)).save(root / "still.png")
+            project = TTGProject(name="Timed still", project_type="motion")
+            project.canvas = CanvasSpec(width=32, height=20, fps=25, duration=3,
+                                        background="#081020")
+            project.layers = [
+                Layer(id="still", type="image", name="timed still",
+                      properties={"path": "still.png", "start": 1.0,
+                                  "source_in": 0.0, "duration": 1.0})
+            ]
+            source_file = root / "original.ttgstudio.json"
+            project.save(source_file)
+            export_otio(project, root / "clip.otio", project_root=root)
+            out = root / "imported.ttgstudio.json"
+            import_otio(root / "clip.otio", out)
+            replayed = TTGProject.load(out)
+            self.assertTrue(replayed.layers[0].properties["clip_timing_enabled"])
+            render = MotionExporter(RenderContext(root))
+            before = render.render_frame(replayed, 0.5).convert("RGBA")
+            during = render.render_frame(replayed, 1.2).convert("RGBA")
+            after = render.render_frame(replayed, 2.2).convert("RGBA")
+            self.assertEqual(before.getpixel((0, 0)), (8, 16, 32, 255))
+            self.assertEqual(during.getpixel((0, 0)), (200, 40, 60, 255))
+            self.assertEqual(after.getpixel((0, 0)), (8, 16, 32, 255))
+            # The imported still is the only image with temporal semantics;
+            # ordinary Studio image layers must remain unchanged.
+            normal = CanvasRenderer(RenderContext(root)).render(project, time=0.5)
+            self.assertEqual(normal.getpixel((0, 0)), (200, 40, 60, 255))
+
     def test_existing_studio_audio_marker_uses_real_native_mix_path(self):
         import wave
         from PIL import Image
