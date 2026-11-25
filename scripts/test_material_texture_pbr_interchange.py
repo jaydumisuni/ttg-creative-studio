@@ -64,6 +64,59 @@ class MaterialTextureInterop(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 import_pbr_export_maps(source, manifest, output, material_name="Worn metal")
 
+    def test_lit_swatch_is_actual_editable_canvas_layer_and_deterministic(self):
+        from ttg_canvas_engine import CanvasRenderer, RenderContext
+        with TemporaryDirectory() as d:
+            root=Path(d)
+            source,manifest=fixture(root)
+            first=root/"first.ttgstudio.json"
+            second=root/"second.ttgstudio.json"
+            one=import_pbr_export_maps(source,manifest,first,material_name="Steel")
+            two=import_pbr_export_maps(source,manifest,second,material_name="Steel")
+            self.assertTrue(one["fixed_light_swatch_rendered"])
+            self.assertFalse(one["material_surface_render_verified"])
+            p=TTGProject.load(first)
+            self.assertEqual(len(p.assets),4)
+            self.assertEqual(len(p.layers),1)
+            self.assertEqual(p.layers[0].type,"image")
+            preview=root/p.layers[0].properties["path"]
+            self.assertTrue(preview.is_file())
+            self.assertEqual(sha256(preview.read_bytes()).hexdigest(),one["preview_sha256"])
+            self.assertEqual(one["preview_sha256"],two["preview_sha256"])
+            from PIL import Image
+            with Image.open(preview) as pixels:
+                rgba=pixels.convert("RGBA")
+                self.assertEqual(rgba.size,(32,32))
+                self.assertNotEqual(rgba.getpixel((0,0))[:3],(150,100,60))
+                merged=CanvasRenderer(RenderContext(project_root=root)).render(p)
+                self.assertEqual(merged.convert("RGBA").getpixel((0,0)),rgba.getpixel((0,0)))
+            self.assertFalse(p.export["pbr_materials"][0]["mesh_uv_shader_certified"])
+
+    def test_normal_y_and_roughness_change_real_swatch_pixels(self):
+        from PIL import Image
+        with TemporaryDirectory() as d:
+            root=Path(d)
+            source,manifest=fixture(root)
+            Image.new("RGBA",(32,32),(180,36,240,255)).save(source/"normal.png")
+            declaration=json.loads(manifest.read_text())
+            declaration["channels"]["normal"]["sha256"]=sha256(
+                (source/"normal.png").read_bytes()).hexdigest()
+            manifest.write_text(json.dumps(declaration))
+            a=import_pbr_export_maps(source,manifest,root/"opengl.ttgstudio.json",
+                                     material_name="OpenGL")
+            declaration["normal_y"]="directx"
+            manifest.write_text(json.dumps(declaration))
+            b=import_pbr_export_maps(source,manifest,root/"directx.ttgstudio.json",
+                                     material_name="DirectX")
+            self.assertNotEqual(a["preview_sha256"],b["preview_sha256"])
+            Image.new("RGBA",(32,32),(245,245,245,255)).save(source/"roughness.png")
+            declaration["channels"]["roughness"]["sha256"]=sha256(
+                (source/"roughness.png").read_bytes()).hexdigest()
+            manifest.write_text(json.dumps(declaration))
+            c=import_pbr_export_maps(source,manifest,root/"rough.ttgstudio.json",
+                                     material_name="Rough")
+            self.assertNotEqual(b["preview_sha256"],c["preview_sha256"])
+
     def test_mismatched_color_space_and_hashes_refused_without_assets(self):
         with TemporaryDirectory() as d:
             root = Path(d)

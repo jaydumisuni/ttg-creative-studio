@@ -90,3 +90,14 @@ The included test file 'tests/fixtures/effectcraft_bouncing_ball.json' and its a
 **Retirement discipline:** These are qualified implementation candidates for specific P1/P2/P4/P5 source-interchange requirements, not closure of full phases or complete direct donor runtime interoperability. Independent owner review, OS-specific GUI tests, CLI tests and real source-file interchange remain requirements. Vork intentionally deferred; Blender left unchanged.
 
 **2026-11-26 source correction:** FilmCraft OTIO Audio tracks now map into Studio's existing `audio_markers` mix graph, preserving start/trim/duration/volume and rejecting unsupported private FilmCraft grade/DSP metadata. Imported OTIO still-image clips are time-bounded in the existing frame renderer; ordinary untagged Studio image layers are unchanged. Windows file identity validation accounts for valid short/long path aliases. All source changes remain in the same integration branch and shared editor/CLI workflow.
+
+
+### 2026-11-26 — Nextwave: FilmCraft sequences and MaterialCraft swatches
+
+This is a **source-bound extension to the existing native Studio interchange**, not a new product, new coordinator or a full donor-engine import.
+
+- **FilmCraft P2:** OTIO Tracks containing multiple consecutive Clip/Gap objects now map to native Studio layers/real audio markers with authored start, duration, trim and sequence identity. Re-export regroups clips into the original track with actual gap timing. Still-image frames are displayed only within their authored clip windows and audio clips enter the incumbent MP4 mixer. Native video rendering, transitions, retimes, FilmCraft effects and nested Compositions retain their existing scope limits.
+- **MaterialCraft/TextureCraft P5:** The existing verified, separately hashed PNG map channels now also create a bounded, reproducible fixed-light **material swatch** and one editable Studio image layer. The swatch samples normal, roughness, metallic, ambient occlusion, base-color, emissive and opacity channels with explicit OpenGL/DirectX normal-Y handling. This is a reference-rendered 2D preview, **not** a UV-mapped 3D shader, full material-graph bake or independent surface-fidelity certification.
+- The same Studio File/Export workflow and manual/typed command routing remain in use; original donor files are untouched and exports are still create-only.
+- Independent Tenfold Gen 1 Foreman lanes prepared these two code changes in *isolated* worker scopes from the exact Studio main ancestor. Tenfold worker stdout carried reviewed patch deltas; the integrated candidate is reviewed/tested in a separate Studio worktree. Existing Cookpit/Sergeant/other project services and timers are not changed.
+- Stage retirement remains per existing owner roadmap. The added clip-sequence and fixed-light-swatch *subrequirements* may be considered in review; **neither P2 nor P5 as a whole is declared closed**. Blender untouched and Vork deferred.

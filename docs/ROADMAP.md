@@ -103,3 +103,8 @@ AI is the operator. The editor is the engine.
 Native interchange subsets were added on the existing Storytold donor-integration branch: PhotoCraft OpenRaster, FilmCraft OpenTimelineIO, EffectCraft basic-shape Lottie, MaterialCraft/TextureCraft exported PBR maps, and VectorCraft basic SVG shapes. Operations are reachable in the existing Studio toolbar, CLI and Hunter tool catalog, with original editable Studio projects preserved.
 
 See the exact supported formats, safety constraints, negative cases and incomplete advanced donor feature coverage in 'STORYTOLD_VORK_DONOR_INTAKE_2026-11-23.md'. This contributes to P1/P2/P4/P5 requirement coverage without declaring entire phases completed. No ArtCraft paid service/model authority added. Vork remains deferred and the current Blender adapter is unchanged.
+
+
+## 2026-11-26 — Native donor nextwave: clip sequences and reference material previews
+
+Continuing the prior Studio native donor integration, a Tenfold Gen 1 two-lane isolated construction pass added FilmCraft OTIO sequential multi-clip/Gap exchange with original track grouping and actual Studio still/video/audio timing, and a MaterialCraft/TextureCraft reference-lit PBR swatch as an editable native image layer. The swatch is a verified source-map rendering, not a native 3D mesh/UV shader qualification. Existing Studio application, project schema, source editors, output controls and review rules are unchanged. No new coordinator; external Cookpit implementation lanes left running. See `docs/STORYTOLD_VORK_DONOR_INTAKE_2026-11-23.md` for exact scope and remaining donor capabilities. Whole P2/P5 gate acceptance, physical proof, real material production shader and owner release signatures remain separate.

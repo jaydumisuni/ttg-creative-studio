@@ -102,6 +102,127 @@ def _safe_write(dest: Path, payload: bytes) -> None:
         Path(temp).unlink(missing_ok=True)
 
 
+
+def _unroll_sequence_tracks(tracks: list[dict], fps: int) -> list[dict]:
+    """Translate sequential OTIO clips/gaps to parallel native Studio layers.
+
+    A flattened Studio layer has a precise start/duration and source trim.
+    Reversible sequence metadata records original track identity/order so an
+    OTIO re-export reconstructs the original sequence instead of claiming
+    that independent overlapping tracks are the same as sequential clips.
+    """
+    out=[]
+    for track_index, track in enumerate(tracks):
+        if not isinstance(track,dict) or track.get("OTIO_SCHEMA") != "Track.1":
+            raise ValueError("Nested or unsupported OTIO track")
+        children=track.get("children")
+        if not isinstance(children,list) or not children:
+            raise ValueError("OTIO track requires content")
+        nclips=sum(x.get("OTIO_SCHEMA") in {"Clip.1","Clip.2"} for x in children
+                   if isinstance(x,dict))
+        if nclips <= 1:
+            out.append(track)
+            continue
+        cursor=0.
+        sequence_idx=0
+        for item in children:
+            if not isinstance(item,dict) or item.get("OTIO_SCHEMA") not in {
+                    "Clip.1","Clip.2","Gap.1"}:
+                raise ValueError("OTIO sequence transition/nesting not qualified")
+            if item.get("effects") or item.get("markers"):
+                raise ValueError("OTIO sequence item effects/markers not supported")
+            source_start,duration=_duration(item.get("source_range"))
+            if item["OTIO_SCHEMA"]=="Gap.1":
+                if source_start:
+                    raise ValueError("OTIO gap offset not supported")
+                cursor+=duration
+                continue
+            clip=dict(item)
+            original_meta=clip.get("metadata") or {}
+            if not isinstance(original_meta,dict):
+                raise ValueError("OTIO clip metadata must be an object")
+            if original_meta.get("ttg_studio") and not isinstance(original_meta["ttg_studio"],dict):
+                raise ValueError("Invalid OTIO TTG metadata")
+            native=dict(original_meta.get("ttg_studio") or {})
+            native.update({
+                "sequence_group":f"otio_sequence_{track_index:03d}",
+                "sequence_index":sequence_idx,
+                "sequence_name":str(track.get("name") or f"Sequence {track_index}"),
+            })
+            clip["metadata"]={**original_meta,"ttg_studio":native}
+            metadata=dict(track.get("metadata") or {})
+            track_native=dict(metadata.get("ttg_studio") or {})
+            track_native.update({
+                "sequence_group":native["sequence_group"],
+                "sequence_index":sequence_idx,
+                "sequence_name":native["sequence_name"],
+            })
+            staged=dict(track)
+            staged["metadata"]={**metadata,"ttg_studio":track_native}
+            staged["children"]=(
+                [{"OTIO_SCHEMA":"Gap.1",
+                  "source_range":_tr(0,cursor,fps),"metadata":{}}]
+                if cursor else []
+            )+[clip]
+            out.append(staged)
+            cursor+=duration
+            sequence_idx+=1
+            if len(out)>MAX_TRACKS:
+                raise ValueError("Expanded OTIO sequence exceeds track budget")
+    return out
+
+
+def _regroup_sequence_tracks(tracks: list[dict], fps: int) -> list[dict]:
+    """Rejoin Studio-imported sequences into standard contiguous OTIO Tracks."""
+    groups={}
+    result=[]
+    for track in tracks:
+        meta=track.get("metadata",{}).get("ttg_studio",{})
+        group=meta.get("sequence_group")
+        if group is None:
+            result.append(track)
+            continue
+        if not isinstance(group,str) or not group or len(group)>100:
+            raise ValueError("Invalid native OTIO sequence identity")
+        idx=meta.get("sequence_index")
+        if not isinstance(idx,int) or isinstance(idx,bool) or idx<0:
+            raise ValueError("Invalid native OTIO sequence index")
+        rows=groups.setdefault(group,[])
+        if not rows:
+            result.append(group)
+        children=track["children"]
+        clip=children[-1]
+        start=0.
+        if len(children)==2:
+            _,start=_duration(children[0]["source_range"])
+        _,duration=_duration(clip["source_range"])
+        rows.append((idx,start,duration,clip,track))
+    for i,item in enumerate(result):
+        if not isinstance(item,str):
+            continue
+        group_rows=sorted(groups[item],key=lambda row:row[0])
+        if len({row[0] for row in group_rows})!=len(group_rows):
+            raise ValueError("Duplicate native OTIO sequence clip index")
+        kinds={row[4]["kind"] for row in group_rows}
+        if len(kinds)!=1:
+            raise ValueError("Mixed audio/video in a single OTIO track")
+        first=group_rows[0][4]
+        joined=[]
+        cursor=0.
+        for _,start,duration,clip,_ in group_rows:
+            if start<cursor-1e-5:
+                raise ValueError("Overlapping OTIO sequential clips")
+            if start>cursor+1e-5:
+                joined.append({"OTIO_SCHEMA":"Gap.1",
+                    "source_range":_tr(0,start-cursor,fps),"metadata":{}})
+            joined.append(clip)
+            cursor=start+duration
+        track=dict(first)
+        track["name"]=first["metadata"]["ttg_studio"].get("sequence_name",first["name"])
+        track["children"]=joined
+        result[i]=track
+    return result
+
 def export_otio(project: TTGProject, destination: str | Path,
                 *, project_root: str | Path) -> dict:
     """Exchange independent video, still and audio tracks with OTIO .otio.
@@ -173,12 +294,19 @@ def export_otio(project: TTGProject, destination: str | Path,
                 "layer_id": layer.id, "original_order": index,
             }},
         }
+        origin_meta = {"layer_id": layer.id}
+        if isinstance(layer.properties.get("_ttg_seq_group"), str):
+            origin_meta.update({
+                "sequence_group":layer.properties["_ttg_seq_group"],
+                "sequence_index":layer.properties["_ttg_seq_index"],
+                "sequence_name":layer.properties.get("_ttg_seq_name", layer.name),
+            })
         tracks.append({
             "OTIO_SCHEMA": "Track.1", "name": layer.name,
             "kind": "Audio" if layer.type == "audio" else "Video",
             "children": gap + [clip],
             "effects": [], "markers": [],
-            "enabled": True, "metadata": {"ttg_studio": {"layer_id": layer.id}},
+            "enabled": True, "metadata": {"ttg_studio": origin_meta},
         })
     # Studio's real MP4 audio pipeline consumes audio_markers, not audio
     # layers. Export those exact editable tracks as independent OTIO Audio
@@ -227,18 +355,26 @@ def export_otio(project: TTGProject, destination: str | Path,
                 "audio_marker": marker, "volume": volume,
             }},
         })
+        origin_meta = {"audio_marker_index": index}
+        if isinstance(marker.get("_ttg_seq_group"), str):
+            origin_meta.update({
+                "sequence_group":marker["_ttg_seq_group"],
+                "sequence_index":marker["_ttg_seq_index"],
+                "sequence_name":marker.get("_ttg_seq_name", "Audio sequence"),
+            })
         tracks.append({
             "OTIO_SCHEMA": "Track.1",
             "name": str(marker.get("name") or f"Studio audio {index + 1}"),
             "kind": "Audio", "children": clips,
             "effects": [], "markers": [], "enabled": True,
-            "metadata": {"ttg_studio": {"audio_marker_index": index}},
+            "metadata": {"ttg_studio": origin_meta},
         })
     if unsupported:
         warnings.append("Non-media layers kept only in original Studio project: "
                         + ", ".join(unsupported[:30]))
     if not tracks:
         raise ValueError("No media timeline clips for FilmCraft interchange")
+    tracks = _regroup_sequence_tracks(tracks, fps)
     doc = {
         "OTIO_SCHEMA": "Timeline.1",
         "name": project.name,
@@ -299,6 +435,9 @@ def import_otio(source: str | Path, destination: str | Path) -> dict:
         raise ValueError("OTIO canvas exceeds size/fps limits")
     project = TTGProject(name=str(obj.get("name") or origin.stem)[:150],
                          project_type="motion", canvas=canvas)
+    # External FilmCraft-style timelines may have actual clip sequences, not
+    # just the single clip/still-track subset introduced in the first wave.
+    tracks = _unroll_sequence_tracks(tracks, int(canvas.fps))
     used: set[str] = set()
     for i, track in enumerate(tracks):
         if not isinstance(track, dict) or track.get("OTIO_SCHEMA") != "Track.1":
@@ -344,6 +483,10 @@ def import_otio(source: str | Path, destination: str | Path) -> dict:
         )
         if is_native_audio_marker:
             audio = dict(metadata["audio_marker"])
+            if "sequence_group" in metadata:
+                audio["_ttg_seq_group"] = metadata["sequence_group"]
+                audio["_ttg_seq_index"] = metadata["sequence_index"]
+                audio["_ttg_seq_name"] = metadata["sequence_name"]
             audio.update({
                 "path": str(path),
                 "start": start,
@@ -389,6 +532,10 @@ def import_otio(source: str | Path, destination: str | Path) -> dict:
         used.add(layer.id)
         layer.properties["path"] = str(path)
         layer.properties["start"] = start
+        if "sequence_group" in metadata:
+            layer.properties["_ttg_seq_group"] = metadata["sequence_group"]
+            layer.properties["_ttg_seq_index"] = metadata["sequence_index"]
+            layer.properties["_ttg_seq_name"] = metadata["sequence_name"]
         if layer.type == "video":
             layer.properties["source_in"] = source_in
             layer.properties["source_out"] = source_in + duration
@@ -407,11 +554,18 @@ def import_otio(source: str | Path, destination: str | Path) -> dict:
             # FFmpeg exporter. Without a marker the imported clip is silent.
             if len([m for m in project.audio_markers if "path" in m]) >= 8:
                 raise ValueError("Studio audio output supports eight mixed audio tracks")
-            project.audio_markers.append({
+            audio_meta = {
                 "path": str(path), "start": start, "source_in": source_in,
                 "duration": duration,
                 "volume": _finite(metadata.get("volume", 1), "audio volume", max_value=3),
-            })
+            }
+            if "sequence_group" in metadata:
+                audio_meta.update({
+                    "_ttg_seq_group":metadata["sequence_group"],
+                    "_ttg_seq_index":metadata["sequence_index"],
+                    "_ttg_seq_name":metadata["sequence_name"],
+                })
+            project.audio_markers.append(audio_meta)
         project.canvas.duration = max(project.canvas.duration, start + duration)
     # Validate BEFORE touching existing Studio files.
     if dest.exists() or dest.is_symlink():
