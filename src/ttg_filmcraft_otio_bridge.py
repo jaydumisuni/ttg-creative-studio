@@ -178,6 +178,60 @@ def export_otio(project: TTGProject, destination: str | Path,
             "effects": [], "markers": [],
             "enabled": True, "metadata": {"ttg_studio": {"layer_id": layer.id}},
         })
+    # Studio's real MP4 audio pipeline consumes audio_markers, not audio
+    # layers. Export those exact editable tracks as independent OTIO Audio
+    # tracks; do not pretend beat/scene markers with no file are audio.
+    audio_track_count = 0
+    for index, marker in enumerate(project.audio_markers):
+        if not isinstance(marker, dict):
+            raise ValueError("Studio audio marker must be a mapping")
+        if not marker.get("path"):
+            warnings.append(f"Audio beat/scene marker {index} stays in the TTG source")
+            continue
+        audio_track_count += 1
+        if audio_track_count > 8:
+            raise ValueError("Studio supports at most eight mixed audio tracks")
+        path = marker["path"]
+        if not isinstance(path, str):
+            raise ValueError("Audio path must be a string")
+        uri = _source_url(path, Path(project_root))
+        start = _finite(marker.get("start", 0), "audio start")
+        source_in = _finite(marker.get("source_in", 0), "audio source in")
+        duration = _finite(
+            marker.get("duration", project_duration - start), "audio duration"
+        )
+        volume = _finite(marker.get("volume", 1), "audio volume", max_value=3)
+        if duration <= 0 or start + duration > project_duration + 1e-4:
+            raise ValueError("Studio audio exceeds authored timeline")
+        if len(tracks) >= MAX_TRACKS:
+            raise ValueError("OTIO track budget exceeded")
+        clips = []
+        if start > 0:
+            clips.append({
+                "OTIO_SCHEMA": "Gap.1",
+                "source_range": _tr(0, start, fps),
+                "metadata": {},
+            })
+        clips.append({
+            "OTIO_SCHEMA": "Clip.1",
+            "name": str(marker.get("name") or f"Studio audio {index + 1}"),
+            "source_range": _tr(source_in, duration, fps),
+            "media_reference": {
+                "OTIO_SCHEMA": "ExternalReference.1",
+                "target_url": uri, "available_range": None, "metadata": {},
+            },
+            "effects": [], "markers": [], "enabled": True,
+            "metadata": {"ttg_studio": {
+                "audio_marker": marker, "volume": volume,
+            }},
+        })
+        tracks.append({
+            "OTIO_SCHEMA": "Track.1",
+            "name": str(marker.get("name") or f"Studio audio {index + 1}"),
+            "kind": "Audio", "children": clips,
+            "effects": [], "markers": [], "enabled": True,
+            "metadata": {"ttg_studio": {"audio_marker_index": index}},
+        })
     if unsupported:
         warnings.append("Non-media layers kept only in original Studio project: "
                         + ", ".join(unsupported[:30]))
@@ -226,6 +280,11 @@ def import_otio(source: str | Path, destination: str | Path) -> dict:
     stack = obj.get("tracks")
     if not isinstance(stack, dict) or stack.get("OTIO_SCHEMA") != "Stack.1":
         raise ValueError("OTIO Stack.1 required")
+    if (obj.get("effects") or obj.get("markers")
+            or stack.get("effects") or stack.get("markers")):
+        raise ValueError("Unsupported OTIO timeline or stack effects/markers")
+    if obj.get("metadata", {}).get("filmcraft") or stack.get("metadata", {}).get("filmcraft"):
+        raise ValueError("FilmCraft advanced sequence metadata needs an explicit native mapping")
     tracks = stack.get("children")
     if not isinstance(tracks, list) or len(tracks) > MAX_TRACKS:
         raise ValueError("OTIO track count exceeds budget")
@@ -244,6 +303,10 @@ def import_otio(source: str | Path, destination: str | Path) -> dict:
             raise ValueError("Nested or unsupported OTIO track")
         if track.get("effects") or track.get("markers") or track.get("enabled") is False:
             raise ValueError("OTIO track effects/markers/mute unsupported")
+        if track.get("metadata", {}).get("filmcraft"):
+            raise ValueError("FilmCraft track metadata requires a qualified adapter")
+        if track.get("kind") not in {"Audio", "Video"}:
+            raise ValueError("Unknown OTIO media track kind")
         children = track.get("children")
         if not isinstance(children, list) or not 1 <= len(children) <= 2:
             raise ValueError("Only one clip per track with optional leading gap")
@@ -263,6 +326,8 @@ def import_otio(source: str | Path, destination: str | Path) -> dict:
             raise ValueError("Only OTIO clips are supported")
         if clip.get("effects") or clip.get("markers"):
             raise ValueError("OTIO effects/markers require explicit donor adapter")
+        if clip.get("metadata", {}).get("filmcraft"):
+            raise ValueError("FilmCraft clip metadata requires a qualified native adapter")
         ref = clip.get("media_reference")
         if not isinstance(ref, dict) or ref.get("OTIO_SCHEMA") != "ExternalReference.1":
             raise ValueError("Only actual local external media references supported")
@@ -270,6 +335,27 @@ def import_otio(source: str | Path, destination: str | Path) -> dict:
         source_in, duration = _duration(clip.get("source_range"))
         metadata = clip.get("metadata", {}).get("ttg_studio", {})
         original = metadata.get("original_layer")
+        is_native_audio_marker = (
+            track["kind"] == "Audio"
+            and isinstance(metadata.get("audio_marker"), dict)
+            and original is None
+        )
+        if is_native_audio_marker:
+            audio = dict(metadata["audio_marker"])
+            audio.update({
+                "path": str(path),
+                "start": start,
+                "source_in": source_in,
+                "duration": duration,
+            })
+            audio["volume"] = _finite(
+                audio.get("volume", 1), "audio marker volume", max_value=3
+            )
+            if len([m for m in project.audio_markers if "path" in m]) >= 8:
+                raise ValueError("Studio audio output supports eight mixed audio tracks")
+            project.audio_markers.append(audio)
+            project.canvas.duration = max(project.canvas.duration, start + duration)
+            continue
         if isinstance(original, dict):
             transformed = Transform(**original.get("transform", {}))
             keyframes = {k: [Keyframe(**kf) for kf in values]
@@ -292,6 +378,10 @@ def import_otio(source: str | Path, destination: str | Path) -> dict:
             layer = Layer(id=f"otio_{i:04d}", type=media_type,
                           name=str(clip.get("name") or f"Clip {i}"),
                           visible=clip.get("enabled", True))
+        if track["kind"] == "Audio" and layer.type != "audio":
+            raise ValueError("Audio track cannot become a video or image layer")
+        if track["kind"] == "Video" and layer.type == "audio":
+            raise ValueError("Video track cannot become an audio layer")
         if layer.id in used:
             raise ValueError("Duplicate OTIO layer IDs")
         used.add(layer.id)
@@ -306,6 +396,16 @@ def import_otio(source: str | Path, destination: str | Path) -> dict:
         else:
             layer.properties["duration"] = duration
         project.layers.append(layer)
+        if layer.type == "audio":
+            # Preserve the legacy audio layer while also feeding the existing
+            # FFmpeg exporter. Without a marker the imported clip is silent.
+            if len([m for m in project.audio_markers if "path" in m]) >= 8:
+                raise ValueError("Studio audio output supports eight mixed audio tracks")
+            project.audio_markers.append({
+                "path": str(path), "start": start, "source_in": source_in,
+                "duration": duration,
+                "volume": _finite(metadata.get("volume", 1), "audio volume", max_value=3),
+            })
         project.canvas.duration = max(project.canvas.duration, start + duration)
     # Validate BEFORE touching existing Studio files.
     if dest.exists() or dest.is_symlink():
