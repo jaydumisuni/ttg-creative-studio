@@ -68,3 +68,23 @@ Two existing donor-informed Studio requirements are now integrated and verified 
 - Private source-bound evidence: TTG-Creative-Studio/.workspace/evidence/donor-combined-20261125/DONOR_MOTION_BLEND_COMBINED_FREEZE_20261125.json, SHA-256 a47722665853d10c5fb819ac6caa330e1079ad2b0b6b3cb777287e759435c4bc.
 
 Do not mark the full P1 or P2 phase CLOSED from this subset. Actual PhotoCraft layered PSD roundtrips, FilmCraft/EffectCraft donor interchange and paid ArtCraft production model outputs are not qualified. The pinned PhotoCraft CLI source documents info, convert and run, but no donor executable was found on KRATOS; layer blending is NOT PSD interoperability. Vork stays deferred, Blender unchanged, and source/release main retains existing owner authority.
+
+## Native donor interchange wave — 2026-11-26
+
+This extends the existing TTG Creative Studio app and native source project, not a separate set of editors. The motion easing and alpha-aware blend integration was already implemented and source-bound tested; **already documented — no duplicate implementation needed**.
+
+| Donor | New native Studio interchange and exact supported subset | Not yet proven |
+| --- | --- | --- |
+| PhotoCraft | OpenRaster (.ora) import/export with actual RGBA layers, supported blend modes, order, opacity, visibility, original image preservation and pixel roundtrip | Full PSD/PSB, groups, masks, adjustments or editable vector/text parity |
+| FilmCraft | OpenTimelineIO (.otio) independent clip tracks, real local media references, source trim/timing and native TTG metadata roundtrip | Advanced NLE trims, multi-clip track sequences, FCPXML/AAF, color pipeline and DSP equivalence |
+| EffectCraft | Lottie 5.x editable basic shape and position/hold/cubic Bézier motion subset, including an attributed actual EffectCraft test fixture | Full Effects, AEP, masks, expressions, complex Lottie or complete AniCraft |
+| MaterialCraft + TextureCraft | Imported real exported PNG PBR maps with hashes, channel and color-space identification, normal-Y conventions, and editable TTG asset references | .mcmat graph baking, full shader/UV integration and surface-quality certification |
+| VectorCraft (DesignCraft overlap) | SVG solid rectangle, ellipse/circle, two-point connector primitives as editable native TTG layers | Rich SVG paths, typography, diagrams, complex effects, PDF/AI interchange |
+| ArtCraft | Existing opt-in provider image/video workflow remains; no new model service invoked | Real ArtCraft model/API admission, cost agreement and unseen image quality acceptance |
+| SoundCraft, LightCraft, AniCraft | Existing TTG sound markers, image ingestion and keyframes remain | Standalone DSP, RAW and full frame/vector animation equivalence |
+
+All five new exact interchange subsets are available through existing Studio **File** and **Export** toolbar menus, the manual 'scripts/creative_cli.py' operations, and the existing Hunter-compatible 'src/ttg_creative_studio/cli.py' task catalog. Imports produce a new canonical TTG project, not a donor-managed replacement source. They refuse unsupported or potentially lossy structural mappings instead of silently flattening them. Original sources are preserved, outputs are create-only, and input/archive/file budgets apply. Vendor donor binaries and model weights are not installed or required for these native format implementations.
+
+The included test file 'tests/fixtures/effectcraft_bouncing_ball.json' and its attribution came from EffectCraft at the previously pinned donor source revision, MIT OR Apache-2.0.
+
+**Retirement discipline:** These are qualified implementation candidates for specific P1/P2/P4/P5 source-interchange requirements, not closure of full phases or complete direct donor runtime interoperability. Independent owner review, OS-specific GUI tests, CLI tests and real source-file interchange remain requirements. Vork intentionally deferred; Blender left unchanged.

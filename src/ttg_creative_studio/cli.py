@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict, is_dataclass
 import json
 import sys
 from pathlib import Path
@@ -16,6 +17,79 @@ from ttg_creative_studio.engine.image_jobs import CreativeJobError
 from ttg_production_director import ProductionDirector, ProductionError
 from ttg_creative_instruction import run_creative_instruction, creative_scene_contract
 from ttg_professional_image_production import ProfessionalImagePipeline, choose_quality
+
+
+DONOR_TASKS = frozenset({
+    "studio_export_openraster", "studio_import_openraster",
+    "studio_export_otio", "studio_import_otio",
+    "studio_export_lottie", "studio_import_lottie",
+    "studio_import_pbr_maps",
+    "studio_export_svg", "studio_import_svg",
+})
+
+
+def run_donor_interchange_job(job: dict[str, Any]) -> dict[str, Any]:
+    """Use exact existing Studio project and actual native interchange engines.
+
+    No subprocess donor runtime or unapproved provider side effect is
+    introduced. Every output is new, source assets remain unchanged.
+    """
+    from ttg_project_schema import TTGProject
+
+    task = job.get("task")
+    output = Path(job.get("output") or job.get("outputPath") or "")
+    if task not in DONOR_TASKS or not output.is_absolute():
+        raise CreativeJobError("Donor interchange needs known task and absolute output")
+    options = job.get("options") or {}
+    if not isinstance(options, dict):
+        raise CreativeJobError("Donor interchange options must be an object")
+    input_value = job.get("input") or job.get("inputPath")
+    if not isinstance(input_value, str) or not Path(input_value).is_absolute():
+        raise CreativeJobError("Donor interchange requires an absolute input path")
+    source = Path(input_value)
+    if task == "studio_export_openraster":
+        from ttg_openraster_bridge import export_openraster
+        result = export_openraster(
+            TTGProject.load(source), output,
+            project_root=Path(options.get("project_root") or source.parent),
+        )
+    elif task == "studio_import_openraster":
+        from ttg_openraster_bridge import import_openraster
+        result = import_openraster(source, output)
+    elif task == "studio_export_otio":
+        from ttg_filmcraft_otio_bridge import export_otio
+        result = export_otio(
+            TTGProject.load(source), output,
+            project_root=Path(options.get("project_root") or source.parent),
+        )
+    elif task == "studio_import_otio":
+        from ttg_filmcraft_otio_bridge import import_otio
+        result = import_otio(source, output)
+    elif task == "studio_export_svg":
+        from ttg_vectorcraft_svg_bridge import export_svg_shapes
+        result = export_svg_shapes(TTGProject.load(source), output)
+    elif task == "studio_import_svg":
+        from ttg_vectorcraft_svg_bridge import import_svg_shapes
+        result = import_svg_shapes(source, output)
+    elif task == "studio_export_lottie":
+        from ttg_effectcraft_lottie_bridge import export_lottie
+        result = export_lottie(TTGProject.load(source), output)
+    elif task == "studio_import_lottie":
+        from ttg_effectcraft_lottie_bridge import import_lottie
+        result = import_lottie(source, output)
+    else:
+        from ttg_material_texture_bridge import import_pbr_export_maps
+        result = import_pbr_export_maps(
+            Path(options.get("maps_dir") or source.parent),
+            source, output, material_name=options.get("material_name", ""),
+        )
+    metadata = asdict(result) if is_dataclass(result) else result
+    return {
+        "ok": True,
+        "jobId": str(job.get("jobId") or "studio_donor_interchange"),
+        "task": task, "status": "complete",
+        "outputPath": str(output), "meta": metadata,
+    }
 
 
 def _read_json(path: Path) -> Dict[str, Any]:
@@ -85,6 +159,22 @@ def main(argv: list[str] | None = None) -> int:
             "image_download_online": {"state":"online",
                 "requires":["options.prediction_id","output"],
                 "side_effects":"verified PNG download"},
+        })
+        schema["operations"].update({
+            task: {
+                "state": "native_interchange_subset",
+                "requires": ["task", "input", "output"],
+                "side_effects": "Creates a new local interchange artifact; never overwrites inputs",
+                "description": (
+                    "PhotoCraft OpenRaster layers; FilmCraft OTIO clips; "
+                    "EffectCraft Lottie shapes; VectorCraft SVG primitives; "
+                    "or exported PBR texture mapset "
+                    "intake into the existing Studio project. Only explicitly "
+                    "supported structures are admitted; no donor runtime, "
+                    "model license or production authority is inferred."
+                ),
+            }
+            for task in sorted(DONOR_TASKS)
         })
         print(json.dumps(schema, indent=2))
         return 0
@@ -197,6 +287,8 @@ def main(argv: list[str] | None = None) -> int:
                     "task":"creative_execute","status":receipt["state"],
                     "outputPath":receipt.get("output"),"meta":receipt}
 
+        elif job.get("task") in DONOR_TASKS:
+            result = run_donor_interchange_job(job)
         elif job.get("task") in VIDEO_TASKS:
             result=run_video_job(job)
         elif job.get("task") in ONLINE_IMAGE_TASKS:

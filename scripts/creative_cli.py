@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict, is_dataclass
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -66,6 +68,53 @@ def design_campaign(args) -> int:
     return 0
 
 
+def donor_interchange(args) -> int:
+    """Use existing Studio source/project and specialized donor exchange paths."""
+    if args.operation == "export-ora":
+        from ttg_openraster_bridge import export_openraster
+        source = Path(args.project)
+        project = TTGProject.load(source)
+        result = export_openraster(
+            project, args.output,
+            project_root=Path(args.project_root or source.parent),
+        )
+    elif args.operation == "import-ora":
+        from ttg_openraster_bridge import import_openraster
+        result = import_openraster(args.source, args.output)
+    elif args.operation == "export-otio":
+        from ttg_filmcraft_otio_bridge import export_otio
+        source = Path(args.project)
+        result = export_otio(
+            TTGProject.load(source), args.output,
+            project_root=Path(args.project_root or source.parent),
+        )
+    elif args.operation == "import-otio":
+        from ttg_filmcraft_otio_bridge import import_otio
+        result = import_otio(args.source, args.output)
+    elif args.operation == "export-lottie":
+        from ttg_effectcraft_lottie_bridge import export_lottie
+        result = export_lottie(TTGProject.load(args.project), args.output)
+    elif args.operation == "import-lottie":
+        from ttg_effectcraft_lottie_bridge import import_lottie
+        result = import_lottie(args.source, args.output)
+    elif args.operation == "export-svg":
+        from ttg_vectorcraft_svg_bridge import export_svg_shapes
+        result = export_svg_shapes(TTGProject.load(args.project), args.output)
+    elif args.operation == "import-svg":
+        from ttg_vectorcraft_svg_bridge import import_svg_shapes
+        result = import_svg_shapes(args.source, args.output)
+    elif args.operation == "import-pbr":
+        from ttg_material_texture_bridge import import_pbr_export_maps
+        result = import_pbr_export_maps(
+            args.maps_dir, args.manifest, args.output,
+            material_name=args.material_name,
+        )
+    else:
+        raise ValueError("Unknown Studio interchange operation")
+    print(json.dumps(asdict(result) if is_dataclass(result) else result, indent=2))
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="TTG Creative Studio CLI")
     sub = parser.add_subparsers(required=True)
@@ -105,6 +154,27 @@ def main() -> int:
     p_campaign.add_argument("--accent", choices=["aqua", "violet", "amber"], default="aqua")
     p_campaign.add_argument("--product-image", default="")
     p_campaign.set_defaults(func=design_campaign)
+
+    # Interchange is a native Studio capability; no donor executable,
+    # external model or paid service is installed by these commands.
+    for name in ("export-ora", "export-otio", "export-lottie", "export-svg"):
+        sp = sub.add_parser(name, help="Export a Studio project to an open donor format")
+        sp.add_argument("project")
+        sp.add_argument("output")
+        if name != "export-lottie":
+            sp.add_argument("--project-root", default="")
+        sp.set_defaults(func=donor_interchange, operation=name)
+    for name in ("import-ora", "import-otio", "import-lottie", "import-svg"):
+        sp = sub.add_parser(name, help="Import supported donor exchange as editable TTG source")
+        sp.add_argument("source")
+        sp.add_argument("output")
+        sp.set_defaults(func=donor_interchange, operation=name)
+    sp = sub.add_parser("import-pbr", help="Import verified MaterialCraft/TextureCraft exported PBR maps")
+    sp.add_argument("maps_dir")
+    sp.add_argument("manifest")
+    sp.add_argument("output")
+    sp.add_argument("--material-name", required=True)
+    sp.set_defaults(func=donor_interchange, operation="import-pbr")
 
     args = parser.parse_args()
     return args.func(args)
