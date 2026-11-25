@@ -101,3 +101,12 @@ This is a **source-bound extension to the existing native Studio interchange**, 
 - The same Studio File/Export workflow and manual/typed command routing remain in use; original donor files are untouched and exports are still create-only.
 - Independent Tenfold Gen 1 Foreman lanes prepared these two code changes in *isolated* worker scopes from the exact Studio main ancestor. Tenfold worker stdout carried reviewed patch deltas; the integrated candidate is reviewed/tested in a separate Studio worktree. Existing Cookpit/Sergeant/other project services and timers are not changed.
 - Stage retirement remains per existing owner roadmap. The added clip-sequence and fixed-light-swatch *subrequirements* may be considered in review; **neither P2 nor P5 as a whole is declared closed**. Blender untouched and Vork deferred.
+
+
+### 2026-11-26 — SoundCraft audio envelope and EffectCraft/AniCraft opacity (Tenfold isolated wave)
+
+**Native additive implementation:**
+- **SoundCraft P2 subset:** The existing Studio audio marker now accepts two optional, finite, source-relative durations, `fade_in` and `fade_out` (seconds). The production FFmpeg chain applies trimmed audio, volume, actual `afade` in/out, then timeline delay, before native mix. Fades are bounded (nonnegative, no overlap past clip duration), clips without fades retain original behavior. Native editable metadata survives the FilmCraft OTIO track exchange. A generated real PCM WAV uses FFT-free amplitude measurements on any workstation with FFmpeg installed; absent FFmpeg is not recorded as a real PCM proof.
+- **EffectCraft/AniCraft P2 subset:** Lottie 5.x basic solid rectangle/ellipse tracks now exchange animated layer opacity as well as position using linear, hold and cubic-Bézier keys. Native shape rendering now honors the same transform.opacity as image and video layers, so saved-project frame sequences are replayable and genuine transparent/visible frame pixels can be compared. External effects, expressions, complex masks or complete AniCraft/EffectCraft runtime remain unsupported.
+- Implementation used the existing qualified Tenfold Foreman and **two independent isolated construction workers**, without altering Cookpit project workers/timers or the existing Blender adapter. Source patches move through the same Studio edit/review/merge path.
+- This advances *selected P2 feature implementations only*. It does **not** close SoundCraft DSP editing, complete animation/VFX parity, full FilmCraft postproduction, protected production signing or the whole P2 stage.

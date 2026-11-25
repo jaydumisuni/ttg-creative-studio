@@ -263,6 +263,12 @@ class CanvasRenderer:
             draw.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=3 if outline else 1)
         else:
             draw.rectangle(box, fill=fill, outline=outline, width=3 if outline else 1)
+        # Shape layers must obey the same native transform opacity as images
+        # and text, including values animated by the timeline engine.
+        if layer.transform.opacity < 1:
+            shape_img.putalpha(shape_img.getchannel("A").point(
+                lambda alpha: max(0,min(255,round(alpha*layer.transform.opacity)))
+            ))
         if layer.properties.get("glow") and outline:
             glow = shape_img.filter(ImageFilter.GaussianBlur(float(layer.properties.get("glow_blur", 10))))
             canvas.alpha_composite(glow)

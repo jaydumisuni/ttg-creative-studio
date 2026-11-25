@@ -74,17 +74,29 @@ class MotionExporter:
             duration = float(marker.get("duration", project.canvas.duration-start))
             source_in = float(marker.get("source_in", 0))
             volume = float(marker.get("volume", 1))
-            if (not all(math.isfinite(x) for x in (start,duration,source_in,volume))
+            # Source-local fades implement a useful SoundCraft editing subset
+            # through the existing professional FFmpeg export pipeline. They
+            # run *after* source trim and *before* timeline delay.
+            fade_in = float(marker.get("fade_in", 0))
+            fade_out = float(marker.get("fade_out", 0))
+            if (not all(math.isfinite(x) for x in
+                        (start, duration, source_in, volume, fade_in, fade_out))
                     or start < 0 or duration <= 0 or source_in < 0 or not (0 <= volume <= 3)
+                    or fade_in < 0 or fade_out < 0
+                    or fade_in + fade_out > duration + 1e-8
                     or start >= project.canvas.duration):
-                raise ValueError("Invalid audio start, duration or volume")
+                raise ValueError("Invalid audio start, duration, volume or fades")
             args += ["-i", str(path)]
             delay_ms = int(start*1000)
-            filters.append(
+            chain = (
                 f"[{len(refs)+1}:a]atrim=start={source_in:.3f}:duration={duration:.3f},"
-                f"asetpts=PTS-STARTPTS,volume={volume:.3f},"
-                f"adelay={delay_ms}:all=1[a{index}]"
+                f"asetpts=PTS-STARTPTS,volume={volume:.3f}"
             )
+            if fade_in:
+                chain += f",afade=t=in:st=0:d={fade_in:.3f}"
+            if fade_out:
+                chain += f",afade=t=out:st={duration-fade_out:.3f}:d={fade_out:.3f}"
+            filters.append(chain + f",adelay={delay_ms}:all=1[a{index}]")
             refs.append(f"[a{index}]")
         if not refs:
             return args, filters, None
