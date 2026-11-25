@@ -120,7 +120,7 @@ class FilmCraftInteropTests(unittest.TestCase):
                 wave_file.setnchannels(1)
                 wave_file.setsampwidth(2)
                 wave_file.setframerate(8000)
-                wave_file.writeframes(b"\\x00\\x00" * 8000)
+                wave_file.writeframes(b"\x00\x00" * 8000)
             project = TTGProject(name="real Studio audio", project_type="motion")
             project.canvas = CanvasSpec(width=320, height=180, fps=30, duration=5)
             project.layers = [
