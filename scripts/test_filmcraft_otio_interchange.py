@@ -10,7 +10,7 @@ import unittest
 SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC))
 
-from ttg_filmcraft_otio_bridge import export_otio, import_otio
+from ttg_filmcraft_otio_bridge import export_otio, import_otio, _tr, _rt
 from ttg_project_schema import CanvasSpec, Keyframe, Layer, TTGProject
 
 
@@ -108,6 +108,107 @@ class FilmCraftInteropTests(unittest.TestCase):
             (root / "bad.otio").write_text(json.dumps(doc))
             with self.assertRaisesRegex(ValueError, "local file URL"):
                 import_otio(root / "bad.otio", root / "bad.ttgstudio.json")
+
+    def test_two_still_clips_in_one_otio_track_import_render_reexport(self):
+        from PIL import Image
+        from ttg_canvas_engine import RenderContext
+        from ttg_motion_exporter import MotionExporter
+        with TemporaryDirectory() as d:
+            root=Path(d)
+            Image.new("RGBA",(10,10),(210,50,40,255)).save(root/"first.png")
+            Image.new("RGBA",(10,10),(20,170,220,255)).save(root/"second.png")
+            p=TTGProject(name="FilmCraft sequence",project_type="motion")
+            p.canvas=CanvasSpec(width=32,height=24,fps=20,duration=4,background="#081018")
+            p.layers=[
+                Layer(id="first",type="image",name="one",properties={
+                    "path":"first.png","duration":1,"start":0}),
+                Layer(id="second",type="image",name="two",properties={
+                    "path":"second.png","duration":1,"start":1.5}),
+            ]
+            export_otio(p,root/"two-tracks.otio",project_root=root)
+            doc=json.loads((root/"two-tracks.otio").read_text())
+            one,two=doc["tracks"]["children"]
+            doc["tracks"]["children"]=[
+                {**one,"name":"single-filmcraft-track","children":[
+                    one["children"][0],
+                    {"OTIO_SCHEMA":"Gap.1",
+                     "source_range":_tr(0,0.5,20),
+                     "metadata":{}},
+                    two["children"][-1],
+                ]}
+            ]
+            # one["children"][0] is first Clip; imported track is sequential.
+            (root/"one-sequence.otio").write_text(json.dumps(doc))
+            out=root/"imported.ttgstudio.json"
+            import_otio(root/"one-sequence.otio",out)
+            restored=TTGProject.load(out)
+            self.assertEqual(len(restored.layers),2)
+            self.assertEqual([x.properties["start"] for x in restored.layers],[0,1.5])
+            renderer=MotionExporter(RenderContext(root))
+            self.assertEqual(renderer.render_frame(restored,0.25).convert("RGBA").getpixel((0,0)),
+                             (210,50,40,255))
+            self.assertEqual(renderer.render_frame(restored,1.25).convert("RGBA").getpixel((0,0)),
+                             (8,16,24,255))
+            self.assertEqual(renderer.render_frame(restored,1.75).convert("RGBA").getpixel((0,0)),
+                             (20,170,220,255))
+            export_otio(restored,root/"roundtrip.otio",project_root=root)
+            after=json.loads((root/"roundtrip.otio").read_text())
+            self.assertEqual(len(after["tracks"]["children"]),1)
+            self.assertEqual(len(after["tracks"]["children"][0]["children"]),3)
+            self.assertEqual(after["tracks"]["children"][0]["name"],"single-filmcraft-track")
+
+    def test_multi_clip_audio_sequence_returns_to_studio_mixer(self):
+        with TemporaryDirectory() as d:
+            root=Path(d)
+            for name in ("a.wav","b.wav"):
+                (root/name).write_bytes(b"source-evidence-only")
+            p=TTGProject(name="Audio sequence",project_type="motion")
+            p.canvas=CanvasSpec(width=32,height=24,fps=20,duration=4)
+            p.audio_markers=[
+                {"path":"a.wav","start":0.0,"duration":0.6,"source_in":0},
+                {"path":"b.wav","start":1.2,"duration":0.7,"source_in":0},
+            ]
+            export_otio(p,root/"sources.otio",project_root=root)
+            doc=json.loads((root/"sources.otio").read_text())
+            first,second=doc["tracks"]["children"]
+            doc["tracks"]["children"]=[
+                {**first,"name":"dual-sound",
+                 "children":[first["children"][-1],
+                  {"OTIO_SCHEMA":"Gap.1","source_range":_tr(0,0.6,20),"metadata":{}},
+                  second["children"][-1]]}
+            ]
+            (root/"audio-sequence.otio").write_text(json.dumps(doc))
+            import_otio(root/"audio-sequence.otio",root/"imported.ttgstudio.json")
+            project=TTGProject.load(root/"imported.ttgstudio.json")
+            self.assertEqual(len(project.audio_markers),2)
+            self.assertEqual([round(m["start"],2) for m in project.audio_markers],[0.,1.2])
+            self.assertEqual([round(m["duration"],2) for m in project.audio_markers],[.6,.7])
+            export_otio(project,root/"replay.otio",project_root=root)
+            again=json.loads((root/"replay.otio").read_text())
+            self.assertEqual(len(again["tracks"]["children"]),1)
+            self.assertEqual(len(again["tracks"]["children"][0]["children"]),3)
+
+    def test_transitions_and_sequence_effects_rejected_without_corruption(self):
+        with TemporaryDirectory() as d:
+            root=Path(d)
+            (root/"a.wav").write_bytes(b"source-evidence")
+            p=TTGProject(name="bad transition",project_type="motion")
+            p.canvas=CanvasSpec(width=32,height=24,fps=20,duration=3)
+            p.audio_markers=[{"path":"a.wav","start":0,"duration":1},
+                             {"path":"a.wav","start":1,"duration":1}]
+            export_otio(p,root/"sources.otio",project_root=root)
+            doc=json.loads((root/"sources.otio").read_text())
+            track=doc["tracks"]["children"][0]
+            track["children"]=[track["children"][-1],
+                {"OTIO_SCHEMA":"Transition.1","in_offset":_rt(.2,20),
+                 "out_offset":_rt(.2,20)},
+                doc["tracks"]["children"][1]["children"][-1]]
+            doc["tracks"]["children"]=[track]
+            (root/"transition.otio").write_text(json.dumps(doc))
+            target=root/"must-not-exist.ttgstudio.json"
+            with self.assertRaisesRegex(ValueError,"transition/nesting"):
+                import_otio(root/"transition.otio",target)
+            self.assertFalse(target.exists())
 
     def test_still_clip_replays_real_frames_only_inside_authored_range(self):
         from PIL import Image

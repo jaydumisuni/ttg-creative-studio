@@ -15,7 +15,7 @@ import tempfile
 
 from PIL import Image
 
-from ttg_project_schema import Asset, TTGProject
+from ttg_project_schema import Asset, TTGProject, Layer, CanvasSpec
 
 MAPS = frozenset({
     "base_color", "normal", "roughness", "metallic", "ambient_occlusion",
@@ -74,6 +74,70 @@ def _validated_manifest(source: Path, manifest: dict) -> list[tuple[str, Path, s
     return rows
 
 
+
+def _preview_png_from_maps(directory: Path, channels: dict[str, dict], normal_y: str) -> tuple[bytes, tuple[int, int]]:
+    """Render an actual bounded swatch with fixed light and per-map semantics.
+
+    This is an image-editor preview of exported PBR maps, not a claim of
+    UV-mapped/physically certified mesh output or a native MaterialCraft graph.
+    """
+    from io import BytesIO
+    import math
+    from PIL import Image
+
+    if "base_color" not in channels:
+        raise ValueError("A PBR swatch requires a base_color map")
+    with Image.open(directory / "base_color.png") as source:
+        width, height = source.size
+    width = max(1, round(width * min(1., 256 / max(width, height))))
+    height = max(1, round(height * min(1., 256 / max(width, height))))
+    images = {}
+    for channel in channels:
+        with Image.open(directory / (channel + ".png")) as raw:
+            images[channel] = raw.convert("RGBA").resize(
+                (width, height), Image.Resampling.BILINEAR
+            )
+    px = {channel: image.load() for channel, image in images.items()}
+    dest = Image.new("RGBA", (width, height))
+    put = dest.load()
+    lx, ly, lz = (-0.42, -0.38, 0.824)
+    ll = math.sqrt(lx*lx + ly*ly + lz*lz)
+    lx,ly,lz = lx/ll,ly/ll,lz/ll
+    hx,hy,hz = lx,ly,lz+1.
+    hl = math.sqrt(hx*hx + hy*hy + hz*hz)
+    hx,hy,hz = hx/hl,hy/hl,hz/hl
+    y_flip = -1 if normal_y == "directx" else 1
+    for y in range(height):
+        for x in range(width):
+            base = px["base_color"][x,y]
+            r,g,b = (v / 255. for v in base[:3])
+            sample = px.get("normal")
+            if sample is None:
+                nx,ny,nz = 0.,0.,1.
+            else:
+                nr,ng,nb,_ = sample[x,y]
+                nx,ny,nz = nr/127.5-1.,(ng/127.5-1.)*y_flip,nb/127.5-1.
+                nl = max(1e-8,math.sqrt(nx*nx+ny*ny+nz*nz))
+                nx,ny,nz = nx/nl,ny/nl,nz/nl
+            diffuse = max(0., nx*lx+ny*ly+nz*lz)
+            halfdot = max(0.,nx*hx+ny*hy+nz*hz)
+            rough = px["roughness"][x,y][0]/255. if "roughness" in px else .5
+            metal = px["metallic"][x,y][0]/255. if "metallic" in px else 0.
+            ao = px["ambient_occlusion"][x,y][0]/255. if "ambient_occlusion" in px else 1.
+            visibility = .17 + .78 * diffuse * ao
+            specular = (halfdot ** (2. + (1. - rough) * 90.)) * (1.15 - .25*rough)
+            emission = px["emissive"][x,y] if "emissive" in px else (0,0,0,0)
+            opacity = px["opacity"][x,y][0] if "opacity" in px else base[3]
+            vals=[]
+            for i,col in enumerate((r,g,b)):
+                f0 = .04*(1.-metal)+col*metal
+                energy = (1.-metal)*col*visibility + f0*specular + emission[i]/255.*.25
+                vals.append(max(0,min(255,round(255*energy))))
+            put[x,y]=(*vals,opacity)
+    buffer=BytesIO()
+    dest.save(buffer,format="PNG")
+    return buffer.getvalue(),(width,height)
+
 def import_pbr_export_maps(
     source_dir: str | Path,
     manifest_path: str | Path,
@@ -112,7 +176,25 @@ def import_pbr_export_maps(
                 "asset_id": f"pbr_{channel}", "path": relative,
                 "colorspace": colorspace, "sha256": digest,
             }
+        # A visible, editable image layer uses the exact downloaded map bytes;
+        # the original channels remain independent and hash-identical.
+        preview_bytes, preview_size = _preview_png_from_maps(
+            temp, channels, declaration["normal_y"])
+        (temp / "material-preview.png").write_bytes(preview_bytes)
+        preview_path = f"{assets_dir.name}/material-preview.png"
         project = TTGProject(name=f"{material_name} — PBR asset set", project_type="mixed")
+        project.canvas = CanvasSpec(
+            width=preview_size[0], height=preview_size[1], background="#101018"
+        )
+        project.layers = [Layer(
+            id="pbr_material_preview", type="image",
+            name=f"{material_name}: PBR lit swatch",
+            properties={
+                "path": preview_path,
+                "source_format": "pbr_export_mapset",
+                "preview_kind": "fixed_light_normal_roughness_metallic",
+            },
+        )]
         project.assets = assets
         project.export["pbr_materials"] = [{
             "name": material_name,
@@ -120,6 +202,10 @@ def import_pbr_export_maps(
             "channels": channels,
             "origin": "MaterialCraft/TextureCraft exported map files",
             "native_graph_imported": False,
+            "swatch_preview_path": preview_path,
+            "swatch_preview_sha256": hashlib.sha256(preview_bytes).hexdigest(),
+            "swatch_render_semantics": "fixed_light_reference_only",
+            "mesh_uv_shader_certified": False,
         }]
         os.replace(temp, assets_dir)
         published = True
@@ -139,4 +225,6 @@ def import_pbr_export_maps(
         "project_sha256": hashlib.sha256(out.read_bytes()).hexdigest(),
         "native_material_graph_imported": False,
         "material_surface_render_verified": False,
+        "fixed_light_swatch_rendered": True,
+        "preview_sha256": hashlib.sha256(preview_bytes).hexdigest(),
     }
