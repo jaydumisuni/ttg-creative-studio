@@ -66,6 +66,72 @@ class EffectCraftLottieInterop(unittest.TestCase):
             self.assertEqual(reopened.layers[0].keyframes["position"][1].easing, "hold")
             self.assertEqual(TTGProject.load(orig).layers[0].id, "shape")
 
+    def test_effectcraft_animated_opacity_roundtrip_and_real_frame_pixels(self):
+        from ttg_motion_exporter import MotionExporter
+        from ttg_canvas_engine import RenderContext
+        with TemporaryDirectory() as d:
+            root=Path(d)
+            project=TTGProject(name="Opacity animation",project_type="motion")
+            project.canvas=CanvasSpec(width=80,height=64,fps=20,duration=2,
+                                      background="#00000000")
+            project.layers=[Layer(id="shape",type="shape",name="fading-shape",
+                properties={"shape":"rectangle","width":24,"height":20,
+                            "fill":"#FF0000"},
+                keyframes={"opacity":[
+                    Keyframe(0,1.,"linear"),
+                    Keyframe(1,0.,"linear"),
+                    Keyframe(2,1.,"hold"),
+                ]})]
+            original=root/"native.ttgstudio.json"
+            project.save(original)
+            lottie=root/"motion.json"
+            result=export_lottie(project,lottie)
+            self.assertIn("animated opacity",result["supported_subset"])
+            doc=json.loads(lottie.read_text())
+            self.assertEqual(doc["layers"][0]["ks"]["o"]["a"],1)
+            self.assertEqual([x["s"][0] for x in doc["layers"][0]["ks"]["o"]["k"]],
+                             [100.,0.,100.])
+            reopened=root/"roundtrip.ttgstudio.json"
+            import_lottie(lottie,reopened)
+            p=TTGProject.load(reopened)
+            self.assertEqual([x.value for x in p.layers[0].keyframes["opacity"]],
+                             [1.,0.,1.])
+            motion=MotionExporter(RenderContext(root))
+            original_frames=[
+                motion.render_frame(project,t).convert("RGBA").getpixel((4,4))
+                for t in (0,.5,1,1.5,2)
+            ]
+            replay_frames=[
+                motion.render_frame(p,t).convert("RGBA").getpixel((4,4))
+                for t in (0,.5,1,1.5,2)
+            ]
+            self.assertEqual(original_frames,replay_frames)
+            self.assertEqual(original_frames[0],(255,0,0,255))
+            self.assertLess(original_frames[1][3],original_frames[0][3])
+            self.assertEqual(original_frames[2][3],0)
+            self.assertEqual(original_frames[3][3],0)
+            self.assertEqual(original_frames[4],(255,0,0,255))
+
+    def test_nonfinite_or_overrange_opacity_refused_without_output(self):
+        with TemporaryDirectory() as d:
+            root=Path(d)
+            project=TTGProject()
+            project.layers=[Layer(id="shape",type="shape",name="bad",
+                properties={"shape":"rectangle","width":24,"height":20,
+                            "fill":"#00E5FF"},
+                keyframes={"opacity":[Keyframe(0,1.,"linear"),
+                                      Keyframe(1,1.2,"linear")]})]
+            with self.assertRaisesRegex(ValueError,"opacity"):
+                export_lottie(project,root/"bad.json")
+            self.assertFalse((root/"bad.json").exists())
+            doc=json.loads(FIXTURE.read_text())
+            doc["layers"][0]["ks"]["o"]={"a":1,"k":[
+                {"t":0,"s":[100]},{"t":1,"s":[-25]}]}
+            (root/"bad.json").write_text(json.dumps(doc))
+            with self.assertRaisesRegex(ValueError,"opacity"):
+                import_lottie(root/"bad.json",root/"no.ttgstudio.json")
+            self.assertFalse((root/"no.ttgstudio.json").exists())
+
     def test_nonshape_video_and_effects_refused_without_file(self):
         with TemporaryDirectory() as d:
             root = Path(d)

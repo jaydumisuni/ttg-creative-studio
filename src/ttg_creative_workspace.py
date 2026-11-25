@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import sys
+import math
 import tempfile
 import uuid
 import shutil
@@ -15,6 +16,10 @@ from PyQt6.QtGui import QAction, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QFileDialog,
     QInputDialog,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFormLayout,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -194,6 +199,7 @@ class CreativeWorkspace(QWidget):
             ("Visual Inspector · Analyze Image", self.open_visual_inspector),
             ("Brush Mask Selected Image", self.brush_mask_selected_image),
             ("Add Audio Track", self.add_audio_track),
+            ("Edit Audio Fades", self.edit_audio_fades),
             ("Video Lab · Inspect / Import", self.open_video_lab),
             ("3D Lab · Model / Light / Render", self.open_3d_lab),
             ("Generate Online Image · Optional Paid", self.open_online_image),
@@ -511,6 +517,82 @@ class CreativeWorkspace(QWidget):
         self.refresh_all()
         self.autosave_snapshot()
         self.status.setText("Audio track added to project timeline")
+
+    def edit_audio_fades(self) -> None:
+        """Edit bounded native FFmpeg fades through one existing Tools action."""
+        if self.project is None:
+            QMessageBox.information(self, "Audio Fades", "Open a project first.")
+            return
+        tracks = [(index, marker)
+                  for index, marker in enumerate(self.project.audio_markers)
+                  if marker.get("path")]
+        if not tracks:
+            QMessageBox.information(self, "Audio Fades", "Add an audio track first.")
+            return
+        selected_index = 0
+        if len(tracks) > 1:
+            descriptions = [
+                f"{index+1}. {Path(str(marker['path'])).name}"
+                for index, marker in tracks
+            ]
+            choice, ok = QInputDialog.getItem(
+                self, "Audio Fades", "Choose audio track:", descriptions, 0, False,
+            )
+            if not ok:
+                return
+            selected_index = descriptions.index(choice)
+        _, marker = tracks[selected_index]
+        try:
+            start = float(marker.get("start", 0))
+            duration = float(marker.get(
+                "duration", float(self.project.canvas.duration) - start
+            ))
+            if not math.isfinite(duration) or duration <= 0:
+                raise ValueError("Audio clip duration is not positive")
+            existing_in = float(marker.get("fade_in", 0))
+            existing_out = float(marker.get("fade_out", 0))
+            if any(not math.isfinite(v) or v < 0
+                   for v in (existing_in, existing_out)):
+                raise ValueError("Existing audio fade is invalid")
+        except (TypeError, ValueError) as exc:
+            QMessageBox.warning(self, "Audio Fades", str(exc))
+            return
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Edit Audio Envelope")
+        form = QFormLayout(dialog)
+        fade_in = QDoubleSpinBox(dialog)
+        fade_out = QDoubleSpinBox(dialog)
+        for control, value in ((fade_in, existing_in), (fade_out, existing_out)):
+            control.setRange(0, duration)
+            control.setDecimals(3)
+            control.setSingleStep(0.1)
+            control.setSuffix(" s")
+            control.setValue(min(value, duration))
+        form.addRow("Fade in", fade_in)
+        form.addRow("Fade out", fade_out)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok |
+            QDialogButtonBox.StandardButton.Cancel, parent=dialog,
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        form.addRow(buttons)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        incoming, outgoing = fade_in.value(), fade_out.value()
+        if incoming + outgoing > duration + 1e-8:
+            QMessageBox.warning(
+                self, "Audio Fades",
+                "Fade durations cannot exceed the authored audio clip duration.",
+            )
+            return
+        self.remember("edit audio fades")
+        marker["fade_in"], marker["fade_out"] = incoming, outgoing
+        self.refresh_all()
+        self.autosave_snapshot()
+        self.status.setText(
+            f"Audio envelope updated: in {incoming:.3f}s, out {outgoing:.3f}s"
+        )
 
     def open_image_lab(self) -> None:
         if self.project is None:

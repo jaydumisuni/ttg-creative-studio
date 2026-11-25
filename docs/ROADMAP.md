@@ -108,3 +108,8 @@ See the exact supported formats, safety constraints, negative cases and incomple
 ## 2026-11-26 — Native donor nextwave: clip sequences and reference material previews
 
 Continuing the prior Studio native donor integration, a Tenfold Gen 1 two-lane isolated construction pass added FilmCraft OTIO sequential multi-clip/Gap exchange with original track grouping and actual Studio still/video/audio timing, and a MaterialCraft/TextureCraft reference-lit PBR swatch as an editable native image layer. The swatch is a verified source-map rendering, not a native 3D mesh/UV shader qualification. Existing Studio application, project schema, source editors, output controls and review rules are unchanged. No new coordinator; external Cookpit implementation lanes left running. See `docs/STORYTOLD_VORK_DONOR_INTAKE_2026-11-23.md` for exact scope and remaining donor capabilities. Whole P2/P5 gate acceptance, physical proof, real material production shader and owner release signatures remain separate.
+
+
+## 2026-11-26 — Native audio fades and Lottie animated shape opacity
+
+Continuing the already-approved Storytold donor approach, the existing TTG Studio native audio/FFmpeg exporter now accepts source-relative validated fade-in/fade-out durations and the existing native Lottie adapter exchanges animated shape opacity, with real canvas alpha at each authored frame. The complete exact-source evidence and limits are in `docs/STORYTOLD_VORK_DONOR_INTAKE_2026-11-23.md`. This is not equivalent to a SoundCraft DAW or full EffectCraft/AniCraft runtime. Existing Studio editor, Blender, system services and release authority unchanged.

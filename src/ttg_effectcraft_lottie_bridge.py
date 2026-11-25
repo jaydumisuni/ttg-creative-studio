@@ -77,6 +77,88 @@ def _lottie_position(layer: Layer, fps: int, width: float, height: float):
     return {"a": 1, "k": output}
 
 
+
+def _lottie_opacity(layer: Layer, fps: int) -> dict:
+    """Export native 0..1 opacity keyframes as Lottie 0..100 scalars."""
+    frames=layer.keyframes.get("opacity")
+    if not frames:
+        opacity=float(layer.transform.opacity)
+        if not math.isfinite(opacity) or not 0<=opacity<=1:
+            raise ValueError("Lottie static opacity outside normalized range")
+        return {"a":0,"k":round(opacity*100,4)}
+    ordered=sorted(frames,key=lambda x:x.time)
+    if not 2<=len(ordered)<=256:
+        raise ValueError("Lottie opacity requires 2–256 keyframes")
+    previous=-1.
+    output=[]
+    for i,frame in enumerate(ordered):
+        stamp=float(frame.time)*fps
+        value=float(frame.value)
+        if (not math.isfinite(stamp) or not previous<stamp<=MAX_FRAMES
+                or not math.isfinite(value) or not 0<=value<=1):
+            raise ValueError("Lottie opacity keyframe time/value invalid")
+        previous=stamp
+        entry={"t":round(stamp,6),"s":[round(100*value,4)]}
+        if i<len(ordered)-1:
+            easing=ordered[i+1].easing
+            if easing=="hold":
+                entry["h"]=1
+            elif easing in ("linear","ease_in_out"):
+                handles=([0,0,1,1] if easing=="linear" else [0.42,0,0.58,1])
+                entry["o"]={"x":handles[0],"y":handles[1]}
+                entry["i"]={"x":handles[2],"y":handles[3]}
+            elif isinstance(easing,dict) and easing.get("type")=="cubic_bezier":
+                handles=_point(list(easing.get("handles",[])),"opacity easing",4)
+                if not 0<=handles[0]<=1 or not 0<=handles[2]<=1:
+                    raise ValueError("Opacity easing time handles invalid")
+                entry["o"]={"x":handles[0],"y":handles[1]}
+                entry["i"]={"x":handles[2],"y":handles[3]}
+            else:
+                raise ValueError("Unmapped Lottie opacity easing")
+        output.append(entry)
+    return {"a":1,"k":output}
+
+
+def _import_lottie_opacity(property: dict, fps: int, frames: int) -> tuple[float,list[Keyframe]]:
+    """Read basic Lottie animated layer opacity to real Studio keyframes."""
+    if not isinstance(property,dict):
+        raise ValueError("Missing Lottie opacity contract")
+    if property.get("a")==0:
+        opacity=float(_static(property,"opacity"))/100
+        if not math.isfinite(opacity) or not 0<=opacity<=1:
+            raise ValueError("Invalid Lottie static opacity")
+        return opacity,[]
+    if property.get("a")!=1:
+        raise ValueError("Unmapped Lottie opacity animation")
+    raw=property.get("k")
+    if not isinstance(raw,list) or not 2<=len(raw)<=256:
+        raise ValueError("Invalid Lottie opacity keyframe count")
+    previous=-1.
+    result=[]
+    for i,key in enumerate(raw):
+        stamp=float(key.get("t",-1))
+        val=_point(key.get("s"),"opacity keyframe",1)[0]/100.
+        if (not math.isfinite(stamp) or not previous<stamp<=frames
+                or not 0<=val<=1):
+            raise ValueError("Invalid Lottie opacity keyframe time/value")
+        previous=stamp
+        ease="linear"
+        if i:
+            old=raw[i-1]
+            if old.get("h")==1:
+                ease="hold"
+            elif "o" in old or "i" in old:
+                if "o" not in old or "i" not in old:
+                    raise ValueError("Incomplete Lottie opacity easing control")
+                handles=_point([old["o"]["x"],old["o"]["y"],
+                                old["i"]["x"],old["i"]["y"]],
+                               "opacity cubic handles",4)
+                if not 0<=handles[0]<=1 or not 0<=handles[2]<=1:
+                    raise ValueError("Invalid Lottie opacity time handle")
+                ease={"type":"cubic_bezier","handles":handles}
+        result.append(Keyframe(time=stamp/fps,value=val,easing=ease))
+    return result[0].value,result
+
 def export_lottie(project: TTGProject, output_path: str | Path) -> dict:
     dest = Path(output_path)
     if dest.suffix.lower() != ".json":
@@ -93,7 +175,7 @@ def export_lottie(project: TTGProject, output_path: str | Path) -> dict:
             raise ValueError(f"Unsupported EffectCraft/Lottie layer kind or effects: {layer.type}")
         if layer.properties.get("blend_mode", "normal") != "normal":
             raise ValueError("Unmapped Lottie blend mode")
-        if set(layer.keyframes) - {"position"}:
+        if set(layer.keyframes) - {"position", "opacity"}:
             raise ValueError("Unmapped Lottie animated property")
         if layer.transform.rotation_z or layer.transform.rotation_x or layer.transform.rotation_y:
             raise ValueError("Lottie rotation requires a verified renderer path")
@@ -131,7 +213,7 @@ def export_lottie(project: TTGProject, output_path: str | Path) -> dict:
                 "p": _lottie_position(layer, fps, w, h),
                 "s": {"a": 0, "k": [100, 100, 100]},
                 "r": {"a": 0, "k": 0},
-                "o": {"a": 0, "k": round(100*layer.transform.opacity, 4)},
+                "o": _lottie_opacity(layer, fps),
             },
             "shapes": [{
                 "ty": "gr", "nm": layer.name,
@@ -158,7 +240,7 @@ def export_lottie(project: TTGProject, output_path: str | Path) -> dict:
     return {
         "format": "lottie", "output": str(dest), "layers": len(layers),
         "sha256": sha256(encoded).hexdigest(),
-        "supported_subset": "solid rectangle/ellipse, static opacity, position keyframes",
+        "supported_subset": "solid shapes, editable animated opacity and position keyframes",
     }
 
 
@@ -191,9 +273,7 @@ def import_lottie(input_file: str | Path, output_project: str | Path) -> dict:
         ks = raw["ks"]
         if _static(ks["a"], "anchor") != [0, 0, 0] or _static(ks["s"], "scale") != [100, 100, 100] or _static(ks["r"], "rotation") != 0:
             raise ValueError("Unsupported Lottie anchor/scale/rotation")
-        opacity = float(_static(ks["o"], "opacity"))/100
-        if not 0 <= opacity <= 1:
-            raise ValueError("Lottie opacity out of range")
+        opacity, opacity_keys = _import_lottie_opacity(ks["o"],fps,frames)
         groups = raw.get("shapes")
         if not isinstance(groups, list) or len(groups) != 1 or groups[0].get("ty") != "gr":
             raise ValueError("Only one Lottie shape group supported")
@@ -256,6 +336,8 @@ def import_lottie(input_file: str | Path, output_project: str | Path) -> dict:
             x, y = path[0].value[:2]
         else:
             raise ValueError("Unknown animated Lottie position contract")
+        if opacity_keys:
+            keyframes["opacity"] = opacity_keys
         project.layers.append(Layer(
             id=f"lottie_{i:04d}", type="shape",
             name=str(raw.get("nm") or f"Lottie shape {i}")[:150],

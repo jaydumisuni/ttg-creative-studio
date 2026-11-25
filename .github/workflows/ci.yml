@@ -87,4 +87,5 @@ jobs:
           python -B scripts/test_material_texture_pbr_interchange.py
           python -B scripts/test_vectorcraft_svg_interchange.py
           python -B scripts/test_donor_command_routing.py
+          python -B scripts/test_donor_soundcraft_audio_fades.py
           python -B scripts/test_donor_gui_interchange.py
