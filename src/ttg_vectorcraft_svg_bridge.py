@@ -43,6 +43,41 @@ def _color(value) -> str:
     return value.upper()
 
 
+
+def _polyline_points(value: object, width: float, height: float) -> list[list[float]]:
+    """Read strictly bounded, untransformed SVG pixel-coordinate polylines."""
+    if not isinstance(value,str) or len(value)>8_192:
+        raise ValueError("SVG polyline coordinates invalid or oversized")
+    if not re.fullmatch(r"\s*(?:\d+(?:\.\d+)?|\.\d+),(?:\d+(?:\.\d+)?|\.\d+)"
+                        r"(?:\s+(?:\d+(?:\.\d+)?|\.\d+),(?:\d+(?:\.\d+)?|\.\d+))*\s*",
+                        value):
+        raise ValueError("SVG polyline needs bounded x,y coordinates")
+    items=value.strip().split()
+    if not 2<=len(items)<=128:
+        raise ValueError("SVG polyline requires 2–128 points")
+    points=[]
+    for item in items:
+        x,y=item.split(",")
+        px=_number(x,"polyline x",max_value=width)
+        py=_number(y,"polyline y",max_value=height)
+        points.append([px,py])
+    return points
+
+
+def _validated_native_line_points(points: object, width: float, height: float) -> list[list[float]]:
+    """Bound native editable connector/polyline point budgets for SVG output."""
+    if not isinstance(points,list) or not 2<=len(points)<=128:
+        raise ValueError("SVG connector requires 2–128 points")
+    rows=[]
+    for p in points:
+        if not isinstance(p,(list,tuple)) or len(p)!=2:
+            raise ValueError("SVG connector point is not a 2D coordinate")
+        if any(isinstance(v,bool) or not isinstance(v,(float,int,str)) for v in p):
+            raise ValueError("SVG connector point requires numeric coordinates")
+        rows.append([_number(p[0],"x",max_value=width),
+                     _number(p[1],"y",max_value=height)])
+    return rows
+
 def _layer_rect(idx, x, y, width, height, fill, *, rounded=0):
     if width <= 0 or height <= 0:
         raise ValueError("Zero-size SVG shape unsupported")
@@ -114,13 +149,21 @@ def import_svg_shapes(source: str | Path, destination: str | Path) -> dict:
                     "fill": _color(el.get("fill")),
                 },
             )
-        elif tag == "line":
+        elif tag in {"line", "polyline"}:
             if el.get("fill") not in (None, "none"):
                 raise ValueError("SVG line cannot have a fill")
-            x1 = _number(el.get("x1"), "x1")
-            y1 = _number(el.get("y1"), "y1")
-            x2 = _number(el.get("x2"), "x2")
-            y2 = _number(el.get("y2"), "y2")
+            if tag == "line":
+                points = [
+                    [_number(el.get("x1"), "x1", max_value=width),
+                     _number(el.get("y1"), "y1", max_value=height)],
+                    [_number(el.get("x2"), "x2", max_value=width),
+                     _number(el.get("y2"), "y2", max_value=height)],
+                ]
+            else:
+                allowed={"points","stroke","stroke-width","fill","id"}
+                if any(key not in allowed for key in el.attrib):
+                    raise ValueError("Unsupported SVG polyline stroke/transform attribute")
+                points = _polyline_points(el.get("points"),width,height)
             color = _color(el.get("stroke"))
             stroke = _number(el.get("stroke-width", 3), "stroke")
             if not 1 <= stroke <= 64:
@@ -128,7 +171,7 @@ def import_svg_shapes(source: str | Path, destination: str | Path) -> dict:
             shape = Layer(
                 id=f"svg_{idx:04d}", type="connector_line",
                 name=f"SVG connector {idx}",
-                properties={"points": [[x1, y1], [x2, y2]],
+                properties={"points": points,
                             "stroke_width": round(stroke), "color": color},
             )
         else:
@@ -199,17 +242,25 @@ def export_svg_shapes(project: TTGProject, destination: str | Path) -> dict:
             else:
                 raise ValueError("Unmapped native shape SVG export")
         elif layer.type == "connector_line":
-            points = layer.properties.get("points")
-            if not isinstance(points, list) or len(points) != 2:
-                raise ValueError("Basic SVG supports two-point connector")
-            p1, p2 = points
+            points = _validated_native_line_points(
+                layer.properties.get("points"),width,height
+            )
             color = _color(layer.properties.get("color"))
-            ET.SubElement(root, f"{{{SVG}}}line", {
-                "x1":str(p1[0]), "y1":str(p1[1]),
-                "x2":str(p2[0]), "y2":str(p2[1]),
-                "stroke":color,
-                "stroke-width":str(layer.properties.get("stroke_width",3)),
-                "fill":"none",
+            weight=_number(layer.properties.get("stroke_width",3),"stroke",max_value=64)
+            if not 1<=weight<=64 or round(weight)!=weight:
+                raise ValueError("SVG connector stroke needs integral pixels")
+            if len(points)==2:
+                p1,p2=points
+                tag="line"
+                coords={"x1":str(p1[0]),"y1":str(p1[1]),
+                        "x2":str(p2[0]),"y2":str(p2[1])}
+            else:
+                tag="polyline"
+                coords={"points":" ".join(
+                    f"{p[0]},{p[1]}" for p in points)}
+            ET.SubElement(root,f"{{{SVG}}}{tag}",{
+                **coords,"stroke":color,
+                "stroke-width":str(int(weight)),"fill":"none",
             })
         else:
             raise ValueError(f"SVG export refuses unsupported layer {layer.type}")
@@ -219,4 +270,4 @@ def export_svg_shapes(project: TTGProject, destination: str | Path) -> dict:
     _safe_write(output, encoded)
     return {"format":"svg", "output":str(output),
             "layers":len(project.layers), "sha256":sha256(encoded).hexdigest(),
-            "supported_subset":"editable solid basic shapes and connectors"}
+            "supported_subset":"editable solid shapes and 2–128-point line/polyline connectors"}

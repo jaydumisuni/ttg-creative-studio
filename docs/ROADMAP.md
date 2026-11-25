@@ -113,3 +113,8 @@ Continuing the prior Studio native donor integration, a Tenfold Gen 1 two-lane i
 ## 2026-11-26 — Native audio fades and Lottie animated shape opacity
 
 Continuing the already-approved Storytold donor approach, the existing TTG Studio native audio/FFmpeg exporter now accepts source-relative validated fade-in/fade-out durations and the existing native Lottie adapter exchanges animated shape opacity, with real canvas alpha at each authored frame. The complete exact-source evidence and limits are in `docs/STORYTOLD_VORK_DONOR_INTAKE_2026-11-23.md`. This is not equivalent to a SoundCraft DAW or full EffectCraft/AniCraft runtime. Existing Studio editor, Blender, system services and release authority unchanged.
+
+
+## 2026-11-26 — Layer group and SVG multi-point donor nextwave
+
+An additional qualified Tenfold Gen 1 two-lane construction cycle extends the **existing** PhotoCraft-compatible OpenRaster and VectorCraft-compatible SVG adapters: neutral nested OpenRaster group structure is preserved in editable TTG layers, and two-to-128-point SVG polylines roundtrip through native diagram connectors with rendered-pixel proof. Details, explicit unsupported effects, source proof and owner-stage limits are in `docs/STORYTOLD_VORK_DONOR_INTAKE_2026-11-23.md`. This is not full PhotoCraft/PSD or VectorCraft editor capability; P1/P4 whole-stage gates remain unchanged.

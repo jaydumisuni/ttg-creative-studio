@@ -103,8 +103,111 @@ class OpenRasterBridgeTests(unittest.TestCase):
                 archive.writestr("mimetype", "image/openraster")
                 archive.writestr("stack.xml",
                     '<image w="8" h="8"><stack><stack name="group"></stack></stack></image>')
-            with self.assertRaisesRegex(ValueError, "Nested groups"):
+            with self.assertRaisesRegex(ValueError, "group|layers|No"):
                 import_openraster(groups, root / "groups.ttgstudio.json")
+
+    def test_neutral_nested_group_tree_import_render_export_roundtrip(self):
+        from io import BytesIO
+        with TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            Image.new("RGBA",(12,10),(220,75,40,255)).save(root/"red.png")
+            Image.new("RGBA",(8,7),(35,175,230,175)).save(root/"blue.png")
+            native=TTGProject(name="Layer family",project_type="image")
+            native.canvas=CanvasSpec(width=24,height=20,background="#00000000")
+            native.layers=[
+                Layer(id="red",type="image",name="Red",
+                      transform=Transform(x=1,y=1),properties={"path":"red.png"}),
+                Layer(id="blue",type="image",name="Blue",
+                      transform=Transform(x=4,y=5),properties={"path":"blue.png"})]
+            base=root/"base.ora"
+            export_openraster(native,base,project_root=root)
+            grouped=root/"grouped.ora"
+            with ZipFile(base) as original, ZipFile(grouped,"w") as modified:
+                for item in original.infolist():
+                    if item.filename!="stack.xml":
+                        modified.writestr(item,original.read(item.filename))
+                doc=ET.fromstring(original.read("stack.xml"))
+                stack=doc.find("stack")
+                top,bottom=list(stack)
+                stack.clear()
+                parent=ET.SubElement(stack,"stack",{"name":"Family"})
+                parent.append(top)
+                detail=ET.SubElement(parent,"stack",{"name":"Detail"})
+                detail.append(bottom)
+                modified.writestr("stack.xml",ET.tostring(doc))
+            output=root/"layers.ttgstudio.json"
+            import_openraster(grouped,output)
+            imported=TTGProject.load(output)
+            self.assertEqual([x.name for x in imported.layers],["Red","Blue"])
+            self.assertEqual([[g["name"] for g in x.properties["ora_groups"]]
+                              for x in imported.layers],
+                             [["Family","Detail"],["Family"]])
+            original_frame=CanvasRenderer(RenderContext(root)).render(native)
+            imported_frame=CanvasRenderer(RenderContext(root)).render(imported)
+            self.assertEqual(original_frame.tobytes(),imported_frame.tobytes())
+            saved=root/"roundtrip.ora"
+            export_openraster(imported,saved,project_root=root)
+            with ZipFile(saved) as z:
+                xml=ET.fromstring(z.read("stack.xml")).find("stack")
+                self.assertEqual(len(xml),1)
+                family=xml[0]
+                self.assertEqual((family.tag,family.get("name")),("stack","Family"))
+                self.assertEqual(family[0].get("name"),"Blue")
+                self.assertEqual(family[1].tag,"stack")
+                self.assertEqual(family[1].get("name"),"Detail")
+                self.assertEqual(family[1][0].get("name"),"Red")
+            reopened=root/"returned.ttgstudio.json"
+            import_openraster(saved,reopened)
+            again=CanvasRenderer(RenderContext(root)).render(
+                TTGProject.load(reopened))
+            self.assertEqual(original_frame.tobytes(),again.tobytes())
+
+    def test_grouped_child_multiply_is_rejected_without_pixel_semantics_guess(self):
+        with TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            Image.new("RGBA",(5,5),(205,130,75,180)).save(root/"color.png")
+            p=TTGProject(project_type="image")
+            p.canvas=CanvasSpec(width=12,height=12,background="#00000000")
+            p.layers=[Layer(id="blend",type="image",name="Blend",
+                            properties={"path":"color.png","blend_mode":"multiply",
+                                        "ora_groups":[{"id":"ora_g0001","name":"Group"}]})]
+            with self.assertRaisesRegex(ValueError,"grouped blend"):
+                export_openraster(p,root/"bad.ora",project_root=root)
+            self.assertFalse((root/"bad.ora").exists())
+
+    def test_group_opacity_and_blend_rejected_without_creating_project(self):
+        with TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            Image.new("RGBA",(5,5),(200,150,100,200)).save(root/"px.png")
+            native=TTGProject(project_type="image")
+            native.canvas=CanvasSpec(width=8,height=8,background="#00000000")
+            native.layers=[Layer(id="one",type="image",name="One",
+                                  properties={"path":"px.png"})]
+            source=root/"flat.ora"
+            export_openraster(native,source,project_root=root)
+            for attr,value in (
+                ("opacity","0.7"),
+                ("composite-op","svg:multiply"),
+                ("visibility","hidden"),
+                ("x","4"),
+                ("isolation","isolate"),
+            ):
+                target=root/(attr+".ora")
+                with ZipFile(source) as read,ZipFile(target,"w") as write:
+                    for info in read.infolist():
+                        if info.filename!="stack.xml":
+                            write.writestr(info,read.read(info.filename))
+                    xml=ET.fromstring(read.read("stack.xml"))
+                    parent=xml.find("stack")
+                    child=list(parent)[0]
+                    parent.clear()
+                    group=ET.SubElement(parent,"stack",{"name":"Unqualified",attr:value})
+                    group.append(child)
+                    write.writestr("stack.xml",ET.tostring(xml))
+                out=root/(attr+".ttgstudio.json")
+                with self.assertRaisesRegex(ValueError,"group"):
+                    import_openraster(target,out)
+                self.assertFalse(out.exists())
 
     def test_missing_source_and_unsupported_blending_fail_closed(self):
         with TemporaryDirectory() as temp:

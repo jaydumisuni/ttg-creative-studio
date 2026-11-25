@@ -77,6 +77,100 @@ def _project_dims(project: TTGProject) -> tuple[int, int]:
     return width, height
 
 
+
+def _read_neutral_group_stack(root: ET.Element) -> list[tuple[ET.Element, list[dict]]]:
+    """Flatten only compositing-neutral ORA groups into editable image layers.
+
+    Preserve unique group IDs in Studio metadata for exact tree reconstruction.
+    Group blending, opacity, offsets, visibility and isolation require true
+    group compositing and cannot be substituted with independent image layers.
+    """
+    rows=[]
+    serial=0
+
+    def visit(node: ET.Element, ancestors: list[dict]) -> None:
+        nonlocal serial
+        if len(ancestors)>4:
+            raise ValueError("OpenRaster group nesting exceeds four levels")
+        for entry in reversed(list(node)):
+            if entry.tag=="layer":
+                if len(entry):
+                    raise ValueError("Nested OpenRaster layer mask unsupported")
+                rows.append((entry,ancestors))
+                if len(rows)>MAX_LAYERS:
+                    raise ValueError("OpenRaster layer budget exceeded")
+            elif entry.tag=="stack":
+                allowed={"name","opacity","visibility","composite-op","x","y"}
+                if any(k not in allowed for k in entry.attrib):
+                    raise ValueError("OpenRaster group effects/isolation unsupported")
+                if (entry.get("opacity","1") not in {"1","1.0"}
+                        or entry.get("visibility","visible")!="visible"
+                        or entry.get("composite-op","svg:src-over")!="svg:src-over"
+                        or entry.get("x","0") not in {"0","0.0"}
+                        or entry.get("y","0") not in {"0","0.0"}):
+                    raise ValueError("OpenRaster group opacity/blend/offset unsupported")
+                if not len(entry):
+                    raise ValueError("Empty OpenRaster group unsupported")
+                serial+=1
+                tag={"id":f"ora_g{serial:04d}","name":entry.get("name","Group")[:100]}
+                visit(entry,ancestors+[tag])
+            else:
+                raise ValueError("Unsupported OpenRaster stack child")
+    visit(root,[])
+    return rows
+
+
+def _insert_preserved_groups(
+    stack: ET.Element, rendered: list[tuple[Layer, Image.Image]],
+    pngs: list[tuple[str,bytes]],
+) -> None:
+    """Rebuild the same neutral tree while respecting ORA top-first order."""
+    opened: list[tuple[str, ET.Element]] = []
+    closed: set[str] = set()
+    known: dict[str,str] = {}
+    for index,(layer, image) in enumerate(reversed(rendered)):
+        key=f"data/layer-{index:04d}.png"
+        pngs.append((key,_png(image)))
+        path=layer.properties.get("ora_groups",[])
+        if not isinstance(path,list) or len(path)>4:
+            raise ValueError("Invalid OpenRaster group metadata")
+        refs=[]
+        for group in path:
+            if not isinstance(group,dict) or set(group)!={"id","name"}:
+                raise ValueError("Invalid OpenRaster group identity")
+            gid,name=group["id"],group["name"]
+            if (not isinstance(gid,str) or not gid.startswith("ora_g")
+                    or len(gid)!=9 or not gid[5:].isdigit()
+                    or not isinstance(name,str) or len(name)>100):
+                raise ValueError("Invalid OpenRaster group ID/name")
+            if gid in known and known[gid]!=name:
+                raise ValueError("Conflicting OpenRaster group name")
+            known[gid]=name
+            refs.append((gid,name))
+        overlap=0
+        while overlap<len(opened) and overlap<len(refs) and opened[overlap][0]==refs[overlap][0]:
+            overlap+=1
+        for old_id,_ in opened[overlap:]:
+            closed.add(old_id)
+        opened=opened[:overlap]
+        for gid,name in refs[overlap:]:
+            if gid in closed or gid in {row[0] for row in opened}:
+                raise ValueError("Noncontiguous OpenRaster group ordering")
+            parent=opened[-1][1] if opened else stack
+            elem=ET.SubElement(parent,"stack",{"name":name})
+            opened.append((gid,elem))
+        parent=opened[-1][1] if opened else stack
+        mode=(layer.properties.get("blend_mode","normal")
+              if layer.id!="ttg_background" else "normal")
+        if path and mode != "normal":
+            raise ValueError("OpenRaster grouped blend needs qualified group compositing")
+        ET.SubElement(parent,"layer",{
+            "name":layer.name[:150],"src":key,"x":"0","y":"0",
+            "opacity":"1",
+            "visibility":"visible" if layer.visible else "hidden",
+            "composite-op":SUPPORTED[mode],
+        })
+
 def export_openraster(
     project: TTGProject,
     output: str | Path,
@@ -129,19 +223,9 @@ def export_openraster(
     })
     stack = ET.SubElement(document, "stack")
     data: list[tuple[str, bytes]] = []
-    # OpenRaster stacks top-to-bottom, TTG projects bottom-to-top.
-    for index, (layer, image) in enumerate(reversed(rendered)):
-        key = f"data/layer-{index:04d}.png"
-        data.append((key, _png(image)))
-        # Per-layer RGBA already includes opacity and effects; avoid applying
-        # opacity twice in PhotoCraft.
-        mode = (layer.properties.get("blend_mode", "normal")
-                if layer.id != "ttg_background" else "normal")
-        ET.SubElement(stack, "layer", {
-            "name": layer.name[:150], "src": key, "x": "0", "y": "0",
-            "opacity": "1", "visibility": "visible" if layer.visible else "hidden",
-            "composite-op": SUPPORTED[mode],
-        })
+    # OpenRaster is top-to-bottom while TTG is bottom-to-top.
+    # Neutral nested stack identity is preserved, not rasterized away.
+    _insert_preserved_groups(stack, rendered, data)
     xml = ET.tostring(document, encoding="utf-8", xml_declaration=True)
     if len(xml) > 1024 * 1024:
         raise ValueError("OpenRaster stack too large")
@@ -174,8 +258,8 @@ def export_openraster(
 def import_openraster(input_ora: str | Path, output_project: str | Path) -> InterchangeReceipt:
     """Import actual editable OpenRaster pixel layers as TTG image layers.
 
-    Unsupported nested groups and masks fail explicitly; no flattening or
-    unsupported Photoshop capability is implied. Creates an asset directory
+    Neutral OpenRaster nested stack grouping remains editable metadata; group
+    effects/opacity/masks fail explicitly. Creates an asset directory
     and new canonical .ttgstudio JSON while preserving both originals.
     """
     source, dest = Path(input_ora), Path(output_project)
@@ -219,9 +303,8 @@ def import_openraster(input_ora: str | Path, output_project: str | Path) -> Inte
             raise ValueError("Unsupported OpenRaster stack structure")
         if len(stacks[0]) > MAX_LAYERS:
             raise ValueError("OpenRaster layer count exceeds bound")
-        for index, entry in enumerate(reversed(list(stacks[0]))):
-            if entry.tag != "layer" or len(entry):
-                raise ValueError("Nested groups/masks unsupported, refusing flatten")
+        entries = _read_neutral_group_stack(stacks[0])
+        for index,(entry,group_path) in enumerate(entries):
             key = entry.get("src", "")
             _archive_member(key)
             if key not in byname or byname[key].file_size > MAX_LAYER_BYTES:
@@ -229,6 +312,8 @@ def import_openraster(input_ora: str | Path, output_project: str | Path) -> Inte
             op = entry.get("composite-op", "svg:src-over")
             if op not in INVERTED:
                 raise ValueError("Unsupported OpenRaster blend mode: " + op)
+            if group_path and op != "svg:src-over":
+                raise ValueError("OpenRaster grouped blend needs qualified group compositing")
             opacity = float(entry.get("opacity", "1"))
             if not 0 <= opacity <= 1:
                 raise ValueError("OpenRaster opacity out of range")
@@ -246,6 +331,7 @@ def import_openraster(input_ora: str | Path, output_project: str | Path) -> Inte
                     "path": f"{assets_dir.name}/{target}",
                     "blend_mode": INVERTED[op],
                     "source_format": "openraster",
+                    "ora_groups": group_path,
                 },
             )
             images.append((layer, raw))
