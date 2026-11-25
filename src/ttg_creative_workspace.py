@@ -141,6 +141,11 @@ class CreativeWorkspace(QWidget):
             ("Check Updates", self.check_updates),
             ("Import Ad ZIP", self.import_ad_zip),
             ("Import Ad Folder", self.import_ad_folder),
+            ("Import PhotoCraft OpenRaster", self.import_openraster),
+            ("Import FilmCraft OTIO", self.import_otio),
+            ("Import EffectCraft Lottie", self.import_lottie),
+            ("Import MaterialCraft / TextureCraft PBR", self.import_pbr_maps),
+            ("Import VectorCraft SVG shapes", self.import_vector_svg),
         ]))
         toolbar.addWidget(self._menu_button("Templates", [
             ("New Campaign Designer", self.design_campaign),
@@ -209,6 +214,10 @@ class CreativeWorkspace(QWidget):
             ("Export PNG", self.export_png),
             ("Export Frames", self.export_frames),
             ("Export MP4", self.export_mp4),
+            ("Export PhotoCraft OpenRaster", self.export_openraster),
+            ("Export FilmCraft OTIO", self.export_otio),
+            ("Export EffectCraft Lottie", self.export_lottie),
+            ("Export VectorCraft SVG shapes", self.export_vector_svg),
         ]))
         toolbar.addStretch()
         self.toolbar_scroll = QScrollArea()
@@ -728,6 +737,151 @@ class CreativeWorkspace(QWidget):
             self.refresh_all()
         except Exception as exc:
             QMessageBox.critical(self, "Open Project", str(exc))
+
+    def _load_donor_import(self, path: Path, label: str) -> None:
+        # Never silently discard the currently displayed editable project.
+        if self.project is not None:
+            answer = QMessageBox.question(
+                self, label,
+                "Open the new imported project in Studio? The currently open project "
+                "will remain unchanged on disk, but unsaved editor changes will not be carried across.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                return
+        project = TTGProject.load(path)
+        self._set_asset_root(path.resolve().parent)
+        self.project = project
+        self.project_path = path
+        self.selected_layer_id = project.layers[0].id if project.layers else None
+        self.still_preview_approved = False
+        self.history.clear()
+        self.refresh_all()
+        self.status.setText(f"{label} imported as editable Studio project: {path}")
+
+    def _donor_import_dialog(self, label: str, filter_text: str, suffix: str, import_function) -> None:
+        source, _ = QFileDialog.getOpenFileName(self, label, "", filter_text)
+        if not source:
+            return
+        dest, _ = QFileDialog.getSaveFileName(
+            self, f"Save {label} as Studio project",
+            str(Path(source).with_name(Path(source).stem + "-studio.ttgstudio.json")),
+            "TTG Studio (*.ttgstudio.json)",
+        )
+        if not dest:
+            return
+        try:
+            receipt = import_function(Path(source), Path(dest))
+            if receipt:
+                self._load_donor_import(Path(dest), label)
+        except Exception as exc:
+            QMessageBox.warning(self, label, str(exc))
+
+    def import_openraster(self) -> None:
+        from ttg_openraster_bridge import import_openraster
+        self._donor_import_dialog("PhotoCraft OpenRaster", "OpenRaster (*.ora)",
+                                  ".ora", import_openraster)
+
+    def import_otio(self) -> None:
+        from ttg_filmcraft_otio_bridge import import_otio
+        self._donor_import_dialog("FilmCraft OTIO", "OpenTimelineIO (*.otio)",
+                                  ".otio", import_otio)
+
+    def import_lottie(self) -> None:
+        from ttg_effectcraft_lottie_bridge import import_lottie
+        self._donor_import_dialog("EffectCraft Lottie", "Lottie JSON (*.json)",
+                                  ".json", import_lottie)
+
+    def import_vector_svg(self) -> None:
+        from ttg_vectorcraft_svg_bridge import import_svg_shapes
+        self._donor_import_dialog("VectorCraft SVG", "SVG Images (*.svg)",
+                                  ".svg", import_svg_shapes)
+
+    def import_pbr_maps(self) -> None:
+        from ttg_material_texture_bridge import import_pbr_export_maps
+        manifest, _ = QFileDialog.getOpenFileName(
+            self, "MaterialCraft / TextureCraft exported maps manifest",
+            "", "PBR mapset (*.json)",
+        )
+        if not manifest:
+            return
+        name, ok = QInputDialog.getText(self, "PBR Material", "Material name:")
+        if not ok or not name.strip():
+            return
+        output, _ = QFileDialog.getSaveFileName(
+            self, "Save editable PBR material asset project",
+            str(Path(manifest).with_name("pbr-import.ttgstudio.json")),
+            "TTG Studio (*.ttgstudio.json)",
+        )
+        if not output:
+            return
+        try:
+            import_pbr_export_maps(
+                Path(manifest).parent, Path(manifest), Path(output),
+                material_name=name.strip(),
+            )
+            self._load_donor_import(Path(output), "PBR exported map set")
+        except Exception as exc:
+            QMessageBox.warning(self, "PBR material import", str(exc))
+
+    def _donor_export_dialog(self, label: str, pattern: str, suffix: str, export_fn) -> None:
+        if self.project is None:
+            QMessageBox.information(self, label, "Open an editable project first.")
+            return
+        default = (self.project_path.parent if self.project_path else self.project_root)
+        name = (self.project_path.stem if self.project_path else "studio-scene") + suffix
+        output, _ = QFileDialog.getSaveFileName(
+            self, label, str(default / name), pattern,
+        )
+        if not output:
+            return
+        try:
+            receipt = export_fn(self.project, Path(output))
+            warnings = receipt.get("warnings", []) if isinstance(receipt, dict) else receipt.warnings
+            self.status.setText(f"{label}: {output}")
+            if warnings:
+                QMessageBox.information(
+                    self, f"{label} source preservation",
+                    "The TTG project remains the editable master.\n"
+                    + "\n".join(str(w) for w in warnings[:12]),
+                )
+        except Exception as exc:
+            QMessageBox.warning(self, label, str(exc))
+
+    def export_openraster(self) -> None:
+        from ttg_openraster_bridge import export_openraster
+        self._donor_export_dialog(
+            "Export PhotoCraft OpenRaster", "OpenRaster (*.ora)", ".ora",
+            lambda project, output: export_openraster(
+                project, output,
+                project_root=self.project_path.parent if self.project_path else self.project_root,
+            ),
+        )
+
+    def export_otio(self) -> None:
+        from ttg_filmcraft_otio_bridge import export_otio
+        self._donor_export_dialog(
+            "Export FilmCraft OTIO", "OpenTimelineIO (*.otio)", ".otio",
+            lambda project, output: export_otio(
+                project, output,
+                project_root=self.project_path.parent if self.project_path else self.project_root,
+            ),
+        )
+
+    def export_lottie(self) -> None:
+        from ttg_effectcraft_lottie_bridge import export_lottie
+        self._donor_export_dialog(
+            "Export EffectCraft Lottie", "Lottie JSON (*.json)", ".lottie.json",
+            export_lottie,
+        )
+
+    def export_vector_svg(self) -> None:
+        from ttg_vectorcraft_svg_bridge import export_svg_shapes
+        self._donor_export_dialog(
+            "Export VectorCraft SVG", "SVG Images (*.svg)", ".svg",
+            export_svg_shapes,
+        )
 
     def import_ad_zip(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Import Ad ZIP", "", "Ad Package (*.zip)")

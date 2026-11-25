@@ -11,6 +11,10 @@ on:
       - 'src/ttg_text_renderer.py'
       - 'scripts/*campaign*.py'
       - 'scripts/creative_cli.py'
+      - 'src/ttg_*bridge.py'
+      - 'scripts/test_*interchange.py'
+      - 'scripts/test_donor_*.py'
+      - 'tests/fixtures/effectcraft_bouncing_ball.*'
       - 'examples/campaigns/**'
       - '.github/workflows/ci.yml'
   push:
@@ -23,6 +27,10 @@ on:
       - 'src/ttg_text_renderer.py'
       - 'scripts/*campaign*.py'
       - 'scripts/creative_cli.py'
+      - 'src/ttg_*bridge.py'
+      - 'scripts/test_*interchange.py'
+      - 'scripts/test_donor_*.py'
+      - 'tests/fixtures/effectcraft_bouncing_ball.*'
       - 'examples/campaigns/**'
       - '.github/workflows/ci.yml'
   workflow_dispatch:
@@ -67,3 +75,16 @@ jobs:
         run: python -B scripts/self_test_ui_offscreen.py
       - name: Verify native editing actions
         run: python -B scripts/test_editing_actions.py
+
+      - name: Verify Storytold donor source-interchange and native Studio tooling
+        shell: bash
+        run: |
+          python -B scripts/test_native_motion_curves.py
+          python -B scripts/test_native_layer_blends.py
+          python -B scripts/test_native_openraster_interchange.py
+          python -B scripts/test_filmcraft_otio_interchange.py
+          python -B scripts/test_effectcraft_lottie_interchange.py
+          python -B scripts/test_material_texture_pbr_interchange.py
+          python -B scripts/test_vectorcraft_svg_interchange.py
+          python -B scripts/test_donor_command_routing.py
+          python -B scripts/test_donor_gui_interchange.py

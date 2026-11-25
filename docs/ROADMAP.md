@@ -97,3 +97,9 @@ AI is the operator. The editor is the engine.
 ## 2026-11-23 — Storytold + Vork specialist donor intake
 
 **Discovery only — no engine/release status change.** Read [STORYTOLD_VORK_DONOR_INTAKE_2026-11-23.md](STORYTOLD_VORK_DONOR_INTAKE_2026-11-23.md) before adding another editor, renderer, model provider or workflow. Compare PhotoCraft/FilmCraft/EffectCraft/Vork/ArtCraft/MaterialCraft/TextureCraft **against each other and the incumbent Studio engines**. Studio keeps the editable project, Director and output receipts. Begin with isolated PSD, timeline, PBR and same-scene Vork-vs-Blender fidelity probes; require permission, license/source pins, deterministic fallback and independent visual proof before adaptation. **No donor capabilities are implemented or admitted by this note.**
+
+## 2026-11-26 — Existing donor roadmap integration
+
+Native interchange subsets were added on the existing Storytold donor-integration branch: PhotoCraft OpenRaster, FilmCraft OpenTimelineIO, EffectCraft basic-shape Lottie, MaterialCraft/TextureCraft exported PBR maps, and VectorCraft basic SVG shapes. Operations are reachable in the existing Studio toolbar, CLI and Hunter tool catalog, with original editable Studio projects preserved.
+
+See the exact supported formats, safety constraints, negative cases and incomplete advanced donor feature coverage in 'STORYTOLD_VORK_DONOR_INTAKE_2026-11-23.md'. This contributes to P1/P2/P4/P5 requirement coverage without declaring entire phases completed. No ArtCraft paid service/model authority added. Vork remains deferred and the current Blender adapter is unchanged.

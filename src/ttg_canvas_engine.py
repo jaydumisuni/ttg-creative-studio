@@ -8,7 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Iterable
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageOps
+from PIL import Image, ImageChops, ImageDraw, ImageEnhance, ImageFilter, ImageOps
 
 from ttg_project_schema import Layer, TTGProject
 from ttg_text_renderer import render_text_layer
@@ -61,11 +61,57 @@ class CanvasRenderer:
         return canvas
 
     def _draw_layer(self, canvas: Image.Image, layer: Layer, time: float) -> None:
+        """Draw one TTG layer, optionally using source-over blend compositing.
+
+        The project retains its own layer/property representation. This is a
+        bounded native implementation of Multiply/Screen blend behavior tested
+        against PhotoCraft's public blend/alpha reference; no donor runtime, UI,
+        or document model is imported.
+        """
+        mode = layer.properties.get("blend_mode", "normal")
+        if mode == "normal":
+            self._draw_layer_unblended(canvas, layer, time)
+            return
+        if not isinstance(mode, str) or mode not in {"multiply", "screen"}:
+            raise ValueError(f"Unsupported TTG layer blend mode: {mode!r}")
+
+        # An offscreen transparent layer preserves the source's real mask,
+        # effects and alpha without altering established normal render paths.
+        source = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+        self._draw_layer_unblended(source, layer, time)
+
+        backdrop_rgb = canvas.convert("RGB")
+        source_rgb = source.convert("RGB")
+        blended_rgb = (ImageChops.multiply(backdrop_rgb, source_rgb)
+                       if mode == "multiply"
+                       else ImageChops.screen(backdrop_rgb, source_rgb))
+
+        # For a partially transparent backdrop, isolated source RGB becomes
+        # (1 - backdrop_alpha)*source + backdrop_alpha*blend(backdrop,source).
+        # Standard source-over then yields the full W3C/PDF compositing rule,
+        # including both source and backdrop alpha. Preserve original alpha.
+        effective = Image.composite(blended_rgb, source_rgb, canvas.getchannel("A"))
+        effective.putalpha(source.getchannel("A"))
+        canvas.alpha_composite(effective)
+
+    def _draw_layer_unblended(self, canvas: Image.Image, layer: Layer, time: float) -> None:
         if layer.properties.get("cinematic_material"):
             from ttg_cinematic_renderer import draw_native_material
             draw_native_material(canvas, layer, time)
             return
         if layer.type == "image":
+            # OTIO still clips have authored in/out points. Normal Studio
+            # canvas image layers remain timeless; only tagged imported
+            # timeline clips participate in start/duration gating.
+            if layer.properties.get("clip_timing_enabled") is True:
+                import math
+                start = float(layer.properties.get("start", 0))
+                duration = float(layer.properties.get("duration", 0))
+                if (not math.isfinite(start) or not math.isfinite(duration)
+                        or start < 0 or duration <= 0):
+                    raise ValueError("Imported still clip timing is invalid")
+                if not start <= time < start + duration:
+                    return
             self._draw_image_layer(canvas, layer)
         elif layer.type in {"text", "text3d"}:
             self._draw_text_layer(canvas, layer)
