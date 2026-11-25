@@ -58,6 +58,64 @@ class VectorCraftSvgTests(unittest.TestCase):
                     import_svg_shapes(src,root/"no.ttgstudio.json")
                 self.assertFalse((root/"no.ttgstudio.json").exists())
 
+    def test_source_svg_polyline_real_pixels_and_editable_roundtrip(self):
+        from xml.etree import ElementTree as ET
+        with TemporaryDirectory() as d:
+            root=Path(d)
+            svg=root/"zigzag.svg"
+            svg.write_text('''<svg xmlns="http://www.w3.org/2000/svg" width="90" height="65"
+              viewBox="0 0 90 65">
+              <polyline points="6,8 34,8 34,48 70,48"
+                  stroke="#00E5FF" stroke-width="3" fill="none"/>
+            </svg>''')
+            project=root/"zigzag.ttgstudio.json"
+            receipt=import_svg_shapes(svg,project)
+            self.assertEqual(receipt["layers"],1)
+            p=TTGProject.load(project)
+            self.assertEqual(p.layers[0].type,"connector_line")
+            self.assertEqual(p.layers[0].properties["points"],
+                             [[6.,8.],[34.,8.],[34.,48.],[70.,48.]])
+            image=CanvasRenderer(RenderContext(root)).render(p).convert("RGBA")
+            self.assertEqual(image.getpixel((20,8))[:3],(0,229,255))
+            self.assertEqual(image.getpixel((34,28))[:3],(0,229,255))
+            self.assertEqual(image.getpixel((50,48))[:3],(0,229,255))
+            output=root/"replay.svg"
+            export_svg_shapes(p,output)
+            document=ET.parse(output)
+            self.assertEqual(len(document.getroot()),1)
+            self.assertEqual(document.getroot()[0].tag.split("}")[-1],"polyline")
+            recreated=root/"returned.ttgstudio.json"
+            import_svg_shapes(output,recreated)
+            again=CanvasRenderer(RenderContext(root)).render(
+                TTGProject.load(recreated)).convert("RGBA")
+            self.assertEqual(image.tobytes(),again.tobytes())
+
+    def test_polyline_injection_coordinate_budget_and_effects_refused(self):
+        with TemporaryDirectory() as d:
+            root=Path(d)
+            for points in ("0,0 1,1 2,2;script", "5,5", "0,0 999,5",
+                           "0,0 10,10 20,NaN", "0,0 "+("1,1 "*130)):
+                svg=root/"bad.svg"
+                svg.write_text(
+                    '<svg width="60" height="60"><polyline '
+                    'points="'+points+'" stroke="#FFFFFF" fill="none"/></svg>'
+                )
+                with self.assertRaises(ValueError):
+                    import_svg_shapes(svg,root/"not-created.ttgstudio.json")
+                self.assertFalse((root/"not-created.ttgstudio.json").exists())
+            native=TTGProject()
+            native.canvas=CanvasSpec(width=60,height=60,background="#00000000")
+            native.layers=[Layer(id="bad",type="connector_line",name="out",
+                properties={"points":[[0,0],[100,2],[12,12]],
+                            "color":"#FFFFFF","stroke_width":3})]
+            with self.assertRaises(ValueError):
+                export_svg_shapes(native,root/"bad-output.svg")
+            self.assertFalse((root/"bad-output.svg").exists())
+            native.layers[0].properties["points"]=[[0,0],[30,30],[12,12]]
+            native.layers[0].properties["stroke_width"]=-1
+            with self.assertRaises(ValueError):
+                export_svg_shapes(native,root/"bad-output.svg")
+
     def test_unsupported_effects_do_not_disappear_during_export(self):
         with TemporaryDirectory() as tmp:
             root=Path(tmp)
