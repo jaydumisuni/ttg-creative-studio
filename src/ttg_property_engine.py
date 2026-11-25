@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ttg_canvas_tools import get_layer
-from ttg_project_schema import Keyframe, Layer, TTGProject
+from ttg_project_schema import Easing, Keyframe, Layer, TTGProject
 
 
 @dataclass(frozen=True)
@@ -115,7 +115,10 @@ def set_layer_time(project: TTGProject, layer_id: str, start: float, end: float)
     project.canvas.duration = max(float(project.canvas.duration), float(end))
 
 
-def add_layer_keyframe(project: TTGProject, layer_id: str, prop: str, time: float, value: Any, easing: str = "ease_in_out") -> None:
+def add_layer_keyframe(project: TTGProject, layer_id: str, prop: str, time: float, value: Any, easing: Easing = "ease_in_out") -> None:
+    if isinstance(easing, dict):
+        from ttg_timeline_engine import ease_value
+        ease_value(0.5, easing)  # No partial invalid edits.
     layer = get_layer(project, layer_id)
     frames = layer.keyframes.setdefault(prop, [])
     frames.append(Keyframe(float(time), value, easing))
@@ -144,6 +147,11 @@ def evaluate_keyframes(project: TTGProject, layer_id: str, prop: str, time: floa
     previous = frames[0]
     for current in frames[1:]:
         if time <= current.time:
+            if isinstance(current.easing, dict) or current.easing == "hold":
+                # Preserve legacy property-engine linear behavior, but keep new
+                # explicit TTG-native curve contracts identical to motion export.
+                from ttg_timeline_engine import TimelineEngine
+                return TimelineEngine().value_at(frames, time)
             if not isinstance(previous.value, (int, float)) or not isinstance(current.value, (int, float)):
                 return previous.value
             span = current.time - previous.time

@@ -41,7 +41,8 @@ Easing = Literal[
     "ease_in_out",
     "ease_out_back",
     "bounce",
-]
+    "hold",
+] | dict[str, Any]
 
 
 def new_id(prefix: str) -> str:

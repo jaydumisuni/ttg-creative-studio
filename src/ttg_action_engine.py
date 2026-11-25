@@ -7,7 +7,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from ttg_project_schema import Layer, TTGProject, Transform, new_id
+from ttg_project_schema import Easing, Layer, TTGProject, Transform, new_id
 
 
 class ActionEngine:
@@ -102,9 +102,12 @@ class ActionEngine:
         project.layers.pop(index)
         project.layers.insert(target, layer)
 
-    def add_keyframe(self, project: TTGProject, layer_id: str, prop: str, time: float, value: Any, easing: str = "ease_in_out") -> None:
+    def add_keyframe(self, project: TTGProject, layer_id: str, prop: str, time: float, value: Any, easing: Easing = "ease_in_out") -> None:
         from ttg_project_schema import Keyframe
+        from ttg_timeline_engine import ease_value
 
+        if isinstance(easing, dict):
+            ease_value(0.5, easing)  # Validate before mutating project state.
         layer = self.get_layer(project, layer_id)
         layer.keyframes.setdefault(prop, []).append(Keyframe(time=time, value=value, easing=easing))
         layer.keyframes[prop].sort(key=lambda item: item.time)
