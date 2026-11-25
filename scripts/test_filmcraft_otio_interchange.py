@@ -148,7 +148,8 @@ class FilmCraftInteropTests(unittest.TestCase):
             from ttg_motion_exporter import MotionExporter
             from ttg_canvas_engine import RenderContext
             args, filters, label = MotionExporter(RenderContext(root))._audio_inputs(replayed)
-            self.assertEqual(args[-1], str(audio))
+            # Windows short (8.3) aliases and long profile paths name the same file.
+            self.assertTrue(Path(args[-1]).samefile(audio))
             self.assertEqual(label, "[aout]")
             self.assertTrue(any("volume=0.700" in x for x in filters))
             again = root / "second-pass.otio"
