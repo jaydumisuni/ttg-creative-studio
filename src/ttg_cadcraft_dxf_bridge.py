@@ -125,12 +125,46 @@ def _check_layer(fields):
     return name
 
 
+def _cad_arc_screen_points(cx: float, cy: float, radius: float,
+                           start_degrees: float, end_degrees: float,
+                           width: float, height: float) -> list[list[float]]:
+    """Sample the explicitly 2D CAD ARC for Studio presentation, CCW and y-up.
+
+    Curve source values are retained separately; sampled points have no
+    engineering tolerance or BREP authority. End<=start wraps past 360°.
+    """
+    if any(not math.isfinite(v) for v in (cx, cy, radius, start_degrees, end_degrees)):
+        raise ValueError("DXF ARC requires finite geometry")
+    if radius <= 0 or radius > max(width, height):
+        raise ValueError("DXF ARC radius is outside canvas")
+    if not 0 <= start_degrees < 360 or not 0 <= end_degrees < 360:
+        raise ValueError("DXF ARC angles must be in [0,360)")
+    delta = (end_degrees-start_degrees) % 360
+    if delta <= 1e-8:
+        raise ValueError("Full-circle or zero-sweep ARC must use CIRCLE")
+    samples = max(2, min(128, math.ceil(delta/5)+1))
+    points = []
+    for index in range(samples):
+        rad = math.radians(start_degrees + delta * index/(samples-1))
+        x = cx + radius*math.cos(rad)
+        y = height - (cy + radius*math.sin(rad))
+        if not -1e-7 <= x <= width+1e-7 or not -1e-7 <= y <= height+1e-7:
+            raise ValueError("CAD ARC crosses canvas boundary")
+        points.append([min(width,max(0,x)),min(height,max(0,y))])
+    return points
+
+
+def _points_digest(points: list[list[float]]) -> str:
+    return sha256(json.dumps(points,sort_keys=True,separators=(",",":"),
+                            allow_nan=False).encode("utf8")).hexdigest()
+
+
 def _geometry_entities(pairs, width, height):
     pos = 0
     layers = []
     while pos < len(pairs):
         kindcode,kind=pairs[pos]
-        if kindcode!=0 or kind not in {"LINE","LWPOLYLINE","CIRCLE"}:
+        if kindcode!=0 or kind not in {"LINE","LWPOLYLINE","CIRCLE","ARC"}:
             raise ValueError(f"Unsupported DXF entity: {kind}")
         pos += 1
         records=[]
@@ -170,6 +204,29 @@ def _geometry_entities(pairs, width, height):
                         name=f"CAD polyline {len(layers)}",
                         properties={"points":pts,"color":_hex_color(f),
                                     "stroke_width":3,"cad_layer":_check_layer(f)})
+        elif kind=="ARC":
+            f=_fields(records,{5,8,62,420,10,20,30,40,50,51})
+            if float(_one(f,30,"0")):
+                raise ValueError("Elevated CAD ARC needs qualified 3D adapter")
+            cx,cy=_num(_one(f,10),"ARC center x",width),_num(_one(f,20),"ARC center y",height)
+            radius=_num(_one(f,40),"ARC radius",max(width,height))
+            start=_num(_one(f,50),"ARC start",360)
+            end=_num(_one(f,51),"ARC end",360)
+            if start==360 or end==360:
+                raise ValueError("DXF ARC angle 360 must be normalized to 0")
+            points=_cad_arc_screen_points(cx,cy,radius,start,end,width,height)
+            layer=Layer(id=f"cad_{len(layers):04d}",type="connector_line",
+                        name=f"CAD arc {len(layers)}",
+                        properties={
+                            "points":points,"stroke_width":3,
+                            "color":_hex_color(f),"cad_layer":_check_layer(f),
+                            "cad_arc":{
+                                "center":[cx,cy],"radius":radius,
+                                "start_degrees":start,"end_degrees":end,
+                                "samples_digest":_points_digest(points),
+                                "representation":"presentation_polyline",
+                            },
+                        })
         else:
             f=_fields(records,{5,8,62,420,10,20,30,40})
             if float(_one(f,30,"0")):
@@ -283,6 +340,31 @@ def export_dxf(project: TTGProject, output: str | Path, *, units: str) -> dict:
             pts=layer.properties.get("points")
             if not isinstance(pts,list) or not 2<=len(pts)<=129:
                 raise ValueError("Unsupported CAD polyline point count")
+            raw_arc=layer.properties.get("cad_arc")
+            if raw_arc is not None:
+                if not isinstance(raw_arc,dict) or raw_arc.get("representation") != "presentation_polyline":
+                    raise ValueError("Unqualified CAD ARC metadata")
+                if raw_arc.get("samples_digest") != _points_digest(pts):
+                    raise ValueError("Edited CAD ARC must be explicitly converted to polyline")
+                center=raw_arc.get("center")
+                if not isinstance(center,list) or len(center)!=2:
+                    raise ValueError("Invalid CAD ARC provenance")
+                cx,cy=center
+                radius=raw_arc.get("radius")
+                start=raw_arc.get("start_degrees")
+                end=raw_arc.get("end_degrees")
+                expected=_cad_arc_screen_points(float(cx),float(cy),float(radius),
+                    float(start),float(end),width,height)
+                if _points_digest(expected)!=_points_digest(pts):
+                    raise ValueError("CAD ARC source metadata no longer matches geometry")
+                color=layer.properties.get("color","#FFFFFF")
+                if not isinstance(color,str) or len(color)!=7 or color[0]!="#":
+                    raise ValueError("Invalid CAD ARC color")
+                int_color=int(color[1:],16)
+                common=_p(8,name)+_p(62,"7")+_p(420,str(int_color))
+                items.append(_p(0,"ARC")+common+_p(10,_fmt(cx))+_p(20,_fmt(cy))
+                             +_p(40,_fmt(radius))+_p(50,_fmt(start))+_p(51,_fmt(end)))
+                continue
             real=[_native_pt(pt,width,height) for pt in pts]
             closed=len(real)>=4 and real[0]==real[-1]
             vertices=real[:-1] if closed else real
