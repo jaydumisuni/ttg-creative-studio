@@ -203,10 +203,10 @@ def main() -> int:
     sp.add_argument("output", help="New .ttgstudio.json project")
     sp.set_defaults(func=donor_interchange, operation="import-lightcraft-raw")
 
-    sp = sub.add_parser("develop-lightcraft-raw", help="Run explicitly selected installed offline LightCraft CLI")
+    sp = sub.add_parser("develop-lightcraft-raw", help="Use Builder-bundled LightCraft source runtime (no separate installation)")
     sp.add_argument("source", help="Original camera RAW")
     sp.add_argument("output", help="New .ttgstudio.json project")
-    sp.add_argument("--lightcraft-cli", required=True, help="Exact installed LightCraft CLI executable path")
+    sp.add_argument("--lightcraft-cli", help="Optional explicit legacy/laboratory executable; normal mode uses verified Builder bundle")
     sp.add_argument("--exposure", type=float)
     sp.set_defaults(func=donor_interchange, operation="develop-lightcraft-raw")
 

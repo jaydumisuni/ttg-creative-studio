@@ -148,6 +148,7 @@ def import_developed_raw(
     *,
     developer: str = "user-supplied-render",
     lightcraft_cli_sha256: str | None = None,
+    builder_source_provenance: dict | None = None,
 ) -> dict:
     """Admit verified rendered pixels as an editable Studio image layer.
 
@@ -202,6 +203,9 @@ def import_developed_raw(
             "lightcraft_executable_sha256": lightcraft_cli_sha256,
             "selected_executable_invoked": lightcraft_cli_sha256 is not None,
             "lightcraft_vendor_binary_identity_verified": False,
+            "donor_source_provenance": builder_source_provenance,
+            "donor_staged_by_registered_builder": bool(builder_source_provenance),
+            "separate_lightcraft_install_required": False,
             "external_raw_preserved": True,
             "raw_demosaic_validated": False,
             "color_accuracy_independently_validated": False,
@@ -234,18 +238,31 @@ def develop_with_lightcraft(
     raw_path: str | Path,
     output_project: str | Path,
     *,
-    lightcraft_cli: str | Path,
+    lightcraft_cli: str | Path | None = None,
     exposure: float | None = None,
 ) -> dict:
-    """Run the existing, explicitly selected offline LightCraft CLI once."""
+    """Develop through a Builder-staged donor *source* runtime by default.
+
+    The explicit CLI argument is maintained only for existing local laboratory
+    tests/older manual scripts. An installed LightCraft application is never
+    required. Builder owns compiling/pinning/bundling the Rust donor source;
+    the Studio app never downloads or builds source during execution.
+    """
     source = Path(raw_path)
     original = _validate_raw(source)
-    binary = Path(lightcraft_cli)
-    if binary.is_symlink() or not binary.is_file():
-        raise FileNotFoundError("Install/select an actual LightCraft CLI executable first")
-    if not os.access(binary, os.X_OK):
-        raise PermissionError("Selected LightCraft CLI is not executable")
-    exe_digest = _digest(binary)
+    provenance = None
+    if lightcraft_cli is None:
+        from ttg_lightcraft_source_runtime import resolve_builder_lightcraft_runtime
+        provenance = resolve_builder_lightcraft_runtime()
+        binary = provenance["path"]
+        exe_digest = provenance["artifact_sha256"]
+    else:
+        binary = Path(lightcraft_cli)
+        if binary.is_symlink() or not binary.is_file():
+            raise FileNotFoundError("The explicitly selected test/legacy executable is unavailable")
+        if not os.access(binary, os.X_OK):
+            raise PermissionError("Selected executable is not executable")
+        exe_digest = _digest(binary)
     opts = []
     if exposure is not None:
         if isinstance(exposure, bool) or not isinstance(exposure, (float, int)) or not -5 <= float(exposure) <= 5:
@@ -263,6 +280,16 @@ def develop_with_lightcraft(
             raise RuntimeError("RAW original changed during external development")
         return import_developed_raw(
             source, png, output_project,
-            developer="lightcraft-cli render",
+            developer=("lightcraft-source-builder render" if provenance
+                       else "explicit-offline-test-render"),
             lightcraft_cli_sha256=exe_digest,
+            builder_source_provenance=(
+                {
+                    "lightcraft_source_commit":provenance["lightcraft_source_commit"],
+                    "craft_libs_source_commit":provenance["craft_libs_source_commit"],
+                    "source_lock_sha256":provenance["source_lock_sha256"],
+                    "builder_staged":True,
+                    "production_signing_verified":False,
+                } if provenance else None
+            ),
         )

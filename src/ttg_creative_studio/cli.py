@@ -33,8 +33,9 @@ DONOR_TASKS = frozenset({
 def run_donor_interchange_job(job: dict[str, Any]) -> dict[str, Any]:
     """Use exact existing Studio project and actual native interchange engines.
 
-    No subprocess donor runtime or unapproved provider side effect is
-    introduced. Every output is new, source assets remain unchanged.
+    The RAW development task permits only Studio's source-locked,
+    Builder-staged donor runtime, never arbitrary remote-nominated code.
+    Other interchange tasks stay native; source assets remain unchanged.
     """
     from ttg_project_schema import TTGProject
 
@@ -87,11 +88,12 @@ def run_donor_interchange_job(job: dict[str, Any]) -> dict[str, Any]:
         result = import_developed_raw(source, Path(preview), output)
     elif task == "studio_develop_lightcraft_raw":
         from ttg_lightcraft_raw_bridge import develop_with_lightcraft
-        binary = options.get("lightcraft_cli")
-        if not isinstance(binary, str) or not Path(binary).is_absolute():
-            raise CreativeJobError("RAW development requires explicit absolute options.lightcraft_cli")
+        # Typed specialist jobs cannot nominate arbitrary executables:
+        # resolve only Builder's source-bound bundled LightCraft runtime.
+        if "lightcraft_cli" in options:
+            raise CreativeJobError("Typed RAW development uses Builder source runtime, not arbitrary executables")
         result = develop_with_lightcraft(
-            source, output, lightcraft_cli=binary, exposure=options.get("exposure"),
+            source, output, exposure=options.get("exposure"),
         )
     elif task == "studio_import_dxf":
         from ttg_cadcraft_dxf_bridge import import_dxf

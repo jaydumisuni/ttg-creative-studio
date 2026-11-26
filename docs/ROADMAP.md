@@ -134,3 +134,16 @@ interchange. They reuse existing UI/CLI/job entrypoints. Full LightCraft
 raw demosaic and CADCraft mechanical/EDA authority are not provided.
 Detailed exact limitations and evidence belong in the existing Storytold
 donor intake document.
+
+
+### 2026-11-26 — LightCraft source integration and Builder ownership correction
+
+The native LightCraft feature now resolves its optional donor RAW development
+engine from a source-pinned, Builder-staged component packaged **inside TTG
+Creative Studio**. There is no separate installed LightCraft application or
+automatic donor download. Its Windows/Linux runtime requires an actual Builder
+source build and accepted artifact receipt; absent that, it fails closed.
+KRATOS owns source integration and verification; ATHENA is for optional
+Windows evidence. See the existing Storytold donor intake document and source
+lock. This is an implementation-route correction, not proof of full RAW
+demosaicing, production packaging or final owner acceptance.

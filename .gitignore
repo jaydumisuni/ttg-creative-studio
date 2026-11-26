@@ -40,3 +40,8 @@ secrets/
 tokens/
 *.key
 *.pem
+
+# Native donor source runtime: Builder-staged outputs and unsigned receipts stay local
+/build_config/donor-sources/lightcraft-builder-receipt.json
+/resources/native/lightcraft/lightcraft-cli
+/resources/native/lightcraft/lightcraft-cli.exe
