@@ -166,3 +166,16 @@ The two new scripts run on both GitHub Linux and Windows runners.
 **Release boundaries:** Complete native subsets only, not P1/P4 phase
 exits, real RAW development, production/physical acceptance or independent
 signature gates. Keep Blender unchanged and Vork deferred.
+
+
+### 2026-11-26 — Correction: source-backed LightCraft, not separately installed donor
+
+The original external-CLI requirement was not the intended TTG donor-integration architecture. THETECHGUY Software Builder owns all native source compilation/packaging; source integration and source-bound test work run on KRATOS. ATHENA is optional for Windows qualification, not a prerequisite for modifying donor code. This fixes the dependency model **without claiming full RAW decoding or producing another installer**.
+
+- **Pinned donor source evidence:** story-told LightCraft at baeaac722de177951a8a1a44d2ef39cd5d39a033, with lightcraft-raw, CLI entrypoint and the underlying story-told craft-libs craft-raw, craft-tiff, craft-develop at b2d2a1e948c43d95aa769d4f0a06fe6b869edc39. The exact source lock is build_config/donor-sources/lightcraft.json. Verify each transitive license before shipping a combined binary. The source is available: a system-wide donor installation is **not** a gate.
+- **Builder is the only build authority:** ttg_lightcraft_source_runtime.resolve_builder_lightcraft_runtime() resolves a Builder-staged, Studio-bundled platform-native runtime through an exact manifest + source-revision + SHA-256 artifact receipt. It does not build, clone, download, install, or search arbitrary PATH executables on app launch. Generated native artifacts and the Builder receipt are ignored by Git; Builder must stage them in the registered Studio project and include the source-lock and receipt alongside the runtime during packaging.
+- **Actual user paths:** The existing Studio File menu now exposes Develop RAW with Builder source engine in addition to Import LightCraft developed RAW. The manual develop-lightcraft-raw no longer requires a --lightcraft-cli argument; it uses Builder's bundle by default. Typed Hunter jobs refuse arbitrary executable names and require the Builder-bundled source runtime. The explicit manual CLI override is preserved only for laboratory/backwards-compatibility testing.
+- **Evidence semantics:** A synthetic local Builder-staged executable is used in regression tests to verify the existing Studio PNG handoff, source revision bind, DNG original preservation, and fail-closed missing/changed receipt. That test is **not** a compiled LightCraft donor runtime nor proof of RAW demosaicing/color science. Builder still must compile and package the actual pinned Rust donor source as a native Studio component before ordinary RAW development works; until then Studio reports the missing Builder component, not a missing installation.
+- **Release remains independent:** full vendor RAW variants and color accuracy, owner visual acceptance, actual Builder artifact receipt from its release workflow, physical installed Studio, production Authenticode and paid provider/model admission retain their own gates. No Cookpit timer, running worker, Blender source, Vork decision, or release key was modified.
+
+Do not return to asking the user to install LightCraft separately. Existing Studio source/Builder registration is the reference workflow.

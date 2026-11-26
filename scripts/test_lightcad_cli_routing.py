@@ -19,7 +19,7 @@ from ttg_project_schema import TTGProject,CanvasSpec,Layer
 
 
 class LightCadRoutingTests(unittest.TestCase):
-    def test_hunter_job_raw_import_and_explicit_binary_requirement(self):
+    def test_hunter_job_raw_import_and_builder_source_requirement(self):
         with TemporaryDirectory() as temp:
             root=Path(temp)
             raw=root/"camera.dng";write_synthetic_dng(raw)
@@ -33,12 +33,19 @@ class LightCadRoutingTests(unittest.TestCase):
             self.assertTrue(result["ok"])
             self.assertTrue(dest.is_file())
             self.assertEqual(TTGProject.load(dest).canvas.width,12)
-            with self.assertRaisesRegex(Exception,"explicit absolute"):
+            with self.assertRaisesRegex(Exception,"Builder receipt"):
                 run_donor_interchange_job({
                     "task":"studio_develop_lightcraft_raw",
                     "input":str(raw.resolve()),
                     "output":str(root/"cannot.ttgstudio.json"),
                     "options":{},
+                })
+            with self.assertRaisesRegex(Exception,"not arbitrary executables"):
+                run_donor_interchange_job({
+                    "task":"studio_develop_lightcraft_raw",
+                    "input":str(raw.resolve()),
+                    "output":str(root/"blocked.ttgstudio.json"),
+                    "options":{"lightcraft_cli":str(root/"unreviewed")},
                 })
 
     def test_cad_export_import_same_hunter_job_interface(self):

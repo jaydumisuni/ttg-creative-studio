@@ -1,0 +1,35 @@
+{
+  "schema": "ttg.studio.lightcraft-donor-source-lock.v1",
+  "build_authority": "thetechguy-software-builder",
+  "integration": "studio-bundled-source-runtime",
+  "sources": {
+    "lightcraft": {
+      "repository": "https://github.com/storytold/lightcraft",
+      "commit": "baeaac722de177951a8a1a44d2ef39cd5d39a033",
+      "packages": [
+        "lightcraft-raw",
+        "lightcraft-cli"
+      ],
+      "license": "MIT OR Apache-2.0"
+    },
+    "craft_libs": {
+      "repository": "https://github.com/storytold/craft-libs",
+      "commit": "b2d2a1e948c43d95aa769d4f0a06fe6b869edc39",
+      "packages": [
+        "craft-raw",
+        "craft-tiff",
+        "craft-develop"
+      ],
+      "license": "check each dependency license before distribution"
+    }
+  },
+  "artifacts": {
+    "linux": "resources/native/lightcraft/lightcraft-cli",
+    "windows": "resources/native/lightcraft/lightcraft-cli.exe"
+  },
+  "builder_receipt": "build_config/donor-sources/lightcraft-builder-receipt.json",
+  "no_system_install": true,
+  "no_download_or_build_on_app_start": true,
+  "no_source_or_binary_download_on_this_task": true,
+  "release_requires_builder_and_owner_approval": true
+}

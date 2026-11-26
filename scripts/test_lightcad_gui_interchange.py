@@ -38,6 +38,7 @@ def main():
             if button.menu() is not None
         }
         assert any("LightCraft" in text for text in menu["File"])
+        assert "Develop RAW with Builder source engine" in menu["File"]
         assert any("CADCraft" in text for text in menu["File"])
         assert any("CADCraft" in text for text in menu["Export"])
 

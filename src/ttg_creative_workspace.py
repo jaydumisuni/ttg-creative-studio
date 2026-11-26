@@ -152,6 +152,7 @@ class CreativeWorkspace(QWidget):
             ("Import MaterialCraft / TextureCraft PBR", self.import_pbr_maps),
             ("Import VectorCraft SVG shapes", self.import_vector_svg),
             ("Import LightCraft developed RAW", self.import_lightcraft_render),
+            ("Develop RAW with Builder source engine", self.develop_lightcraft_source),
             ("Import CADCraft DXF drawing", self.import_cadcraft_dxf),
         ]))
         toolbar.addWidget(self._menu_button("Templates", [
@@ -908,6 +909,28 @@ class CreativeWorkspace(QWidget):
             self._load_donor_import(Path(output), "LightCraft developed RAW")
         except Exception as exc:
             QMessageBox.warning(self, "LightCraft RAW intake", str(exc))
+
+    def develop_lightcraft_source(self) -> None:
+        """Use the donor source runtime packaged into *this Studio* by Builder."""
+        from ttg_lightcraft_raw_bridge import develop_with_lightcraft
+        raw, _ = QFileDialog.getOpenFileName(
+            self, "Develop camera RAW in Creative Studio", "",
+            "Camera RAW (*.dng *.cr2 *.cr3 *.arw *.nef *.raf *.rw2 *.orf *.pef *.srw)",
+        )
+        if not raw:
+            return
+        output, _ = QFileDialog.getSaveFileName(
+            self, "New editable Studio RAW development",
+            str(Path(raw).with_name(Path(raw).stem + "-developed.ttgstudio.json")),
+            "TTG Studio (*.ttgstudio.json)",
+        )
+        if not output:
+            return
+        try:
+            develop_with_lightcraft(raw, output)
+            self._load_donor_import(Path(output), "Studio source-backed RAW development")
+        except Exception as exc:
+            QMessageBox.warning(self, "Studio RAW development", str(exc))
 
     def import_cadcraft_dxf(self) -> None:
         from ttg_cadcraft_dxf_bridge import import_dxf
