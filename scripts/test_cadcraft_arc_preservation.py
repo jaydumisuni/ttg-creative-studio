@@ -41,7 +41,7 @@ class CadArcSourceTests(TestCase):
             self.assertGreater(len(layer.properties["points"]),20)
             canvas=CanvasRenderer(RenderContext(root)).render(p)
             self.assertEqual(canvas.size,(220,220))
-            self.assertTrue(any(px[:3]!=(0,0,0) for px in canvas.get_flattened_data()))
+            self.assertIsNotNone(canvas.getbbox())
             back=root/"exported.dxf"
             self.assertEqual(export_dxf(p,back,units="mm")["entities"],1)
             content=back.read_text()
