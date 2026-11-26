@@ -8,6 +8,7 @@ from unittest.mock import patch
 import sys
 
 from PIL import Image
+from _synthetic_dng_fixture import write_synthetic_dng
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"src"))
@@ -27,7 +28,7 @@ def main():
         patch.object(QMessageBox,"information",return_value=QMessageBox.StandardButton.Ok),
     ):
         root=Path(tmp)
-        raw=root/"picture.dng";raw.write_bytes(b"II*\x00"+b"\x00"*64)
+        raw=root/"picture.dng";write_synthetic_dng(raw)
         image=root/"developed.png";Image.new("RGB",(24,16),(100,120,140)).save(image)
         win=CreativeStudioWindow()
         workspace=win.centralWidget()
