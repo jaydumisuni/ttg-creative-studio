@@ -65,6 +65,31 @@ class CadArcSourceTests(TestCase):
                 export_dxf(p,root/"must-not-export.dxf",units="mm")
             self.assertFalse((root/"must-not-export.dxf").exists())
 
+    def test_high_precision_source_arc_and_unmapped_transform_fail_closed(self):
+        with TemporaryDirectory() as d:
+            root=Path(d)
+            source=root/"fractional.dxf"
+            source.write_text(_dxf(_arc(
+                110.1234567890123,98.1234567890123,44.1234567890123,
+                20.123456789,190.987654321)))
+            ppath=root/"precise.ttgstudio.json"
+            import_dxf(source,ppath,canvas_width=220,canvas_height=220,units="mm")
+            original=TTGProject.load(ppath)
+            exported=root/"again.dxf"
+            export_dxf(original,exported,units="mm")
+            reimported=root/"reimport.ttgstudio.json"
+            import_dxf(exported,reimported,canvas_width=220,canvas_height=220,units="mm")
+            x=TTGProject.load(reimported).layers[0].properties["cad_arc"]
+            self.assertAlmostEqual(x["center"][0],110.1234567890123,places=12)
+            self.assertAlmostEqual(x["center"][1],98.1234567890123,places=12)
+            self.assertAlmostEqual(x["radius"],44.1234567890123,places=12)
+            self.assertAlmostEqual(x["start_degrees"],20.123456789,places=9)
+            self.assertAlmostEqual(x["end_degrees"],190.987654321,places=9)
+            original.layers[0].transform.x=1
+            with self.assertRaisesRegex(ValueError,"transform"):
+                export_dxf(original,root/"unmapped.dxf",units="mm")
+            self.assertFalse((root/"unmapped.dxf").exists())
+
     def test_zero_sweep_3d_and_outside_rejected_without_artifact(self):
         with TemporaryDirectory() as d:
             root=Path(d)

@@ -16,6 +16,9 @@ on:
       - 'scripts/test_donor_*.py'
       - 'scripts/test_lightcraft_*.py'
       - 'scripts/test_lightcad_*.py'
+      - 'scripts/test_cadcraft_arc_preservation.py'
+      - 'scripts/test_dng_source_structure.py'
+      - 'scripts/_synthetic_dng_fixture.py'
       - 'tests/fixtures/effectcraft_bouncing_ball.*'
       - 'examples/campaigns/**'
       - '.github/workflows/ci.yml'
@@ -34,6 +37,9 @@ on:
       - 'scripts/test_donor_*.py'
       - 'scripts/test_lightcraft_*.py'
       - 'scripts/test_lightcad_*.py'
+      - 'scripts/test_cadcraft_arc_preservation.py'
+      - 'scripts/test_dng_source_structure.py'
+      - 'scripts/_synthetic_dng_fixture.py'
       - 'tests/fixtures/effectcraft_bouncing_ball.*'
       - 'examples/campaigns/**'
       - '.github/workflows/ci.yml'
@@ -94,6 +100,8 @@ jobs:
           python -B scripts/test_donor_soundcraft_audio_fades.py
           python -B scripts/test_donor_gui_interchange.py
           python -B scripts/test_lightcraft_raw_handoff.py
+          python -B scripts/test_dng_source_structure.py
           python -B scripts/test_cadcraft_dxf_interchange.py
+          python -B scripts/test_cadcraft_arc_preservation.py
           python -B scripts/test_lightcad_cli_routing.py
           python -B scripts/test_lightcad_gui_interchange.py

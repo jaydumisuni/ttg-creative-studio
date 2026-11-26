@@ -310,7 +310,9 @@ def _p(group,value) -> str:
 def _fmt(value) -> str:
     if not math.isfinite(float(value)):
         raise ValueError("Nonfinite CAD geometry")
-    return f"{float(value):.6f}".rstrip("0").rstrip(".") or "0"
+    # 17 significant digits preserve IEEE-754 numeric round-trips. The
+    # previous six-decimal formatter silently changed precision CAD arcs.
+    return format(float(value), ".17g")
 
 
 def _native_pt(point,width,height):
@@ -337,11 +339,17 @@ def export_dxf(project: TTGProject, output: str | Path, *, units: str) -> dict:
         if not isinstance(name,str) or not 1<=len(name)<=80 or any(x in name for x in "\r\n") or not name.isascii():
             raise ValueError("Invalid CAD drawing layer")
         if layer.type=="connector_line":
+            # Connector points are already absolute canvas coordinates. A
+            # separate transform would be discarded by the DXF exporter.
+            if layer.transform != Transform():
+                raise ValueError("CAD connector transform requires explicit geometry flattening")
             pts=layer.properties.get("points")
             if not isinstance(pts,list) or not 2<=len(pts)<=129:
                 raise ValueError("Unsupported CAD polyline point count")
             raw_arc=layer.properties.get("cad_arc")
             if raw_arc is not None:
+                if layer.properties.get("stroke_width",3)!=3:
+                    raise ValueError("CAD ARC stroke change has no mapped DXF width")
                 if not isinstance(raw_arc,dict) or raw_arc.get("representation") != "presentation_polyline":
                     raise ValueError("Unqualified CAD ARC metadata")
                 if raw_arc.get("samples_digest") != _points_digest(pts):
