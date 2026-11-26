@@ -64,7 +64,7 @@ class CadCraftDXFInterop(TestCase):
             with self.assertRaisesRegex(ValueError,"units disagree"):
                 import_dxf(source,root/"no.ttgstudio.json",
                            canvas_width=160,canvas_height=100,units="inch")
-            source.write_text(source.read_text().replace("LINE\n","ARC\n",1))
+            source.write_text(source.read_text().replace("LINE\n","SPLINE\n",1))
             with self.assertRaisesRegex(ValueError,"Unsupported DXF entity"):
                 import_dxf(source,root/"no.ttgstudio.json",
                            canvas_width=160,canvas_height=100,units="mm")

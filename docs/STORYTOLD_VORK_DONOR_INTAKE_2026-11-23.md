@@ -130,3 +130,39 @@ New source-bound Studio adapters, built in two separate worktrees from the same 
 - **P4 CADCraft bounded DXF:** ASCII R12/R2000 DXF import/export supports simple LINE, straight LWPOLYLINE and unfilled CIRCLE, explicit unit agreement, true-color or common ACI colors, layer names and exact y-up CAD to y-down Studio conversion. Saved TTG connectors/circle primitives remain editable, and imported files reopen with pixel replay. Unknown sections/entities, 3D/elevated geometry, CAD hatches, spline/bulge, blocks, DWG and engineering netlists are rejected. Studio File / Export menus and CLI expose the same bounded typed contract. This is 2D presentation exchange only, not CADCraft's complete drafting system or Hardware Studio's electrical/mechanical design authority.
 
 The two modules own no separate app, resource worker, installed model, hardware operation or production release key. Exact source versions, Tenfold run evidence, platform-specific GUI and CLI checks, Sergeant review and GitHub CI must be frozen before deciding any subrequirement retirement. Do not mark P1 or P4 as whole-stage closed.
+
+
+### 2026-11-26 — Two follow-on source-quality gaps: DNG structure and CAD ARC
+
+Existing exact Studio source is extended in two independent, Tenfold Gen 1
+isolated workstreams, without touching active Cookpit timers, application
+services, installed binaries or alternate worktrees.
+
+- **LightCraft DNG integrity:** the earlier DNG intake validated only a
+  TIFF four-byte signature; it now also validates endian/magic, bounded first
+  TIFF IFD, presence/type/value of DNGVersion tag 50706, dimension tags,
+  duplicate-tag ambiguity, source bounds and reasonable image dimensions.
+  An unsupported/truncated TIFF is rejected before producing a new Studio
+  asset. Structural evidence is attached to native project provenance.
+  **A synthetic TIFF with correct tags remains synthetic**, and the check is
+  expressly not validation of raw pixels, demosaic/colour accuracy, a real
+  camera sample or a trusted LightCraft executable.
+- **CADCraft 2D ARC:** the previously missing DXF ARC entity now maps to
+  an editable Studio connector line with a bounded 5-degree-or-finer display
+  tessellation. The original curve centre, radius, start/end angles, layer
+  and color are retained; unchanged geometry reexports as a true DXF ARC
+  with 17-significant-digit numeric fidelity. Wraparound angles, original
+  geometry replay, out-of-bounds geometry, 3D arcs, transforms and edited
+  sampled geometry have explicit regression/negative checks.
+  Tessellation is a presentation primitive, not exact manufacturing BREP
+  or clearance tolerance. Modified arc point geometry requires explicit
+  conversion rather than silent loss of the analytic curve.
+
+Existing GUI DXF File/Export and LightCraft RAW intake, manual CLI and
+typed specialist-job APIs automatically use the corrected underlying
+source-bound modules; no duplicate menus or reimplementation is needed.
+The two new scripts run on both GitHub Linux and Windows runners.
+
+**Release boundaries:** Complete native subsets only, not P1/P4 phase
+exits, real RAW development, production/physical acceptance or independent
+signature gates. Keep Blender unchanged and Vork deferred.

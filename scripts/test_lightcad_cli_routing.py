@@ -9,6 +9,7 @@ import sys
 import unittest
 
 from PIL import Image
+from _synthetic_dng_fixture import write_synthetic_dng
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"src"))
@@ -21,7 +22,7 @@ class LightCadRoutingTests(unittest.TestCase):
     def test_hunter_job_raw_import_and_explicit_binary_requirement(self):
         with TemporaryDirectory() as temp:
             root=Path(temp)
-            raw=root/"camera.dng";raw.write_bytes(b"II*\x00"+b"\x00"*64)
+            raw=root/"camera.dng";write_synthetic_dng(raw)
             png=root/"developed.png";Image.new("RGB",(12,8),(25,75,125)).save(png)
             dest=root/"imported.ttgstudio.json"
             result=run_donor_interchange_job({
@@ -70,7 +71,7 @@ class LightCadRoutingTests(unittest.TestCase):
     def test_manual_cli_raw_and_dxf_are_genuine_invocable_commands(self):
         with TemporaryDirectory() as temp:
             root=Path(temp)
-            raw=root/"source.dng";raw.write_bytes(b"II*\x00"+b"\x00"*64)
+            raw=root/"source.dng";write_synthetic_dng(raw)
             image=root/"raw.png";Image.new("RGB",(10,10),(33,66,99)).save(image)
             project=root/"raw.ttgstudio.json"
             p=subprocess.run([

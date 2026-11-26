@@ -8,6 +8,7 @@ import os
 import sys
 
 from PIL import Image
+from _synthetic_dng_fixture import write_synthetic_dng
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from ttg_lightcraft_raw_bridge import import_developed_raw, develop_with_lightcraft
@@ -18,7 +19,7 @@ from ttg_canvas_engine import CanvasRenderer, RenderContext
 class LightCraftRawHandoffTests(TestCase):
     def fixture(self, root):
         raw = root / "camera.dng"
-        raw.write_bytes(b"II*\x00" + b"\x00"*64)
+        write_synthetic_dng(raw)
         image = root / "lightcraft-export.png"
         Image.new("RGB",(20,16),(33,103,203)).save(image)
         return raw,image
@@ -52,7 +53,7 @@ class LightCraftRawHandoffTests(TestCase):
             with self.assertRaisesRegex(ValueError,"header"):
                 import_developed_raw(raw,png,root/"bad.ttgstudio.json")
             self.assertFalse((root/"bad.ttgstudio.json").exists())
-            raw.write_bytes(b"II*\x00" + b"\x00"*64)
+            write_synthetic_dng(raw)
             Image.new("L",(8,8),50).save(png)
             with self.assertRaisesRegex(ValueError,"RGB or RGBA"):
                 import_developed_raw(raw,png,root/"bad.ttgstudio.json")

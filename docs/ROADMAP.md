@@ -123,3 +123,14 @@ An additional qualified Tenfold Gen 1 two-lane construction cycle extends the **
 ### 2026-11-26 — Independent donor bridge: LightCraft/CADCraft
 
 The existing Storytold donor campaign extends Studio's native editable project through LightCraft developed-RAW PNG intake and bounded CADCraft ASCII DXF drawing exchange. Both reuse the existing Studio File/Export UI, manual CLI and typed Hunter job entrypoint. Each is an independently tested, Tenfold-isolated new subfeature; not full RAW development or CAD/DWG/hardware-design equivalence. See the existing STORYTOLD_VORK_DONOR_INTAKE_2026-11-23.md for exact source and proof. Existing P1/P4 owner exit gates, Vork deferral and Blender remain unchanged.
+
+
+### 2026-11-26 — DNG structural evidence and CAD ARC numeric interchange
+
+Two qualified follow-on native format-subset candidates extend the existing
+Studio LightCraft/CADCraft work: DNG IFD0/Version/dimension structural
+validation with provenance, and DXF ARC source-preserving presentation
+interchange. They reuse existing UI/CLI/job entrypoints. Full LightCraft
+raw demosaic and CADCraft mechanical/EDA authority are not provided.
+Detailed exact limitations and evidence belong in the existing Storytold
+donor intake document.
