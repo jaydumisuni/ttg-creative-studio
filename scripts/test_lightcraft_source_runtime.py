@@ -68,7 +68,7 @@ class BuilderSourceRuntimeTests(TestCase):
             root = Path(d)
             artifact, _, lock = self.source_fixture(root)
             result = resolve_builder_lightcraft_runtime(project_root=root, windows=False)
-            self.assertEqual(result["path"], artifact)
+            self.assertTrue(result["path"].samefile(artifact))
             self.assertTrue(result["builder_staged"])
             self.assertFalse(result["installed_donor_application_required"])
             self.assertEqual(result["lightcraft_source_commit"], json.loads(lock.read_text())["sources"]["lightcraft"]["commit"])
@@ -120,7 +120,7 @@ class BuilderSourceRuntimeTests(TestCase):
             root=Path(d)
             artifact,_,_=self.source_fixture(root,windows=True)
             result=resolve_builder_lightcraft_runtime(project_root=root,windows=True)
-            self.assertEqual(result["path"],artifact)
+            self.assertTrue(result["path"].samefile(artifact))
             self.assertTrue(str(artifact).endswith(".exe"))
             self.assertFalse(result["installed_donor_application_required"])
 
